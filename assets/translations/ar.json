@@ -1,0 +1,114 @@
+{
+  "app_name": "VibeLocate AI",
+
+  "welcome": "مرحباً",
+  "login": "تسجيل الدخول",
+  "register": "إنشاء حساب",
+  "email": "البريد الإلكتروني",
+  "password": "كلمة المرور",
+
+  "onboarding_title_1": "اعثر على منزل يناسب أسلوب حياتك",
+  "onboarding_description_1": "استكشف آلاف العقارات واكتشف المكان الذي يناسب ميزانيتك واحتياجاتك وطريقة معيشتك.",
+
+  "onboarding_title_2": "اكتشف الحي قبل أن تنتقل",
+  "onboarding_description_2": "استكشف الشقق والمرافق والأحياء القريبة منك في الوقت الفعلي باستخدام خريطتنا التفاعلية.",
+
+  "onboarding_title_3": "اتخذ قرارات إيجار أذكى",
+  "onboarding_description_3": "استخدم تحليلات الذكاء الاصطناعي للعثور على المنازل والأحياء التي تتناسب فعلاً مع أسلوب حياتك وسفرك.",
+
+  "next": "التالي",
+  "get_started": "ابدأ الآن",
+  "skip": "تخطي",
+  "back": "رجوع",
+
+  "welcome_back": "مرحباً بعودتك",
+  "login_subtitle": "اعثر على مكان يناسب أسلوب حياتك.",
+
+  "email_hint": "ahmad@example.com",
+  "password_hint": "••••••••",
+
+  "email_required": "يرجى إدخال البريد الإلكتروني",
+  "email_invalid": "يرجى إدخال بريد إلكتروني صحيح",
+  "password_required": "يرجى إدخال كلمة المرور",
+  "password_min": "يجب أن تكون كلمة المرور 6 أحرف على الأقل",
+
+  "forgot_password": "نسيت كلمة المرور؟",
+  "or": "أو",
+  "continue_with_google": "المتابعة باستخدام Google",
+
+  "dont_have_account": "ليس لديك حساب؟",
+  "sign_up": "إنشاء حساب",
+
+  "create_account": "إنشاء حساب",
+  "signup_subtitle": "أنشئ حسابك وابدأ بالعثور على المكان المثالي لك.",
+
+  "first_name": "الاسم الأول",
+  "first_name_hint": "أحمد",
+  "first_name_required": "يرجى إدخال الاسم الأول",
+
+  "last_name": "اسم العائلة",
+  "last_name_hint": "محمد",
+  "last_name_required": "يرجى إدخال اسم العائلة",
+
+  "city": "المدينة",
+  "city_hint": "رام الله",
+  "city_required": "يرجى إدخال المدينة",
+
+  "country": "الدولة",
+  "country_hint": "فلسطين",
+  "country_required": "يرجى إدخال الدولة",
+
+  "phone_number": "رقم الهاتف",
+  "phone_hint": "59 123 4567",
+  "phone_required": "يرجى إدخال رقم الهاتف",
+
+  "confirm_password": "تأكيد كلمة المرور",
+  "confirm_password_hint": "••••••••",
+  "confirm_password_required": "يرجى تأكيد كلمة المرور",
+  "passwords_not_match": "كلمتا المرور غير متطابقتين",
+
+  "terms_text": "بالضغط على \"إنشاء حساب\"، أوافق على شروط الخدمة وسياسة الخصوصية.",
+
+  "already_have_account": "لديك حساب بالفعل؟",
+
+  "accept_terms_required": "يرجى الموافقة على شروط الخدمة وسياسة الخصوصية.",
+
+  "register_success_demo": "سيتم ربط إنشاء الحساب بالـ API قريباً.",
+  "google_signup_demo": "سيتم ربط التسجيل عبر Google قريباً.",
+
+  "login_success_demo": "سيتم ربط تسجيل الدخول بالـ API قريباً.",
+  "google_login_demo": "سيتم ربط تسجيل الدخول عبر Google قريباً.",
+
+  "terms_agreement_start": "بالضغط على \"إنشاء حساب\"، أوافق على ",
+  "terms_of_service": "شروط الخدمة",
+  "terms_and": " و",
+  "privacy_policy": "سياسة الخصوصية",
+
+  "terms_title": "شروط الخدمة",
+  "privacy_title": "سياسة الخصوصية",
+
+  "terms_content": "توضح شروط الخدمة هذه القواعد والأحكام المتعلقة باستخدام VibeLocate AI. هذا المحتوى مؤقت وسيتم استبداله بالمحتوى القانوني النهائي.",
+  "privacy_content": "توضح سياسة الخصوصية هذه كيفية جمع معلومات المستخدم واستخدامها وتخزينها وحمايتها في VibeLocate AI. هذا المحتوى مؤقت وسيتم استبداله بالمحتوى القانوني النهائي.",
+
+  "forgot_password_title": "هل نسيت كلمة المرور؟",
+  "forgot_password_subtitle": "أدخل بريدك الإلكتروني وسنرسل لك رمز التحقق.",
+  "send_code": "إرسال الرمز",
+  "back_to_login": "العودة لتسجيل الدخول",
+
+  "verification_title": "أدخل رمز التحقق",
+  "verification_subtitle": "تحقق من بريدك الإلكتروني للحصول على رمز التحقق.",
+  "verification_code_required": "يرجى إدخال رمز التحقق.",
+  "verification_code_resent": "تم إرسال رمز تحقق جديد.",
+  "verify": "تحقق",
+  "didnt_receive_code": "لم يصلك الرمز؟",
+  "resend_code": "إعادة إرسال الرمز",
+
+  "reset_password_title": "إعادة تعيين كلمة المرور",
+  "reset_password_subtitle": "أنشئ كلمة مرور جديدة لاستعادة حسابك والوصول إليه.",
+  "new_password_hint": "••••••••",
+  "reset_password_button": "إعادة تعيين كلمة المرور",
+
+  "reset_password_success_title": "تمت إعادة تعيين كلمة المرور بنجاح",
+  "reset_password_success_subtitle": "تم تغيير كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول باستخدام كلمة المرور الجديدة.",
+  "go_to_login": "تسجيل الدخول"
+}

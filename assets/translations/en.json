@@ -1,0 +1,114 @@
+{
+  "app_name": "VibeLocate AI",
+
+  "welcome": "Welcome",
+  "login": "Log in",
+  "register": "Create account",
+  "email": "Email",
+  "password": "Password",
+
+  "onboarding_title_1": "Find a home that fits your lifestyle",
+  "onboarding_description_1": "Explore thousands of properties and discover a place that matches your budget, needs, and way of living.",
+
+  "onboarding_title_2": "Discover the neighborhood",
+  "onboarding_description_2": "Explore nearby apartments, amenities, and neighborhoods in real time with our interactive map.",
+
+  "onboarding_title_3": "Make smarter rental decisions",
+  "onboarding_description_3": "Use AI-powered insights to find homes and neighborhoods that truly fit the way you live and travel.",
+
+  "next": "Next",
+  "get_started": "Get Started",
+  "skip": "Skip",
+  "back": "Back",
+
+  "welcome_back": "Welcome back",
+  "login_subtitle": "Find a place that fits your lifestyle.",
+
+  "email_hint": "john@example.com",
+  "password_hint": "••••••••",
+
+  "email_required": "Please enter your email",
+  "email_invalid": "Please enter a valid email",
+  "password_required": "Please enter your password",
+  "password_min": "Password must be at least 6 characters",
+
+  "forgot_password": "Forgot password?",
+  "or": "or",
+  "continue_with_google": "Continue with Google",
+
+  "dont_have_account": "Don't have an account?",
+  "sign_up": "Sign up",
+
+  "create_account": "Create account",
+  "signup_subtitle": "Create your account and start finding your ideal place.",
+
+  "first_name": "First Name",
+  "first_name_hint": "John",
+  "first_name_required": "Please enter your first name",
+
+  "last_name": "Last Name",
+  "last_name_hint": "Doe",
+  "last_name_required": "Please enter your last name",
+
+  "city": "City",
+  "city_hint": "Ramallah",
+  "city_required": "Please enter your city",
+
+  "country": "Country",
+  "country_hint": "Palestine",
+  "country_required": "Please enter your country",
+
+  "phone_number": "Phone Number",
+  "phone_hint": "59 123 4567",
+  "phone_required": "Please enter your phone number",
+
+  "confirm_password": "Confirm Password",
+  "confirm_password_hint": "••••••••",
+  "confirm_password_required": "Please confirm your password",
+  "passwords_not_match": "Passwords do not match",
+
+  "terms_text": "By clicking \"Sign up\", I agree to Terms of Service & Privacy Policy.",
+
+  "already_have_account": "Already have an account?",
+
+  "accept_terms_required": "Please accept the Terms of Service and Privacy Policy.",
+
+  "register_success_demo": "Registration will be connected to the API soon.",
+  "google_signup_demo": "Google signup will be connected soon.",
+
+  "login_success_demo": "Login will be connected to the API soon.",
+  "google_login_demo": "Google login will be connected soon.",
+
+  "terms_agreement_start": "By clicking \"Sign up\", I agree to ",
+  "terms_of_service": "Terms of Service",
+  "terms_and": " & ",
+  "privacy_policy": "Privacy Policy",
+
+  "terms_title": "Terms of Service",
+  "privacy_title": "Privacy Policy",
+
+  "terms_content": "These Terms of Service explain the rules and conditions for using VibeLocate AI. This content is a temporary placeholder and will be replaced with the final legal content.",
+  "privacy_content": "This Privacy Policy explains how VibeLocate AI collects, uses, stores, and protects user information. This content is a temporary placeholder and will be replaced with the final legal content.",
+
+  "forgot_password_title": "Forgot your password?",
+  "forgot_password_subtitle": "Enter your email address and we'll send you a verification code.",
+  "send_code": "Send Code",
+  "back_to_login": "Back to Login",
+
+  "verification_title": "Enter the verification code",
+  "verification_subtitle": "Please check your email to get the verification code.",
+  "verification_code_required": "Please enter the verification code.",
+  "verification_code_resent": "A new verification code has been sent.",
+  "verify": "Verify",
+  "didnt_receive_code": "Didn't receive the code?",
+  "resend_code": "Resend code",
+
+  "reset_password_title": "Reset Password",
+  "reset_password_subtitle": "Create a new password to recover and access your account.",
+  "new_password_hint": "••••••••",
+  "reset_password_button": "Reset Password",
+
+  "reset_password_success_title": "Reset Password Successfully",
+  "reset_password_success_subtitle": "Your password has been reset successfully. You can now log in with your new password.",
+  "go_to_login": "Log in"
+}
