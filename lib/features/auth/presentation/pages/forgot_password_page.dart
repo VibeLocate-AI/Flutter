@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/app_router.dart';
+import '../../../../core/errors/exceptions.dart';
 import '../../../../core/localization/localization.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
+import '../../auth_dependencies.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_text_field.dart';
+import 'verification_page.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -20,8 +22,11 @@ class _ForgotPasswordPageState
   final GlobalKey<FormState> _formKey =
   GlobalKey<FormState>();
 
-  final TextEditingController _emailController =
+  final TextEditingController
+  _emailController =
   TextEditingController();
+
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -29,28 +34,86 @@ class _ForgotPasswordPageState
     super.dispose();
   }
 
-  void _sendCode() {
+  Future<void> _sendCode() async {
     FocusScope.of(context).unfocus();
+
+    final localization =
+    AppLocalization.of(context);
 
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    Navigator.pushNamed(
-      context,
-      AppRouter.verification,
-      arguments: _emailController.text.trim(),
-    );
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final email =
+      _emailController.text.trim();
+
+      await AuthDependencies.forgotPassword(
+        email: email,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.pushNamed(
+        context,
+        AppRouter.verification,
+        arguments: VerificationPageArgs(
+          email: email,
+          purpose:
+          VerificationPurpose.passwordReset,
+        ),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        SnackBar(
+          content: Text(
+            localization.translate(
+              'generic_api_error',
+            ),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final localization = AppLocalization.of(context);
+    final localization =
+    AppLocalization.of(context);
 
-    final size = MediaQuery.sizeOf(context);
-    final width = size.width;
+    final width =
+        MediaQuery.sizeOf(context).width;
 
-    final horizontalPadding = width < 360 ? 20.0 : 24.0;
+    final horizontalPadding =
+    width < 360 ? 20.0 : 24.0;
 
     return Scaffold(
       backgroundColor: AppColors.grayBg,
@@ -62,7 +125,8 @@ class _ForgotPasswordPageState
           ),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
+              constraints:
+              const BoxConstraints(
                 maxWidth: 430,
               ),
               child: Form(
@@ -74,10 +138,12 @@ class _ForgotPasswordPageState
                     const SizedBox(height: 20),
 
                     AuthHeader(
-                      title: localization.translate(
+                      title:
+                      localization.translate(
                         'forgot_password_title',
                       ),
-                      subtitle: localization.translate(
+                      subtitle:
+                      localization.translate(
                         'forgot_password_subtitle',
                       ),
                     ),
@@ -85,11 +151,14 @@ class _ForgotPasswordPageState
                     const SizedBox(height: 40),
 
                     AuthTextField(
-                      controller: _emailController,
-                      label: localization.translate(
+                      controller:
+                      _emailController,
+                      label:
+                      localization.translate(
                         'email',
                       ),
-                      hint: localization.translate(
+                      hint:
+                      localization.translate(
                         'email_hint',
                       ),
                       prefixIcon:
@@ -101,26 +170,31 @@ class _ForgotPasswordPageState
                       validator: (value) {
                         if (value == null ||
                             value.trim().isEmpty) {
-                          return localization.translate(
+                          return localization
+                              .translate(
                             'email_required',
                           );
                         }
 
-                        final emailRegex = RegExp(
+                        final emailRegex =
+                        RegExp(
                           r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
                         );
 
-                        if (!emailRegex.hasMatch(
+                        if (!emailRegex
+                            .hasMatch(
                           value.trim(),
                         )) {
-                          return localization.translate(
+                          return localization
+                              .translate(
                             'email_invalid',
                           );
                         }
 
                         return null;
                       },
-                      onSubmitted: (_) => _sendCode(),
+                      onSubmitted: (_) =>
+                          _sendCode(),
                     ),
 
                     const SizedBox(height: 28),
@@ -128,9 +202,22 @@ class _ForgotPasswordPageState
                     SizedBox(
                       height: 52,
                       child: ElevatedButton(
-                        onPressed: _sendCode,
-                        child: Text(
-                          localization.translate(
+                        onPressed:
+                        _isLoading
+                            ? null
+                            : _sendCode,
+                        child: _isLoading
+                            ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child:
+                          CircularProgressIndicator(
+                            strokeWidth: 2,
+                          ),
+                        )
+                            : Text(
+                          localization
+                              .translate(
                             'send_code',
                           ),
                         ),
@@ -141,7 +228,8 @@ class _ForgotPasswordPageState
 
                     TextButton(
                       onPressed: () {
-                        Navigator.pushReplacementNamed(
+                        Navigator
+                            .pushReplacementNamed(
                           context,
                           AppRouter.login,
                         );
@@ -149,13 +237,6 @@ class _ForgotPasswordPageState
                       child: Text(
                         localization.translate(
                           'back_to_login',
-                        ),
-                        style: AppTextStyles.labelMedium
-                            .copyWith(
-                          color:
-                          AppColors.navyPrimary,
-                          fontWeight:
-                          FontWeight.w600,
                         ),
                       ),
                     ),

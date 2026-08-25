@@ -1,22 +1,30 @@
-import '../entities/user.dart';
 import '../repositories/auth_repository.dart';
 
 class Register {
-  const Register(this._repository);
+  const Register(this.repository);
 
-  final AuthRepository _repository;
+  final AuthRepository repository;
 
-  Future<User> call({
+  Future<int?> call({
+    required String firstName,
+    required String lastName,
+    required String city,
+    required String country,
     required String email,
+    required String phone,
     required String password,
-    String? firstName,
-    String? lastName,
+    required String passwordConfirmation,
   }) {
-    return _repository.register(
-      email: email,
-      password: password,
+    return repository.register(
       firstName: firstName,
       lastName: lastName,
+      city: city,
+      country: country,
+      email: email,
+      phone: phone,
+      password: password,
+      passwordConfirmation:
+      passwordConfirmation,
     );
   }
 }

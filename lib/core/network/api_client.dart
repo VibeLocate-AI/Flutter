@@ -13,7 +13,7 @@ class ApiClient {
   static const Duration _timeout =
   Duration(seconds: 45);
 
-  static Uri _uri(String endpoint) {
+  static Uri _buildUri(String endpoint) {
     return Uri.parse(
       '${ApiEndpoints.baseUrl}$endpoint',
     );
@@ -28,13 +28,12 @@ class ApiClient {
     };
 
     if (authenticated) {
-      final accessToken =
+      final token =
       await TokenStorage.getAccessToken();
 
-      if (accessToken != null &&
-          accessToken.isNotEmpty) {
+      if (token != null && token.isNotEmpty) {
         headers['Authorization'] =
-        'Bearer $accessToken';
+        'Bearer $token';
       }
     }
 
@@ -49,7 +48,7 @@ class ApiClient {
     try {
       final response = await http
           .post(
-        _uri(endpoint),
+        _buildUri(endpoint),
         headers: await _headers(
           authenticated: authenticated,
         ),
@@ -61,13 +60,11 @@ class ApiClient {
 
       return _handleResponse(response);
     } on TimeoutException {
-      throw NetworkException(
+      throw const NetworkException(
         'Request timed out. Please try again.',
       );
     } on http.ClientException catch (e) {
-      throw NetworkException(
-        e.message,
-      );
+      throw NetworkException(e.message);
     }
   }
 
@@ -78,7 +75,7 @@ class ApiClient {
     try {
       final response = await http
           .get(
-        _uri(endpoint),
+        _buildUri(endpoint),
         headers: await _headers(
           authenticated: authenticated,
         ),
@@ -87,73 +84,11 @@ class ApiClient {
 
       return _handleResponse(response);
     } on TimeoutException {
-      throw NetworkException(
+      throw const NetworkException(
         'Request timed out. Please try again.',
       );
     } on http.ClientException catch (e) {
-      throw NetworkException(
-        e.message,
-      );
-    }
-  }
-
-  static Future<Map<String, dynamic>> put(
-      String endpoint, {
-        Map<String, dynamic>? body,
-        bool authenticated = false,
-      }) async {
-    try {
-      final response = await http
-          .put(
-        _uri(endpoint),
-        headers: await _headers(
-          authenticated: authenticated,
-        ),
-        body: body == null
-            ? null
-            : jsonEncode(body),
-      )
-          .timeout(_timeout);
-
-      return _handleResponse(response);
-    } on TimeoutException {
-      throw NetworkException(
-        'Request timed out. Please try again.',
-      );
-    } on http.ClientException catch (e) {
-      throw NetworkException(
-        e.message,
-      );
-    }
-  }
-
-  static Future<Map<String, dynamic>> delete(
-      String endpoint, {
-        Map<String, dynamic>? body,
-        bool authenticated = false,
-      }) async {
-    try {
-      final response = await http
-          .delete(
-        _uri(endpoint),
-        headers: await _headers(
-          authenticated: authenticated,
-        ),
-        body: body == null
-            ? null
-            : jsonEncode(body),
-      )
-          .timeout(_timeout);
-
-      return _handleResponse(response);
-    } on TimeoutException {
-      throw NetworkException(
-        'Request timed out. Please try again.',
-      );
-    } on http.ClientException catch (e) {
-      throw NetworkException(
-        e.message,
-      );
+      throw NetworkException(e.message);
     }
   }
 
@@ -164,14 +99,13 @@ class ApiClient {
 
     if (response.body.isNotEmpty) {
       try {
-        final decoded =
-        jsonDecode(response.body);
+        final decoded = jsonDecode(response.body);
 
         if (decoded is Map<String, dynamic>) {
           data = decoded;
         }
       } catch (_) {
-        throw ServerException(
+        throw const ServerException(
           'Invalid response from server.',
         );
       }

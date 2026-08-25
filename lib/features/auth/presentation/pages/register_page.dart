@@ -1,10 +1,13 @@
 import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:vibe_locate_ai/features/auth/presentation/pages/verification_page.dart';
 
 import '../../../../app/app_router.dart';
+import '../../../../core/errors/exceptions.dart';
 import '../../../../core/localization/localization.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../auth_dependencies.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/legal_agreement_text.dart';
 import '../widgets/phone_number_field.dart';
@@ -61,6 +64,7 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _acceptedTerms = false;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -91,7 +95,9 @@ class _RegisterPageState extends State<RegisterPage> {
       AppLocalization localization,
       ) {
     if (value == null || value.trim().isEmpty) {
-      return localization.translate('email_required');
+      return localization.translate(
+        'email_required',
+      );
     }
 
     final emailRegex = RegExp(
@@ -99,7 +105,9 @@ class _RegisterPageState extends State<RegisterPage> {
     );
 
     if (!emailRegex.hasMatch(value.trim())) {
-      return localization.translate('email_invalid');
+      return localization.translate(
+        'email_invalid',
+      );
     }
 
     return null;
@@ -146,9 +154,55 @@ class _RegisterPageState extends State<RegisterPage> {
   Future<void> _register() async {
     FocusScope.of(context).unfocus();
 
-    final localization = AppLocalization.of(context);
+    final localization =
+    AppLocalization.of(context);
 
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    final firstName =
+    _firstNameController.text.trim();
+
+    final lastName =
+    _lastNameController.text.trim();
+
+    final city =
+    _cityController.text.trim();
+
+    final country =
+    _countryController.text.trim();
+
+    final email =
+    _emailController.text.trim();
+
+    final phone =
+        '+${_selectedCountry.phoneCode}'
+        '${_phoneController.text.replaceAll(' ', '')}';
+
+    final password =
+        _passwordController.text;
+
+    final passwordConfirmation =
+        _confirmPasswordController.text;
+
+    if (firstName.isEmpty ||
+        lastName.isEmpty ||
+        city.isEmpty ||
+        country.isEmpty ||
+        email.isEmpty ||
+        _phoneController.text.trim().isEmpty ||
+        password.isEmpty ||
+        passwordConfirmation.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            localization.translate(
+              'complete_required_fields',
+            ),
+          ),
+        ),
+      );
       return;
     }
 
@@ -165,18 +219,80 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          localization.translate(
-            'register_success_demo',
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await AuthDependencies.register(
+        firstName: firstName,
+        lastName: lastName,
+        city: city,
+        country: country,
+        email: email,
+        phone: phone,
+        password: password,
+        passwordConfirmation:
+        passwordConfirmation,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.pushNamed(
+        context,
+        AppRouter.verification,
+        arguments: VerificationPageArgs(
+          email: email,
+          purpose:
+          VerificationPurpose
+              .emailVerification,
+        ),
+      );
+    } on ValidationException catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+        ),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            localization.translate(
+              'generic_api_error',
+            ),
           ),
         ),
-      ),
-    );
-
-    // سيتم ربط Register UseCase + API لاحقًا.
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
+
 
   void _continueWithGoogle() {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -192,7 +308,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    final localization = AppLocalization.of(context);
+    final localization =
+    AppLocalization.of(context);
 
     final size = MediaQuery.sizeOf(context);
     final width = size.width;
@@ -231,10 +348,12 @@ class _RegisterPageState extends State<RegisterPage> {
                           child: AuthTextField(
                             controller:
                             _firstNameController,
-                            label: localization.translate(
+                            label:
+                            localization.translate(
                               'first_name',
                             ),
-                            hint: localization.translate(
+                            hint:
+                            localization.translate(
                               'first_name_hint',
                             ),
                             prefixIcon:
@@ -243,26 +362,26 @@ class _RegisterPageState extends State<RegisterPage> {
                             TextInputType.name,
                             textInputAction:
                             TextInputAction.next,
-                            validator: (value) =>
-                                _required(
-                                  value,
-                                  localization.translate(
-                                    'first_name_required',
-                                  ),
-                                ),
+                            validator:
+                                (value) => _required(
+                              value,
+                              localization.translate(
+                                'first_name_required',
+                              ),
+                            ),
                           ),
                         ),
-
                         const SizedBox(width: 12),
-
                         Expanded(
                           child: AuthTextField(
                             controller:
                             _lastNameController,
-                            label: localization.translate(
+                            label:
+                            localization.translate(
                               'last_name',
                             ),
-                            hint: localization.translate(
+                            hint:
+                            localization.translate(
                               'last_name_hint',
                             ),
                             prefixIcon:
@@ -271,13 +390,13 @@ class _RegisterPageState extends State<RegisterPage> {
                             TextInputType.name,
                             textInputAction:
                             TextInputAction.next,
-                            validator: (value) =>
-                                _required(
-                                  value,
-                                  localization.translate(
-                                    'last_name_required',
-                                  ),
-                                ),
+                            validator:
+                                (value) => _required(
+                              value,
+                              localization.translate(
+                                'last_name_required',
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -291,11 +410,14 @@ class _RegisterPageState extends State<RegisterPage> {
                       children: [
                         Expanded(
                           child: AuthTextField(
-                            controller: _cityController,
-                            label: localization.translate(
+                            controller:
+                            _cityController,
+                            label:
+                            localization.translate(
                               'city',
                             ),
-                            hint: localization.translate(
+                            hint:
+                            localization.translate(
                               'city_hint',
                             ),
                             prefixIcon:
@@ -304,26 +426,26 @@ class _RegisterPageState extends State<RegisterPage> {
                             TextInputType.text,
                             textInputAction:
                             TextInputAction.next,
-                            validator: (value) =>
-                                _required(
-                                  value,
-                                  localization.translate(
-                                    'city_required',
-                                  ),
-                                ),
+                            validator:
+                                (value) => _required(
+                              value,
+                              localization.translate(
+                                'city_required',
+                              ),
+                            ),
                           ),
                         ),
-
                         const SizedBox(width: 12),
-
                         Expanded(
                           child: AuthTextField(
                             controller:
                             _countryController,
-                            label: localization.translate(
+                            label:
+                            localization.translate(
                               'country',
                             ),
-                            hint: localization.translate(
+                            hint:
+                            localization.translate(
                               'country_hint',
                             ),
                             prefixIcon:
@@ -332,13 +454,13 @@ class _RegisterPageState extends State<RegisterPage> {
                             TextInputType.text,
                             textInputAction:
                             TextInputAction.next,
-                            validator: (value) =>
-                                _required(
-                                  value,
-                                  localization.translate(
-                                    'country_required',
-                                  ),
-                                ),
+                            validator:
+                                (value) => _required(
+                              value,
+                              localization.translate(
+                                'country_required',
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -347,20 +469,27 @@ class _RegisterPageState extends State<RegisterPage> {
                     const SizedBox(height: 16),
 
                     PhoneNumberField(
-                      controller: _phoneController,
-                      country: _selectedCountry,
-                      onCountryChanged: (country) {
+                      controller:
+                      _phoneController,
+                      country:
+                      _selectedCountry,
+                      onCountryChanged:
+                          (country) {
                         setState(() {
-                          _selectedCountry = country;
+                          _selectedCountry =
+                              country;
                         });
                       },
-                      label: localization.translate(
+                      label:
+                      localization.translate(
                         'phone_number',
                       ),
-                      hint: localization.translate(
+                      hint:
+                      localization.translate(
                         'phone_hint',
                       ),
-                      errorText: localization.translate(
+                      errorText:
+                      localization.translate(
                         'phone_required',
                       ),
                     ),
@@ -368,11 +497,14 @@ class _RegisterPageState extends State<RegisterPage> {
                     const SizedBox(height: 16),
 
                     AuthTextField(
-                      controller: _emailController,
-                      label: localization.translate(
+                      controller:
+                      _emailController,
+                      label:
+                      localization.translate(
                         'email',
                       ),
-                      hint: localization.translate(
+                      hint:
+                      localization.translate(
                         'email_hint',
                       ),
                       prefixIcon:
@@ -381,7 +513,8 @@ class _RegisterPageState extends State<RegisterPage> {
                       TextInputType.emailAddress,
                       textInputAction:
                       TextInputAction.next,
-                      validator: (value) =>
+                      validator:
+                          (value) =>
                           _emailValidator(
                             value,
                             localization,
@@ -391,11 +524,14 @@ class _RegisterPageState extends State<RegisterPage> {
                     const SizedBox(height: 16),
 
                     AuthTextField(
-                      controller: _passwordController,
-                      label: localization.translate(
+                      controller:
+                      _passwordController,
+                      label:
+                      localization.translate(
                         'password',
                       ),
-                      hint: localization.translate(
+                      hint:
+                      localization.translate(
                         'password_hint',
                       ),
                       prefixIcon:
@@ -411,7 +547,8 @@ class _RegisterPageState extends State<RegisterPage> {
                       },
                       textInputAction:
                       TextInputAction.next,
-                      validator: (value) =>
+                      validator:
+                          (value) =>
                           _passwordValidator(
                             value,
                             localization,
@@ -423,10 +560,12 @@ class _RegisterPageState extends State<RegisterPage> {
                     AuthTextField(
                       controller:
                       _confirmPasswordController,
-                      label: localization.translate(
+                      label:
+                      localization.translate(
                         'confirm_password',
                       ),
-                      hint: localization.translate(
+                      hint:
+                      localization.translate(
                         'confirm_password_hint',
                       ),
                       prefixIcon:
@@ -442,12 +581,12 @@ class _RegisterPageState extends State<RegisterPage> {
                       },
                       textInputAction:
                       TextInputAction.done,
-                      validator: (value) =>
+                      validator:
+                          (value) =>
                           _confirmPasswordValidator(
                             value,
                             localization,
                           ),
-                      onSubmitted: (_) => _register(),
                     ),
 
                     const SizedBox(height: 16),
@@ -460,25 +599,30 @@ class _RegisterPageState extends State<RegisterPage> {
                           width: 30,
                           height: 30,
                           child: Checkbox(
-                            value: _acceptedTerms,
-                            onChanged: (value) {
+                            value:
+                            _acceptedTerms,
+                            onChanged:
+                                (value) {
                               setState(() {
                                 _acceptedTerms =
-                                    value ?? false;
+                                    value ??
+                                        false;
                               });
                             },
                             activeColor:
-                            AppColors.navyPrimary,
+                            AppColors
+                                .navyPrimary,
                             materialTapTargetSize:
                             MaterialTapTargetSize
                                 .shrinkWrap,
                           ),
                         ),
-
-                        const SizedBox(width: 8),
-
+                        const SizedBox(
+                          width: 8,
+                        ),
                         const Expanded(
-                          child: LegalAgreementText(),
+                          child:
+                          LegalAgreementText(),
                         ),
                       ],
                     ),
@@ -487,13 +631,30 @@ class _RegisterPageState extends State<RegisterPage> {
 
                     SizedBox(
                       height: 52,
-                      child: ElevatedButton(
-                        onPressed: _register,
-                        child: Text(
-                          localization.translate(
+                      child:
+                      ElevatedButton(
+                        onPressed:
+                        _isLoading
+                            ? null
+                            : _register,
+                        child:
+                        _isLoading
+                            ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child:
+                          CircularProgressIndicator(
+                            strokeWidth: 2,
+                          ),
+                        )
+                            : Text(
+                          localization
+                              .translate(
                             'sign_up',
                           ),
-                          style: AppTextStyles.button,
+                          style:
+                          AppTextStyles
+                              .button,
                         ),
                       ),
                     ),
@@ -504,32 +665,33 @@ class _RegisterPageState extends State<RegisterPage> {
                       children: [
                         const Expanded(
                           child: Divider(
-                            color:
-                            AppColors.grayBorderLight,
+                            color: AppColors
+                                .grayBorderLight,
                           ),
                         ),
-
                         Padding(
                           padding:
-                          const EdgeInsets.symmetric(
+                          const EdgeInsets
+                              .symmetric(
                             horizontal: 12,
                           ),
                           child: Text(
-                            localization.translate(
+                            localization
+                                .translate(
                               'or',
                             ),
-                            style: AppTextStyles.labelSmall
+                            style: AppTextStyles
+                                .labelSmall
                                 .copyWith(
-                              color:
-                              AppColors.grayTextMuted,
+                              color: AppColors
+                                  .grayTextMuted,
                             ),
                           ),
                         ),
-
                         const Expanded(
                           child: Divider(
-                            color:
-                            AppColors.grayBorderLight,
+                            color: AppColors
+                                .grayBorderLight,
                           ),
                         ),
                       ],
@@ -538,7 +700,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     const SizedBox(height: 18),
 
                     SocialLoginButton(
-                      label: localization.translate(
+                      label:
+                      localization.translate(
                         'continue_with_google',
                       ),
                       onPressed:
@@ -553,34 +716,37 @@ class _RegisterPageState extends State<RegisterPage> {
                       children: [
                         Flexible(
                           child: Text(
-                            localization.translate(
+                            localization
+                                .translate(
                               'already_have_account',
                             ),
-                            style:
-                            AppTextStyles.bodySmall
+                            style: AppTextStyles
+                                .bodySmall
                                 .copyWith(
-                              color:
-                              AppColors.grayTextSub,
+                              color: AppColors
+                                  .grayTextSub,
                             ),
                           ),
                         ),
-
                         TextButton(
                           onPressed: () {
-                            Navigator.pushReplacementNamed(
+                            Navigator
+                                .pushReplacementNamed(
                               context,
-                              AppRouter.login,
+                              AppRouter
+                                  .login,
                             );
                           },
                           child: Text(
-                            localization.translate(
+                            localization
+                                .translate(
                               'login',
                             ),
-                            style:
-                            AppTextStyles.labelMedium
+                            style: AppTextStyles
+                                .labelMedium
                                 .copyWith(
-                              color:
-                              AppColors.navyPrimary,
+                              color: AppColors
+                                  .navyPrimary,
                               fontWeight:
                               FontWeight.w700,
                             ),

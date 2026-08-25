@@ -13,10 +13,14 @@ class AppRouter {
 
   static const String login = '/login';
   static const String register = '/register';
-  static const String forgotPassword = '/forgot-password';
-  static const String verification = '/verification';
-  static const String resetPassword = '/reset-password';
-  static const String resetSuccess = '/reset-success';
+  static const String forgotPassword =
+      '/forgot-password';
+  static const String verification =
+      '/verification';
+  static const String resetPassword =
+      '/reset-password';
+  static const String resetSuccess =
+      '/reset-success';
 
   static const String terms = '/terms';
   static const String privacy = '/privacy';
@@ -42,27 +46,34 @@ class AppRouter {
       case forgotPassword:
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => const ForgotPasswordPage(),
+          builder: (_) =>
+          const ForgotPasswordPage(),
         );
 
       case verification:
-        final email = settings.arguments as String?;
+        final args =
+        settings.arguments
+        as VerificationPageArgs;
 
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => VerificationPage(
-            email: email ?? '',
-          ),
+          builder: (_) =>
+              VerificationPage(
+                args: args,
+              ),
         );
 
       case resetPassword:
-        final email = settings.arguments as String?;
+        final args =
+        settings.arguments
+        as ResetPasswordArgs;
 
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => ResetPasswordPage(
-            email: email ?? '',
-          ),
+          builder: (_) =>
+              ResetPasswordPage(
+                args: args,
+              ),
         );
 
       case resetSuccess:
@@ -93,7 +104,9 @@ class AppRouter {
           settings: settings,
           builder: (_) => const Scaffold(
             body: Center(
-              child: Text('Page not found'),
+              child: Text(
+                'Page not found',
+              ),
             ),
           ),
         );

@@ -1,15 +1,17 @@
 class User {
   const User({
-    required this.id,
-    required this.email,
+    this.id,
     this.firstName,
     this.lastName,
-    this.profileImage,
+    this.email,
+    this.phone,
+    this.roleSlug,
   });
 
-  final String id;
-  final String email;
+  final int? id;
   final String? firstName;
   final String? lastName;
-  final String? profileImage;
+  final String? email;
+  final String? phone;
+  final String? roleSlug;
 }

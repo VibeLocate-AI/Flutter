@@ -10,11 +10,9 @@ class ApiEndpoints {
   static const String resendOtp = '/api/resend-otp';
   static const String login = '/api/login';
 
-  // Tokens & Sessions
-  static const String refreshToken =
-      '/api/refresh-token';
-  static const String rememberMe =
-      '/api/remember-me';
+  // Tokens & Session
+  static const String refreshToken = '/api/refresh-token';
+  static const String rememberMe = '/api/remember-me';
   static const String logout = '/api/logout';
 
   // Password Management
@@ -24,8 +22,6 @@ class ApiEndpoints {
       '/api/verify-reset-otp';
   static const String resetPassword =
       '/api/reset-password';
-  static const String changePassword =
-      '/api/change-password';
 
   // Profile
   static const String profile = '/api/profile';
@@ -36,6 +32,5 @@ class ApiEndpoints {
   static const String sessions = '/api/sessions';
 
   // Two Factor Authentication
-  static const String twoFactor =
-      '/api/two-factor';
+  static const String twoFactor = '/api/two-factor';
 }

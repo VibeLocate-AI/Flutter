@@ -48,12 +48,10 @@ class TokenStorage {
     );
   }
 
-  static Future<void> saveUserId(
-      int userId,
-      ) async {
+  static Future<void> saveUserId(int id) async {
     await _storage.write(
       key: _userIdKey,
-      value: userId.toString(),
+      value: id.toString(),
     );
   }
 
@@ -85,11 +83,11 @@ class TokenStorage {
   }
 
   static Future<void> saveDeviceUuid(
-      String deviceUuid,
+      String uuid,
       ) async {
     await _storage.write(
       key: _deviceUuidKey,
-      value: deviceUuid,
+      value: uuid,
     );
   }
 
@@ -109,13 +107,7 @@ class TokenStorage {
     );
   }
 
-  static Future<void> clearAll() async {
-    await _storage.deleteAll();
-  }
-
-  static Future<bool> hasAccessToken() async {
-    final token = await getAccessToken();
-
-    return token != null && token.isNotEmpty;
+  static Future<void> clearAll() {
+    return _storage.deleteAll();
   }
 }

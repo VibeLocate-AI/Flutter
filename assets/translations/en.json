@@ -110,5 +110,25 @@
 
   "reset_password_success_title": "Reset Password Successfully",
   "reset_password_success_subtitle": "Your password has been reset successfully. You can now log in with your new password.",
-  "go_to_login": "Log in"
+  "go_to_login": "Log in",
+
+  "generic_api_error": "Something went wrong. Please try again.",
+  "login_success": "Login successful.",
+  "email_verified_success": "Email verified successfully.",
+
+  "complete_required_fields": "Please complete all required fields."
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }

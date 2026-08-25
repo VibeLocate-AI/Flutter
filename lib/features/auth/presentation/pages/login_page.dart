@@ -1,13 +1,18 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../app/app_router.dart';
+import '../../../../core/errors/exceptions.dart';
 import '../../../../core/localization/localization.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/device_identity.dart';
+import '../../auth_dependencies.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/legal_agreement_text.dart';
 import '../widgets/social_login_button.dart';
+import 'verification_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -27,6 +32,7 @@ class _LoginPageState extends State<LoginPage> {
   TextEditingController();
 
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -35,24 +41,161 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _login() {
+  Future<void> _handleUnverifiedEmail() async {
+    final localization =
+    AppLocalization.of(context);
+
+    final email =
+    _emailController.text.trim();
+
+    try {
+      await AuthDependencies.resendVerification(
+        email: email,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.pushNamed(
+        context,
+        AppRouter.verification,
+        arguments: VerificationPageArgs(
+          email: email,
+          purpose:
+          VerificationPurpose.emailVerification,
+        ),
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            localization.translate(
+              'verification_code_resent',
+            ),
+          ),
+        ),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            localization.translate(
+              'generic_api_error',
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _login() async {
     FocusScope.of(context).unfocus();
+
+    final localization =
+    AppLocalization.of(context);
 
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          AppLocalization.of(context).translate(
-            'login_success_demo',
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final deviceUuid =
+      await DeviceIdentity.getDeviceUuid();
+
+      final deviceType =
+      defaultTargetPlatform ==
+          TargetPlatform.iOS
+          ? 'ios'
+          : 'android';
+
+      await AuthDependencies.login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        rememberMe: false,
+        deviceUuid: deviceUuid,
+        deviceType: deviceType,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            localization.translate(
+              'login_success',
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    // API + Login UseCase سيتم ربطهم لاحقًا.
+      // لاحقًا ننقل المستخدم للـ Home.
+    } on ApiException catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      final message =
+      e.message.trim().toLowerCase();
+
+      final isEmailNotVerified =
+          message ==
+              'please verify your email first' ||
+              message.contains(
+                'verify your email',
+              );
+
+      if (isEmailNotVerified) {
+        await _handleUnverifiedEmail();
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            localization.translate(
+              'generic_api_error',
+            ),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   void _continueWithGoogle() {
@@ -69,7 +212,8 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final localization = AppLocalization.of(context);
+    final localization =
+    AppLocalization.of(context);
 
     final size = MediaQuery.sizeOf(context);
     final width = size.width;
@@ -83,13 +227,16 @@ class _LoginPageState extends State<LoginPage> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
+            physics:
+            const BouncingScrollPhysics(),
             padding: EdgeInsets.symmetric(
               horizontal: horizontalPadding,
-              vertical: height < 700 ? 20 : 32,
+              vertical:
+              height < 700 ? 20 : 32,
             ),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
+              constraints:
+              const BoxConstraints(
                 maxWidth: 430,
               ),
               child: Form(
@@ -99,10 +246,12 @@ class _LoginPageState extends State<LoginPage> {
                   CrossAxisAlignment.stretch,
                   children: [
                     AuthHeader(
-                      title: localization.translate(
+                      title:
+                      localization.translate(
                         'welcome_back',
                       ),
-                      subtitle: localization.translate(
+                      subtitle:
+                      localization.translate(
                         'login_subtitle',
                       ),
                     ),
@@ -110,11 +259,14 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 36),
 
                     AuthTextField(
-                      controller: _emailController,
-                      label: localization.translate(
+                      controller:
+                      _emailController,
+                      label:
+                      localization.translate(
                         'email',
                       ),
-                      hint: localization.translate(
+                      hint:
+                      localization.translate(
                         'email_hint',
                       ),
                       prefixIcon:
@@ -126,19 +278,23 @@ class _LoginPageState extends State<LoginPage> {
                       validator: (value) {
                         if (value == null ||
                             value.trim().isEmpty) {
-                          return localization.translate(
+                          return localization
+                              .translate(
                             'email_required',
                           );
                         }
 
-                        final emailRegex = RegExp(
+                        final emailRegex =
+                        RegExp(
                           r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
                         );
 
-                        if (!emailRegex.hasMatch(
+                        if (!emailRegex
+                            .hasMatch(
                           value.trim(),
                         )) {
-                          return localization.translate(
+                          return localization
+                              .translate(
                             'email_invalid',
                           );
                         }
@@ -150,11 +306,14 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 20),
 
                     AuthTextField(
-                      controller: _passwordController,
-                      label: localization.translate(
+                      controller:
+                      _passwordController,
+                      label:
+                      localization.translate(
                         'password',
                       ),
-                      hint: localization.translate(
+                      hint:
+                      localization.translate(
                         'password_hint',
                       ),
                       prefixIcon:
@@ -173,13 +332,15 @@ class _LoginPageState extends State<LoginPage> {
                       validator: (value) {
                         if (value == null ||
                             value.isEmpty) {
-                          return localization.translate(
+                          return localization
+                              .translate(
                             'password_required',
                           );
                         }
 
                         if (value.length < 6) {
-                          return localization.translate(
+                          return localization
+                              .translate(
                             'password_min',
                           );
                         }
@@ -193,30 +354,36 @@ class _LoginPageState extends State<LoginPage> {
 
                     Align(
                       alignment:
-                      AlignmentDirectional.centerEnd,
+                      AlignmentDirectional
+                          .centerEnd,
                       child: TextButton(
                         onPressed: () {
                           Navigator.pushNamed(
                             context,
-                            AppRouter.forgotPassword,
+                            AppRouter
+                                .forgotPassword,
                           );
                         },
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          minimumSize: Size.zero,
+                        style:
+                        TextButton.styleFrom(
+                          padding:
+                          EdgeInsets.zero,
+                          minimumSize:
+                          Size.zero,
                           tapTargetSize:
                           MaterialTapTargetSize
                               .shrinkWrap,
                         ),
                         child: Text(
-                          localization.translate(
+                          localization
+                              .translate(
                             'forgot_password',
                           ),
-                          style:
-                          AppTextStyles.labelMedium
+                          style: AppTextStyles
+                              .labelMedium
                               .copyWith(
-                            color:
-                            AppColors.blueAccent,
+                            color: AppColors
+                                .blueAccent,
                             fontWeight:
                             FontWeight.w600,
                           ),
@@ -229,9 +396,22 @@ class _LoginPageState extends State<LoginPage> {
                     SizedBox(
                       height: 52,
                       child: ElevatedButton(
-                        onPressed: _login,
-                        child: Text(
-                          localization.translate(
+                        onPressed:
+                        _isLoading
+                            ? null
+                            : _login,
+                        child: _isLoading
+                            ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child:
+                          CircularProgressIndicator(
+                            strokeWidth: 2,
+                          ),
+                        )
+                            : Text(
+                          localization
+                              .translate(
                             'login',
                           ),
                         ),
@@ -244,29 +424,34 @@ class _LoginPageState extends State<LoginPage> {
                       children: [
                         const Expanded(
                           child: Divider(
-                            color:
-                            AppColors.grayBorderLight,
+                            color: AppColors
+                                .grayBorderLight,
                           ),
                         ),
                         Padding(
                           padding:
-                          const EdgeInsets.symmetric(
+                          const EdgeInsets
+                              .symmetric(
                             horizontal: 14,
                           ),
                           child: Text(
-                            localization.translate('or'),
+                            localization
+                                .translate(
+                              'or',
+                            ),
                             style:
-                            AppTextStyles.labelSmall
+                            AppTextStyles
+                                .labelSmall
                                 .copyWith(
-                              color:
-                              AppColors.grayTextMuted,
+                              color: AppColors
+                                  .grayTextMuted,
                             ),
                           ),
                         ),
                         const Expanded(
                           child: Divider(
-                            color:
-                            AppColors.grayBorderLight,
+                            color: AppColors
+                                .grayBorderLight,
                           ),
                         ),
                       ],
@@ -275,7 +460,9 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 20),
 
                     SocialLoginButton(
-                      label: localization.translate(
+                      label:
+                      localization
+                          .translate(
                         'continue_with_google',
                       ),
                       onPressed:
@@ -290,14 +477,16 @@ class _LoginPageState extends State<LoginPage> {
                       children: [
                         Flexible(
                           child: Text(
-                            localization.translate(
+                            localization
+                                .translate(
                               'dont_have_account',
                             ),
                             style:
-                            AppTextStyles.bodySmall
+                            AppTextStyles
+                                .bodySmall
                                 .copyWith(
-                              color:
-                              AppColors.grayTextSub,
+                              color: AppColors
+                                  .grayTextSub,
                             ),
                             textAlign:
                             TextAlign.center,
@@ -307,18 +496,21 @@ class _LoginPageState extends State<LoginPage> {
                           onPressed: () {
                             Navigator.pushNamed(
                               context,
-                              AppRouter.register,
+                              AppRouter
+                                  .register,
                             );
                           },
                           child: Text(
-                            localization.translate(
+                            localization
+                                .translate(
                               'sign_up',
                             ),
                             style:
-                            AppTextStyles.labelMedium
+                            AppTextStyles
+                                .labelMedium
                                 .copyWith(
-                              color:
-                              AppColors.navyPrimary,
+                              color: AppColors
+                                  .navyPrimary,
                               fontWeight:
                               FontWeight.w700,
                             ),
@@ -329,7 +521,7 @@ class _LoginPageState extends State<LoginPage> {
 
                     const SizedBox(height: 10),
 
-                    LegalAgreementText(
+                    const LegalAgreementText(
                       centered: true,
                     ),
                   ],

@@ -1,14 +1,14 @@
 import '../repositories/auth_repository.dart';
 
 class ForgotPassword {
-  const ForgotPassword(this._repository);
+  const ForgotPassword(this.repository);
 
-  final AuthRepository _repository;
+  final AuthRepository repository;
 
   Future<void> call({
     required String email,
   }) {
-    return _repository.forgotPassword(
+    return repository.forgotPassword(
       email: email,
     );
   }

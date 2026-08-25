@@ -1,11 +1,11 @@
 import '../repositories/auth_repository.dart';
 
 class Logout {
-  const Logout(this._repository);
+  const Logout(this.repository);
 
-  final AuthRepository _repository;
+  final AuthRepository repository;
 
   Future<void> call() {
-    return _repository.logout();
+    return repository.logout();
   }
 }

@@ -2,43 +2,37 @@ class ApiException implements Exception {
   const ApiException(
       this.message, {
         this.statusCode,
+        this.errors,
       });
 
   final String message;
   final int? statusCode;
+  final dynamic errors;
 
   @override
   String toString() => message;
 }
 
-class NetworkException implements Exception {
-  const NetworkException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => message;
+class NetworkException extends ApiException {
+  const NetworkException(
+      super.message,
+      );
 }
 
-class UnauthorizedException
-    extends ApiException {
+class UnauthorizedException extends ApiException {
   const UnauthorizedException(
       super.message,
       );
 }
 
-class ValidationException
-    extends ApiException {
+class ValidationException extends ApiException {
   const ValidationException(
       super.message, {
-        this.errors,
+        super.errors,
       });
-
-  final dynamic errors;
 }
 
-class ServerException
-    extends ApiException {
+class ServerException extends ApiException {
   const ServerException(
       super.message, {
         super.statusCode,

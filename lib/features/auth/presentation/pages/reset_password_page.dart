@@ -1,18 +1,30 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/app_router.dart';
+import '../../../../core/errors/exceptions.dart';
 import '../../../../core/localization/localization.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
+import '../../auth_dependencies.dart';
+import '../widgets/auth_header.dart';
 import '../widgets/auth_text_field.dart';
+
+class ResetPasswordArgs {
+  const ResetPasswordArgs({
+    required this.email,
+    required this.token,
+  });
+
+  final String email;
+  final String token;
+}
 
 class ResetPasswordPage extends StatefulWidget {
   const ResetPasswordPage({
     super.key,
-    required this.email,
+    required this.args,
   });
 
-  final String email;
+  final ResetPasswordArgs args;
 
   @override
   State<ResetPasswordPage> createState() =>
@@ -24,7 +36,8 @@ class _ResetPasswordPageState
   final GlobalKey<FormState> _formKey =
   GlobalKey<FormState>();
 
-  final TextEditingController _passwordController =
+  final TextEditingController
+  _passwordController =
   TextEditingController();
 
   final TextEditingController
@@ -33,6 +46,7 @@ class _ResetPasswordPageState
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -79,26 +93,78 @@ class _ResetPasswordPageState
     return null;
   }
 
-  void _resetPassword() {
+  Future<void> _resetPassword() async {
     FocusScope.of(context).unfocus();
+
+    final localization =
+    AppLocalization.of(context);
 
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    Navigator.pushReplacementNamed(
-      context,
-      AppRouter.resetSuccess,
-    );
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await AuthDependencies.resetPassword(
+        email: widget.args.email,
+        token: widget.args.token,
+        newPassword:
+        _passwordController.text,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.pushReplacementNamed(
+        context,
+        AppRouter.resetSuccess,
+      );
+    } on ApiException catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        SnackBar(
+          content: Text(
+            localization.translate(
+              'generic_api_error',
+            ),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final localization = AppLocalization.of(context);
+    final localization =
+    AppLocalization.of(context);
 
-    final size = MediaQuery.sizeOf(context);
-    final width = size.width;
-    final height = size.height;
+    final width =
+        MediaQuery.sizeOf(context).width;
 
     final horizontalPadding =
     width < 360 ? 20.0 : 24.0;
@@ -107,14 +173,14 @@ class _ResetPasswordPageState
       backgroundColor: AppColors.grayBg,
       body: SafeArea(
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
           padding: EdgeInsets.symmetric(
             horizontal: horizontalPadding,
-            vertical: height < 700 ? 20 : 32,
+            vertical: 30,
           ),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
+              constraints:
+              const BoxConstraints(
                 maxWidth: 430,
               ),
               child: Form(
@@ -123,54 +189,47 @@ class _ResetPasswordPageState
                   crossAxisAlignment:
                   CrossAxisAlignment.stretch,
                   children: [
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 18),
 
-                    Text(
+                    AuthHeader(
+                      title:
                       localization.translate(
                         'reset_password_title',
                       ),
-                      textAlign: TextAlign.center,
-                      style:
-                      AppTextStyles.headingLarge.copyWith(
-                        color: AppColors.navyDark,
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    Text(
+                      subtitle:
                       localization.translate(
                         'reset_password_subtitle',
                       ),
-                      textAlign: TextAlign.center,
-                      style:
-                      AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.grayTextSub,
-                        height: 1.5,
-                      ),
                     ),
 
-                    if (widget.email.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        widget.email,
-                        textAlign: TextAlign.center,
-                        style:
-                        AppTextStyles.labelMedium.copyWith(
-                          color: AppColors.navyPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
+                    const SizedBox(height: 8),
+
+                    Text(
+                      widget.args.email,
+                      textAlign:
+                      TextAlign.center,
+                      style: Theme.of(context)
+                          .textTheme
+                          .labelMedium
+                          ?.copyWith(
+                        color:
+                        AppColors.navyPrimary,
+                        fontWeight:
+                        FontWeight.w700,
                       ),
-                    ],
+                    ),
 
                     const SizedBox(height: 40),
 
                     AuthTextField(
-                      controller: _passwordController,
-                      label: localization.translate(
+                      controller:
+                      _passwordController,
+                      label:
+                      localization.translate(
                         'password',
                       ),
-                      hint: localization.translate(
+                      hint:
+                      localization.translate(
                         'new_password_hint',
                       ),
                       prefixIcon:
@@ -186,7 +245,8 @@ class _ResetPasswordPageState
                       },
                       textInputAction:
                       TextInputAction.next,
-                      validator: (value) =>
+                      validator:
+                          (value) =>
                           _passwordValidator(
                             value,
                             localization,
@@ -198,10 +258,12 @@ class _ResetPasswordPageState
                     AuthTextField(
                       controller:
                       _confirmPasswordController,
-                      label: localization.translate(
+                      label:
+                      localization.translate(
                         'confirm_password',
                       ),
-                      hint: localization.translate(
+                      hint:
+                      localization.translate(
                         'confirm_password_hint',
                       ),
                       prefixIcon:
@@ -217,7 +279,8 @@ class _ResetPasswordPageState
                       },
                       textInputAction:
                       TextInputAction.done,
-                      validator: (value) =>
+                      validator:
+                          (value) =>
                           _confirmPasswordValidator(
                             value,
                             localization,
@@ -229,12 +292,24 @@ class _ResetPasswordPageState
                     const SizedBox(height: 28),
 
                     SizedBox(
-                      width: double.infinity,
                       height: 52,
                       child: ElevatedButton(
-                        onPressed: _resetPassword,
-                        child: Text(
-                          localization.translate(
+                        onPressed:
+                        _isLoading
+                            ? null
+                            : _resetPassword,
+                        child: _isLoading
+                            ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child:
+                          CircularProgressIndicator(
+                            strokeWidth: 2,
+                          ),
+                        )
+                            : Text(
+                          localization
+                              .translate(
                             'reset_password_button',
                           ),
                         ),
