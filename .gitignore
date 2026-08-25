@@ -43,3 +43,30 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+
+# Environment & Secrets
+
+.env
+.env.*
+!.env.example
+
+# API / credentials / secrets
+secrets.json
+credentials.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+key.properties
+
+# Postman environments
+*.postman_environment.json
+
+# Android local configuration
+/android/local.properties
+
+# Firebase / service account credentials
+google-services.json
+GoogleService-Info.plist
