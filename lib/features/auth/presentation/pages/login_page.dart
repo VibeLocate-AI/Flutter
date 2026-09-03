@@ -86,7 +86,15 @@ class _LoginPageState extends State<LoginPage> {
           content: Text(e.message),
         ),
       );
-    } catch (_) {
+    } catch (e, stackTrace) {
+      debugPrint(
+        'RESEND OTP ERROR: $e',
+      );
+
+      debugPrint(
+        'RESEND OTP STACK TRACE: $stackTrace',
+      );
+
       if (!mounted) {
         return;
       }
@@ -94,10 +102,10 @@ class _LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            localization.translate(
-              'generic_api_error',
-            ),
+            'Resend OTP Error: $e',
           ),
+          duration:
+          const Duration(seconds: 6),
         ),
       );
     }
@@ -128,8 +136,10 @@ class _LoginPageState extends State<LoginPage> {
           : 'android';
 
       await AuthDependencies.login(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
+        email:
+        _emailController.text.trim(),
+        password:
+        _passwordController.text,
         rememberMe: false,
         deviceUuid: deviceUuid,
         deviceType: deviceType,
@@ -139,17 +149,11 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            localization.translate(
-              'login_success',
-            ),
-          ),
-        ),
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRouter.home,
+            (route) => false,
       );
-
-      // لاحقًا ننقل المستخدم للـ Home.
     } on ApiException catch (e) {
       if (!mounted) {
         return;
@@ -175,7 +179,15 @@ class _LoginPageState extends State<LoginPage> {
           content: Text(e.message),
         ),
       );
-    } catch (_) {
+    } catch (e, stackTrace) {
+      debugPrint(
+        'EMAIL LOGIN ERROR: $e',
+      );
+
+      debugPrint(
+        'EMAIL LOGIN STACK TRACE: $stackTrace',
+      );
+
       if (!mounted) {
         return;
       }
@@ -183,10 +195,10 @@ class _LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            localization.translate(
-              'generic_api_error',
-            ),
+            'Login Error: $e',
           ),
+          duration:
+          const Duration(seconds: 6),
         ),
       );
     } finally {
@@ -198,16 +210,84 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void _continueWithGoogle() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          AppLocalization.of(context).translate(
-            'google_login_demo',
+  Future<void> _continueWithGoogle() async {
+    if (_isLoading) {
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      debugPrint(
+        'GOOGLE LOGIN: Starting Google Sign-In...',
+      );
+
+      await AuthDependencies.loginWithGoogle();
+
+      debugPrint(
+        'GOOGLE LOGIN: Laravel login successful.',
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRouter.home,
+            (route) => false,
+      );
+    } on ApiException catch (e) {
+      debugPrint(
+        'GOOGLE LOGIN API ERROR: ${e.message}',
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Google API Error: ${e.message}',
           ),
+          duration:
+          const Duration(seconds: 8),
         ),
-      ),
-    );
+      );
+    } catch (e, stackTrace) {
+      debugPrint(
+        'GOOGLE LOGIN ERROR: $e',
+      );
+
+      debugPrint(
+        'GOOGLE LOGIN STACK TRACE: $stackTrace',
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Google Login Error: $e',
+          ),
+          duration:
+          const Duration(seconds: 8),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -215,7 +295,9 @@ class _LoginPageState extends State<LoginPage> {
     final localization =
     AppLocalization.of(context);
 
-    final size = MediaQuery.sizeOf(context);
+    final size =
+    MediaQuery.sizeOf(context);
+
     final width = size.width;
     final height = size.height;
 
@@ -223,14 +305,16 @@ class _LoginPageState extends State<LoginPage> {
     width < 360 ? 20.0 : 24.0;
 
     return Scaffold(
-      backgroundColor: AppColors.grayBg,
+      backgroundColor:
+      AppColors.grayBg,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             physics:
             const BouncingScrollPhysics(),
             padding: EdgeInsets.symmetric(
-              horizontal: horizontalPadding,
+              horizontal:
+              horizontalPadding,
               vertical:
               height < 700 ? 20 : 32,
             ),
@@ -256,7 +340,9 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
 
-                    const SizedBox(height: 36),
+                    const SizedBox(
+                      height: 36,
+                    ),
 
                     AuthTextField(
                       controller:
@@ -272,12 +358,15 @@ class _LoginPageState extends State<LoginPage> {
                       prefixIcon:
                       Icons.email_outlined,
                       keyboardType:
-                      TextInputType.emailAddress,
+                      TextInputType
+                          .emailAddress,
                       textInputAction:
                       TextInputAction.next,
                       validator: (value) {
                         if (value == null ||
-                            value.trim().isEmpty) {
+                            value
+                                .trim()
+                                .isEmpty) {
                           return localization
                               .translate(
                             'email_required',
@@ -303,7 +392,9 @@ class _LoginPageState extends State<LoginPage> {
                       },
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(
+                      height: 20,
+                    ),
 
                     AuthTextField(
                       controller:
@@ -347,10 +438,13 @@ class _LoginPageState extends State<LoginPage> {
 
                         return null;
                       },
-                      onSubmitted: (_) => _login(),
+                      onSubmitted: (_) =>
+                          _login(),
                     ),
 
-                    const SizedBox(height: 12),
+                    const SizedBox(
+                      height: 12,
+                    ),
 
                     Align(
                       alignment:
@@ -375,8 +469,7 @@ class _LoginPageState extends State<LoginPage> {
                               .shrinkWrap,
                         ),
                         child: Text(
-                          localization
-                              .translate(
+                          localization.translate(
                             'forgot_password',
                           ),
                           style: AppTextStyles
@@ -391,22 +484,27 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(
+                      height: 24,
+                    ),
 
                     SizedBox(
                       height: 52,
-                      child: ElevatedButton(
+                      child:
+                      ElevatedButton(
                         onPressed:
                         _isLoading
                             ? null
                             : _login,
-                        child: _isLoading
+                        child:
+                        _isLoading
                             ? const SizedBox(
                           width: 22,
                           height: 22,
                           child:
                           CircularProgressIndicator(
-                            strokeWidth: 2,
+                            strokeWidth:
+                            2,
                           ),
                         )
                             : Text(
@@ -418,7 +516,9 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
 
-                    const SizedBox(height: 28),
+                    const SizedBox(
+                      height: 28,
+                    ),
 
                     Row(
                       children: [
@@ -428,6 +528,7 @@ class _LoginPageState extends State<LoginPage> {
                                 .grayBorderLight,
                           ),
                         ),
+
                         Padding(
                           padding:
                           const EdgeInsets
@@ -435,12 +536,10 @@ class _LoginPageState extends State<LoginPage> {
                             horizontal: 14,
                           ),
                           child: Text(
-                            localization
-                                .translate(
+                            localization.translate(
                               'or',
                             ),
-                            style:
-                            AppTextStyles
+                            style: AppTextStyles
                                 .labelSmall
                                 .copyWith(
                               color: AppColors
@@ -448,6 +547,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
                         ),
+
                         const Expanded(
                           child: Divider(
                             color: AppColors
@@ -457,32 +557,34 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(
+                      height: 20,
+                    ),
 
                     SocialLoginButton(
                       label:
-                      localization
-                          .translate(
+                      localization.translate(
                         'continue_with_google',
                       ),
                       onPressed:
                       _continueWithGoogle,
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(
+                      height: 24,
+                    ),
 
                     Row(
                       mainAxisAlignment:
-                      MainAxisAlignment.center,
+                      MainAxisAlignment
+                          .center,
                       children: [
                         Flexible(
                           child: Text(
-                            localization
-                                .translate(
+                            localization.translate(
                               'dont_have_account',
                             ),
-                            style:
-                            AppTextStyles
+                            style: AppTextStyles
                                 .bodySmall
                                 .copyWith(
                               color: AppColors
@@ -492,21 +594,19 @@ class _LoginPageState extends State<LoginPage> {
                             TextAlign.center,
                           ),
                         ),
+
                         TextButton(
                           onPressed: () {
                             Navigator.pushNamed(
                               context,
-                              AppRouter
-                                  .register,
+                              AppRouter.register,
                             );
                           },
                           child: Text(
-                            localization
-                                .translate(
+                            localization.translate(
                               'sign_up',
                             ),
-                            style:
-                            AppTextStyles
+                            style: AppTextStyles
                                 .labelMedium
                                 .copyWith(
                               color: AppColors
@@ -519,7 +619,9 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
 
-                    const SizedBox(height: 10),
+                    const SizedBox(
+                      height: 10,
+                    ),
 
                     const LegalAgreementText(
                       centered: true,

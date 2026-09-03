@@ -33,6 +33,12 @@ abstract class AuthRepository {
     required String deviceType,
   });
 
+  Future<AuthTokens> loginWithGoogle({
+    required String idToken,
+    required String deviceUuid,
+    required String deviceType,
+  });
+
   Future<void> forgotPassword({
     required String email,
   });

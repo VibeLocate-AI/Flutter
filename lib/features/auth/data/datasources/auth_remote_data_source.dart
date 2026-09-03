@@ -27,6 +27,12 @@ abstract class AuthRemoteDataSource {
       LoginRequestModel request,
       );
 
+  Future<LoginResponseModel> loginWithGoogle({
+    required String idToken,
+    required String deviceUuid,
+    required String deviceType,
+  });
+
   Future<void> forgotPassword({
     required String email,
   });
@@ -124,10 +130,8 @@ class AuthRemoteDataSourceImpl
     LoginResponseModel.fromJson(response);
 
     await TokenStorage.saveTokens(
-      accessToken:
-      result.tokens.accessToken,
-      refreshToken:
-      result.tokens.refreshToken,
+      accessToken: result.tokens.accessToken,
+      refreshToken: result.tokens.refreshToken,
     );
 
     await TokenStorage.saveEmail(
@@ -137,6 +141,47 @@ class AuthRemoteDataSourceImpl
     if (result.user?.id != null) {
       await TokenStorage.saveUserId(
         result.user!.id!,
+      );
+    }
+
+    return result;
+  }
+
+  @override
+  Future<LoginResponseModel> loginWithGoogle({
+    required String idToken,
+    required String deviceUuid,
+    required String deviceType,
+  }) async {
+    final response = await ApiClient.post(
+      ApiEndpoints.googleLogin,
+      body: {
+        'id_token': idToken,
+        'device_uuid': deviceUuid,
+        'device_type': deviceType,
+      },
+    );
+
+    final result =
+    LoginResponseModel.fromJson(response);
+
+    await TokenStorage.saveTokens(
+      accessToken: result.tokens.accessToken,
+      refreshToken: result.tokens.refreshToken,
+    );
+
+    final user = result.user;
+
+    if (user?.email != null &&
+        user!.email!.isNotEmpty) {
+      await TokenStorage.saveEmail(
+        user.email!,
+      );
+    }
+
+    if (user?.id != null) {
+      await TokenStorage.saveUserId(
+        user!.id!,
       );
     }
 

@@ -41,6 +41,8 @@ dependencies:
   http: ^1.6.0
   flutter_secure_storage: ^11.0.0
   uuid: ^4.6.0
+  shared_preferences: ^2.5.5
+  google_sign_in: ^7.2.0
 
 dev_dependencies:
   flutter_test:
@@ -72,9 +74,10 @@ flutter:
         - asset: assets/fonts/PlusJakartaSans/PlusJakartaSans-Bold.ttf
           weight: 700
 
+
 flutter_native_splash:
   color: "#0F2F79"
-  image: assets/branding/splash_logo.png
+  image: assets/branding/a.png
 
   android: true
   ios: true
@@ -83,13 +86,13 @@ flutter_native_splash:
 
   android_12:
     color: "#0F2F79"
-    image: assets/branding/splash_android12.png
-    icon_background_color: "#0F2F79"
+    image: assets/branding/a.png
+
 
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: assets/icon/app_icon.png
+  image_path: "assets/icon/app_icon2.png"
 
   adaptive_icon_background: "#0F2F79"
-  adaptive_icon_foreground: assets/icon/app_icon_foreground.png
+  adaptive_icon_foreground: "assets/icon/app_icon2.png"

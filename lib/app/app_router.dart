@@ -7,22 +7,35 @@ import '../features/auth/presentation/pages/register_page.dart';
 import '../features/auth/presentation/pages/reset_password_page.dart';
 import '../features/auth/presentation/pages/reset_password_success_page.dart';
 import '../features/auth/presentation/pages/verification_page.dart';
+import '../features/home/presentation/pages/home_page.dart';
+import '../features/onboarding/presentation/pages/onboarding_page.dart';
+import 'startup_page.dart';
 
 class AppRouter {
   AppRouter._();
 
+  static const String startup = '/startup';
+
+  static const String onboarding = '/onboarding';
+
   static const String login = '/login';
+
   static const String register = '/register';
+
   static const String forgotPassword =
       '/forgot-password';
+
   static const String verification =
       '/verification';
+
   static const String resetPassword =
       '/reset-password';
+
   static const String resetSuccess =
       '/reset-success';
 
   static const String terms = '/terms';
+
   static const String privacy = '/privacy';
 
   static const String home = '/home';
@@ -31,6 +44,18 @@ class AppRouter {
       RouteSettings settings,
       ) {
     switch (settings.name) {
+      case startup:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const StartupPage(),
+        );
+
+      case onboarding:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const OnboardingPage(),
+        );
+
       case login:
         return MaterialPageRoute(
           settings: settings,
@@ -57,10 +82,9 @@ class AppRouter {
 
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) =>
-              VerificationPage(
-                args: args,
-              ),
+          builder: (_) => VerificationPage(
+            args: args,
+          ),
         );
 
       case resetPassword:
@@ -70,10 +94,9 @@ class AppRouter {
 
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) =>
-              ResetPasswordPage(
-                args: args,
-              ),
+          builder: (_) => ResetPasswordPage(
+            args: args,
+          ),
         );
 
       case resetSuccess:
@@ -97,6 +120,12 @@ class AppRouter {
           builder: (_) => const LegalPage(
             type: LegalPageType.privacy,
           ),
+        );
+
+      case home:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const HomePage(),
         );
 
       default:

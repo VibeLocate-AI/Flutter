@@ -4,8 +4,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../core/localization/localization.dart';
 import '../core/theme/app_theme.dart';
-import '../features/onboarding/presentation/pages/onboarding_page.dart';
 import 'app_router.dart';
+import 'startup_page.dart';
 
 class VibeLocateApp extends StatelessWidget {
   const VibeLocateApp({super.key});
@@ -18,8 +18,6 @@ class VibeLocateApp extends StatelessWidget {
       title: 'VibeLocate AI',
 
       theme: AppTheme.light(),
-
-      locale: const Locale('en'),
 
       supportedLocales: const [
         Locale('en'),
@@ -36,7 +34,7 @@ class VibeLocateApp extends StatelessWidget {
 
       onGenerateRoute: AppRouter.generateRoute,
 
-      home: const OnboardingPage(),
+      home: const StartupPage(),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/app_router.dart';
 import '../../../../core/localization/localization.dart';
+import '../../../../core/storage/onboarding_storage.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../widgets/onboarding_button.dart';
 import '../widgets/onboarding_content.dart';
@@ -47,7 +48,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
     _getStarted();
   }
 
-  void _getStarted() {
+  Future<void> _getStarted() async {
+    await OnboardingStorage.markAsSeen();
+
+    if (!mounted) {
+      return;
+    }
+
     Navigator.of(context).pushReplacementNamed(
       AppRouter.login,
     );
@@ -255,3 +262,5 @@ class _OnboardingView extends StatelessWidget {
     );
   }
 }
+
+

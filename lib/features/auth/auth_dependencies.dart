@@ -1,4 +1,8 @@
+import 'package:flutter/foundation.dart';
+
+import '../../core/utils/device_identity.dart';
 import 'data/datasources/auth_remote_data_source.dart';
+import 'data/datasources/google_auth_data_source.dart';
 import 'data/repositories/auth_repository_impl.dart';
 import 'domain/usecases/forgot_password.dart';
 import 'domain/usecases/login.dart';
@@ -15,12 +19,20 @@ class AuthDependencies {
   static final AuthRemoteDataSource remoteDataSource =
   AuthRemoteDataSourceImpl();
 
+  static final GoogleAuthDataSource googleAuthDataSource =
+  GoogleAuthDataSource(
+    serverClientId: const String.fromEnvironment(
+      'GOOGLE_SERVER_CLIENT_ID',
+    ),
+  );
+
   static final AuthRepositoryImpl repository =
   AuthRepositoryImpl(
     remoteDataSource: remoteDataSource,
   );
 
-  static final Login login = Login(repository);
+  static final Login login =
+  Login(repository);
 
   static final Register register =
   Register(repository);
@@ -42,4 +54,25 @@ class AuthDependencies {
 
   static final Logout logout =
   Logout(repository);
+
+  static Future<void> loginWithGoogle() async {
+    final idToken =
+    await googleAuthDataSource
+        .signInAndGetIdToken();
+
+    final deviceUuid =
+    await DeviceIdentity.getDeviceUuid();
+
+    final deviceType =
+    defaultTargetPlatform ==
+        TargetPlatform.iOS
+        ? 'ios'
+        : 'android';
+
+    await repository.loginWithGoogle(
+      idToken: idToken,
+      deviceUuid: deviceUuid,
+      deviceType: deviceType,
+    );
+  }
 }

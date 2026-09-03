@@ -33,4 +33,7 @@ class ApiEndpoints {
 
   // Two Factor Authentication
   static const String twoFactor = '/api/two-factor';
+
+  static const String googleLogin =
+      '/api/auth/google';
 }

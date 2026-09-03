@@ -48,6 +48,13 @@ class TokenStorage {
     );
   }
 
+  static Future<bool> hasAccessToken() async {
+    final token = await getAccessToken();
+
+    return token != null &&
+        token.isNotEmpty;
+  }
+
   static Future<void> saveUserId(int id) async {
     await _storage.write(
       key: _userIdKey,

@@ -92,6 +92,22 @@ class AuthRepositoryImpl
   }
 
   @override
+  Future<AuthTokens> loginWithGoogle({
+    required String idToken,
+    required String deviceUuid,
+    required String deviceType,
+  }) async {
+    final result =
+    await remoteDataSource.loginWithGoogle(
+      idToken: idToken,
+      deviceUuid: deviceUuid,
+      deviceType: deviceType,
+    );
+
+    return result.tokens;
+  }
+
+  @override
   Future<void> forgotPassword({
     required String email,
   }) {
