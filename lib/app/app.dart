@@ -19,6 +19,10 @@ class VibeLocateApp extends StatelessWidget {
 
       theme: AppTheme.light(),
 
+      darkTheme: AppTheme.dark(),
+
+      themeMode: ThemeMode.system,
+
       supportedLocales: const [
         Locale('en'),
         Locale('ar'),
@@ -32,7 +36,8 @@ class VibeLocateApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
 
-      onGenerateRoute: AppRouter.generateRoute,
+      onGenerateRoute:
+      AppRouter.generateRoute,
 
       home: const StartupPage(),
     );

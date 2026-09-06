@@ -15,8 +15,9 @@ class AuthHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
+    final colorScheme = Theme.of(context).colorScheme;
 
+    final width = MediaQuery.sizeOf(context).width;
     final logoSize = width < 360 ? 58.0 : 68.0;
 
     return Column(
@@ -24,15 +25,15 @@ class AuthHeader extends StatelessWidget {
         Container(
           width: logoSize,
           height: logoSize,
-         padding: const EdgeInsets.all(10),
-         decoration: BoxDecoration(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
             color: AppColors.navyPrimary,
             borderRadius: BorderRadius.circular(18),
           ),
           child: Image.asset(
-      'assets/icons/logo_without_background.png',
-      fit: BoxFit.contain,
-    ),
+            'assets/icons/logo_without_background.png',
+            fit: BoxFit.contain,
+          ),
         ),
 
         const SizedBox(height: 22),
@@ -41,7 +42,7 @@ class AuthHeader extends StatelessWidget {
           title,
           textAlign: TextAlign.center,
           style: AppTextStyles.headingLarge.copyWith(
-            color: AppColors.navyDark,
+            color: colorScheme.onSurface,
           ),
         ),
 
@@ -55,7 +56,7 @@ class AuthHeader extends StatelessWidget {
             subtitle,
             textAlign: TextAlign.center,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.grayTextSub,
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
         ),

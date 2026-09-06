@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/app_router.dart';
 import '../../../../core/localization/localization.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 
 class LegalAgreementText extends StatefulWidget {
@@ -59,11 +58,12 @@ class _LegalAgreementTextState
   @override
   Widget build(BuildContext context) {
     final localization = AppLocalization.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Text.rich(
       TextSpan(
         style: AppTextStyles.bodySmall.copyWith(
-          color: AppColors.grayTextSub,
+          color: colorScheme.onSurfaceVariant,
           fontSize: 11,
           height: 1.5,
         ),
@@ -73,39 +73,43 @@ class _LegalAgreementTextState
               'terms_agreement_start',
             ),
           ),
+
           TextSpan(
             text: localization.translate(
               'terms_of_service',
             ),
             recognizer: _termsRecognizer,
             style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.blueAccent,
+              color: colorScheme.primary,
               fontSize: 11,
               height: 1.5,
               fontWeight: FontWeight.w700,
               decoration: TextDecoration.underline,
-              decorationColor: AppColors.blueAccent,
+              decorationColor: colorScheme.primary,
             ),
           ),
+
           TextSpan(
             text: localization.translate(
               'terms_and',
             ),
           ),
+
           TextSpan(
             text: localization.translate(
               'privacy_policy',
             ),
             recognizer: _privacyRecognizer,
             style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.blueAccent,
+              color: colorScheme.primary,
               fontSize: 11,
               height: 1.5,
               fontWeight: FontWeight.w700,
               decoration: TextDecoration.underline,
-              decorationColor: AppColors.blueAccent,
+              decorationColor: colorScheme.primary,
             ),
           ),
+
           const TextSpan(
             text: '.',
           ),

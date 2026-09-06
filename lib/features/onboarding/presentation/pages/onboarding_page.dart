@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../../app/app_router.dart';
 import '../../../../core/localization/localization.dart';
 import '../../../../core/storage/onboarding_storage.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../widgets/onboarding_button.dart';
 import '../widgets/onboarding_content.dart';
 import '../widgets/onboarding_image.dart';
@@ -101,7 +100,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
     ];
 
     return Scaffold(
-      backgroundColor: AppColors.grayBg,
       body: SafeArea(
         child: PageView.builder(
           controller: _pageController,
@@ -222,10 +220,12 @@ class _OnboardingView extends StatelessWidget {
                 IconButton(
                   onPressed: onPrevious,
                   icon: const Icon(
-                    Icons.arrow_back,
+                    Icons.arrow_back_rounded,
                     size: 18,
                   ),
-                  color: AppColors.grayTextSub,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant,
                   tooltip: localization.translate('back'),
                 )
               else
@@ -262,5 +262,3 @@ class _OnboardingView extends StatelessWidget {
     );
   }
 }
-
-

@@ -5,8 +5,6 @@ import 'package:flutter/services.dart';
 import '../../../../app/app_router.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/localization/localization.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/device_identity.dart';
 import '../../auth_dependencies.dart';
 import '../widgets/auth_header.dart';
@@ -44,7 +42,8 @@ class _VerificationPageState
     extends State<VerificationPage> {
   static const int _otpLength = 6;
 
-  final List<TextEditingController> _controllers =
+  final List<TextEditingController>
+  _controllers =
   List.generate(
     _otpLength,
         (_) => TextEditingController(),
@@ -64,15 +63,18 @@ class _VerificationPageState
     super.initState();
 
     for (final controller in _controllers) {
-      controller.addListener(_onControllerChanged);
+      controller.addListener(
+        _onControllerChanged,
+      );
     }
   }
 
   @override
   void dispose() {
     for (final controller in _controllers) {
-      controller
-          .removeListener(_onControllerChanged);
+      controller.removeListener(
+        _onControllerChanged,
+      );
       controller.dispose();
     }
 
@@ -103,7 +105,6 @@ class _VerificationPageState
       String value,
       int index,
       ) {
-    // Handle pasting multiple digits.
     if (value.length > 1) {
       final digitsOnly =
       value.replaceAll(RegExp(r'\D'), '');
@@ -138,20 +139,19 @@ class _VerificationPageState
       if (remaining.length >= _otpLength) {
         FocusScope.of(context).unfocus();
       } else {
-        _focusNodes[targetIndex].requestFocus();
+        _focusNodes[targetIndex]
+            .requestFocus();
       }
 
       setState(() {});
       return;
     }
 
-    // Move to the next box automatically.
     if (value.isNotEmpty &&
         index < _otpLength - 1) {
       _focusNodes[index + 1].requestFocus();
     }
 
-    // Unfocus after entering the sixth digit.
     if (value.isNotEmpty &&
         index == _otpLength - 1) {
       FocusScope.of(context).unfocus();
@@ -170,7 +170,9 @@ class _VerificationPageState
       if (_controllers[index].text.isEmpty &&
           index > 0) {
         _controllers[index - 1].clear();
-        _focusNodes[index - 1].requestFocus();
+
+        _focusNodes[index - 1]
+            .requestFocus();
 
         setState(() {});
 
@@ -186,7 +188,8 @@ class _VerificationPageState
     AppLocalization.of(context);
 
     if (!_isCodeComplete) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         SnackBar(
           content: Text(
             localization.translate(
@@ -204,7 +207,8 @@ class _VerificationPageState
 
     try {
       if (widget.args.purpose ==
-          VerificationPurpose.emailVerification) {
+          VerificationPurpose
+              .emailVerification) {
         final deviceUuid =
         await DeviceIdentity.getDeviceUuid();
 
@@ -318,7 +322,6 @@ class _VerificationPageState
         email: widget.args.email,
       );
 
-      // Clear old OTP after successful resend.
       for (final controller in _controllers) {
         controller.clear();
       }
@@ -380,12 +383,16 @@ class _VerificationPageState
       int index,
       double width,
       ) {
+    final colorScheme =
+        Theme.of(context).colorScheme;
+
     final fieldWidth =
     width < 360 ? 42.0 : 46.0;
 
     return SizedBox(
       width: fieldWidth,
       height: 54,
+
       child: Focus(
         onKeyEvent: (
             node,
@@ -396,70 +403,99 @@ class _VerificationPageState
             index,
           );
         },
+
         child: TextFormField(
-          controller: _controllers[index],
-          focusNode: _focusNodes[index],
-          textAlign: TextAlign.center,
-          keyboardType: TextInputType.number,
+          controller:
+          _controllers[index],
+          focusNode:
+          _focusNodes[index],
+
+          textAlign:
+          TextAlign.center,
+
+          keyboardType:
+          TextInputType.number,
+
           textInputAction:
           index == _otpLength - 1
               ? TextInputAction.done
               : TextInputAction.next,
+
           maxLength: 1,
+
           inputFormatters: [
             FilteringTextInputFormatter
                 .digitsOnly,
           ],
+
           onChanged: (value) {
             _onCodeChanged(
               value,
               index,
             );
           },
+
           onFieldSubmitted: (_) {
             if (index ==
                 _otpLength - 1) {
               _verify();
             }
           },
+
           decoration: InputDecoration(
             counterText: '',
-            contentPadding: EdgeInsets.zero,
+            contentPadding:
+            EdgeInsets.zero,
+
             filled: true,
-            fillColor: AppColors.white,
-            border: OutlineInputBorder(
+
+            fillColor:
+            colorScheme.surface,
+
+            border:
+            OutlineInputBorder(
               borderRadius:
               BorderRadius.circular(10),
-              borderSide:
-              const BorderSide(
-                color: AppColors.grayBorder,
+
+              borderSide: BorderSide(
+                color:
+                colorScheme.outline,
               ),
             ),
+
             enabledBorder:
             OutlineInputBorder(
               borderRadius:
               BorderRadius.circular(10),
-              borderSide:
-              const BorderSide(
-                color: AppColors.grayBorder,
+
+              borderSide: BorderSide(
+                color:
+                colorScheme.outline,
               ),
             ),
+
             focusedBorder:
             OutlineInputBorder(
               borderRadius:
               BorderRadius.circular(10),
-              borderSide:
-              const BorderSide(
-                color: AppColors.blueAccent,
+
+              borderSide: BorderSide(
+                color:
+                colorScheme.primary,
                 width: 1.5,
               ),
             ),
           ),
-          style: AppTextStyles
-              .headingSmall
-              .copyWith(
-            color: AppColors.navyDark,
-            fontWeight: FontWeight.w700,
+
+          style:
+          Theme.of(context)
+              .textTheme
+              .headlineSmall
+              ?.copyWith(
+            color:
+            colorScheme.onSurface,
+            fontWeight:
+            FontWeight.w700,
           ),
         ),
       ),
@@ -471,6 +507,9 @@ class _VerificationPageState
     final localization =
     AppLocalization.of(context);
 
+    final colorScheme =
+        Theme.of(context).colorScheme;
+
     final width =
         MediaQuery.sizeOf(context).width;
 
@@ -478,20 +517,23 @@ class _VerificationPageState
     width < 360 ? 20.0 : 24.0;
 
     return Scaffold(
-      backgroundColor: AppColors.grayBg,
+      backgroundColor:
+      colorScheme.surface,
+
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(
-            horizontal:
-            horizontalPadding,
+            horizontal: horizontalPadding,
             vertical: 30,
           ),
+
           child: Center(
             child: ConstrainedBox(
               constraints:
               const BoxConstraints(
                 maxWidth: 430,
               ),
+
               child: Column(
                 children: [
                   const SizedBox(height: 18),
@@ -513,11 +555,13 @@ class _VerificationPageState
                     widget.args.email,
                     textAlign:
                     TextAlign.center,
-                    style: AppTextStyles
+
+                    style: Theme.of(context)
+                        .textTheme
                         .labelMedium
-                        .copyWith(
+                        ?.copyWith(
                       color:
-                      AppColors.navyPrimary,
+                      colorScheme.primary,
                       fontWeight:
                       FontWeight.w700,
                     ),
@@ -528,8 +572,8 @@ class _VerificationPageState
                   Row(
                     mainAxisAlignment:
                     MainAxisAlignment.center,
-                    children:
-                    List.generate(
+
+                    children: List.generate(
                       _otpLength,
                           (index) {
                         return Padding(
@@ -553,11 +597,13 @@ class _VerificationPageState
                   SizedBox(
                     width: double.infinity,
                     height: 52,
+
                     child: ElevatedButton(
                       onPressed:
                       _isLoading
                           ? null
                           : _verify,
+
                       child: _isLoading
                           ? const SizedBox(
                         width: 22,
@@ -581,26 +627,26 @@ class _VerificationPageState
                   Row(
                     mainAxisAlignment:
                     MainAxisAlignment.center,
+
                     children: [
                       Flexible(
                         child: Text(
-                          localization
-                              .translate(
+                          localization.translate(
                             'didnt_receive_code',
                           ),
-                          style: AppTextStyles
-                              .bodySmall
-                              .copyWith(
-                            color: AppColors
-                                .grayTextSub,
+                          style: TextStyle(
+                            color: colorScheme
+                                .onSurfaceVariant,
                           ),
                         ),
                       ),
+
                       TextButton(
                         onPressed:
                         _isResending
                             ? null
                             : _resendCode,
+
                         child: _isResending
                             ? const SizedBox(
                           width: 18,
@@ -626,6 +672,7 @@ class _VerificationPageState
                     onPressed: () {
                       Navigator.pop(context);
                     },
+
                     child: Text(
                       localization.translate(
                         'back',

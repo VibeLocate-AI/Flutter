@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import '../../../../app/app_router.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/localization/localization.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/device_identity.dart';
 import '../../auth_dependencies.dart';
 import '../widgets/auth_header.dart';
@@ -18,7 +16,8 @@ class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<LoginPage> createState() =>
+      _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
@@ -67,7 +66,8 @@ class _LoginPageState extends State<LoginPage> {
         ),
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         SnackBar(
           content: Text(
             localization.translate(
@@ -81,31 +81,25 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         SnackBar(
           content: Text(e.message),
         ),
       );
-    } catch (e, stackTrace) {
-      debugPrint(
-        'RESEND OTP ERROR: $e',
-      );
-
-      debugPrint(
-        'RESEND OTP STACK TRACE: $stackTrace',
-      );
-
+    } catch (_) {
       if (!mounted) {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         SnackBar(
           content: Text(
-            'Resend OTP Error: $e',
+            localization.translate(
+              'generic_api_error',
+            ),
           ),
-          duration:
-          const Duration(seconds: 6),
         ),
       );
     }
@@ -174,31 +168,25 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         SnackBar(
           content: Text(e.message),
         ),
       );
-    } catch (e, stackTrace) {
-      debugPrint(
-        'EMAIL LOGIN ERROR: $e',
-      );
-
-      debugPrint(
-        'EMAIL LOGIN STACK TRACE: $stackTrace',
-      );
-
+    } catch (_) {
       if (!mounted) {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         SnackBar(
           content: Text(
-            'Login Error: $e',
+            localization.translate(
+              'generic_api_error',
+            ),
           ),
-          duration:
-          const Duration(seconds: 6),
         ),
       );
     } finally {
@@ -222,15 +210,7 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      debugPrint(
-        'GOOGLE LOGIN: Starting Google Sign-In...',
-      );
-
       await AuthDependencies.loginWithGoogle();
-
-      debugPrint(
-        'GOOGLE LOGIN: Laravel login successful.',
-      );
 
       if (!mounted) {
         return;
@@ -242,43 +222,30 @@ class _LoginPageState extends State<LoginPage> {
             (route) => false,
       );
     } on ApiException catch (e) {
-      debugPrint(
-        'GOOGLE LOGIN API ERROR: ${e.message}',
-      );
-
       if (!mounted) {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         SnackBar(
-          content: Text(
-            'Google API Error: ${e.message}',
-          ),
-          duration:
-          const Duration(seconds: 8),
+          content: Text(e.message),
         ),
       );
-    } catch (e, stackTrace) {
-      debugPrint(
-        'GOOGLE LOGIN ERROR: $e',
-      );
-
-      debugPrint(
-        'GOOGLE LOGIN STACK TRACE: $stackTrace',
-      );
-
+    } catch (_) {
       if (!mounted) {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         SnackBar(
           content: Text(
-            'Google Login Error: $e',
+            AppLocalization.of(context)
+                .translate(
+              'generic_api_error',
+            ),
           ),
-          duration:
-          const Duration(seconds: 8),
         ),
       );
     } finally {
@@ -295,8 +262,10 @@ class _LoginPageState extends State<LoginPage> {
     final localization =
     AppLocalization.of(context);
 
-    final size =
-    MediaQuery.sizeOf(context);
+    final colorScheme =
+        Theme.of(context).colorScheme;
+
+    final size = MediaQuery.sizeOf(context);
 
     final width = size.width;
     final height = size.height;
@@ -305,29 +274,33 @@ class _LoginPageState extends State<LoginPage> {
     width < 360 ? 20.0 : 24.0;
 
     return Scaffold(
-      backgroundColor:
-      AppColors.grayBg,
+      backgroundColor: colorScheme.surface,
+
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             physics:
             const BouncingScrollPhysics(),
+
             padding: EdgeInsets.symmetric(
-              horizontal:
-              horizontalPadding,
+              horizontal: horizontalPadding,
               vertical:
               height < 700 ? 20 : 32,
             ),
+
             child: ConstrainedBox(
               constraints:
               const BoxConstraints(
                 maxWidth: 430,
               ),
+
               child: Form(
                 key: _formKey,
+
                 child: Column(
                   crossAxisAlignment:
                   CrossAxisAlignment.stretch,
+
                   children: [
                     AuthHeader(
                       title:
@@ -340,9 +313,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
 
-                    const SizedBox(
-                      height: 36,
-                    ),
+                    const SizedBox(height: 36),
 
                     AuthTextField(
                       controller:
@@ -358,15 +329,12 @@ class _LoginPageState extends State<LoginPage> {
                       prefixIcon:
                       Icons.email_outlined,
                       keyboardType:
-                      TextInputType
-                          .emailAddress,
+                      TextInputType.emailAddress,
                       textInputAction:
                       TextInputAction.next,
                       validator: (value) {
                         if (value == null ||
-                            value
-                                .trim()
-                                .isEmpty) {
+                            value.trim().isEmpty) {
                           return localization
                               .translate(
                             'email_required',
@@ -392,9 +360,7 @@ class _LoginPageState extends State<LoginPage> {
                       },
                     ),
 
-                    const SizedBox(
-                      height: 20,
-                    ),
+                    const SizedBox(height: 20),
 
                     AuthTextField(
                       controller:
@@ -442,14 +408,13 @@ class _LoginPageState extends State<LoginPage> {
                           _login(),
                     ),
 
-                    const SizedBox(
-                      height: 12,
-                    ),
+                    const SizedBox(height: 12),
 
                     Align(
                       alignment:
                       AlignmentDirectional
                           .centerEnd,
+
                       child: TextButton(
                         onPressed: () {
                           Navigator.pushNamed(
@@ -458,25 +423,23 @@ class _LoginPageState extends State<LoginPage> {
                                 .forgotPassword,
                           );
                         },
+
                         style:
                         TextButton.styleFrom(
-                          padding:
-                          EdgeInsets.zero,
-                          minimumSize:
-                          Size.zero,
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
                           tapTargetSize:
                           MaterialTapTargetSize
                               .shrinkWrap,
                         ),
+
                         child: Text(
                           localization.translate(
                             'forgot_password',
                           ),
-                          style: AppTextStyles
-                              .labelMedium
-                              .copyWith(
-                            color: AppColors
-                                .blueAccent,
+                          style: TextStyle(
+                            color:
+                            colorScheme.primary,
                             fontWeight:
                             FontWeight.w600,
                           ),
@@ -484,27 +447,24 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
 
-                    const SizedBox(
-                      height: 24,
-                    ),
+                    const SizedBox(height: 24),
 
                     SizedBox(
                       height: 52,
-                      child:
-                      ElevatedButton(
+
+                      child: ElevatedButton(
                         onPressed:
                         _isLoading
                             ? null
                             : _login,
-                        child:
-                        _isLoading
+
+                        child: _isLoading
                             ? const SizedBox(
                           width: 22,
                           height: 22,
                           child:
                           CircularProgressIndicator(
-                            strokeWidth:
-                            2,
+                            strokeWidth: 2,
                           ),
                         )
                             : Text(
@@ -516,16 +476,15 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
 
-                    const SizedBox(
-                      height: 28,
-                    ),
+                    const SizedBox(height: 28),
 
                     Row(
                       children: [
-                        const Expanded(
+                        Expanded(
                           child: Divider(
-                            color: AppColors
-                                .grayBorderLight,
+                            color:
+                            colorScheme
+                                .outlineVariant,
                           ),
                         ),
 
@@ -535,31 +494,29 @@ class _LoginPageState extends State<LoginPage> {
                               .symmetric(
                             horizontal: 14,
                           ),
+
                           child: Text(
                             localization.translate(
                               'or',
                             ),
-                            style: AppTextStyles
-                                .labelSmall
-                                .copyWith(
-                              color: AppColors
-                                  .grayTextMuted,
+                            style: TextStyle(
+                              color: colorScheme
+                                  .onSurfaceVariant,
                             ),
                           ),
                         ),
 
-                        const Expanded(
+                        Expanded(
                           child: Divider(
-                            color: AppColors
-                                .grayBorderLight,
+                            color:
+                            colorScheme
+                                .outlineVariant,
                           ),
                         ),
                       ],
                     ),
 
-                    const SizedBox(
-                      height: 20,
-                    ),
+                    const SizedBox(height: 20),
 
                     SocialLoginButton(
                       label:
@@ -570,25 +527,21 @@ class _LoginPageState extends State<LoginPage> {
                       _continueWithGoogle,
                     ),
 
-                    const SizedBox(
-                      height: 24,
-                    ),
+                    const SizedBox(height: 24),
 
                     Row(
                       mainAxisAlignment:
-                      MainAxisAlignment
-                          .center,
+                      MainAxisAlignment.center,
+
                       children: [
                         Flexible(
                           child: Text(
                             localization.translate(
                               'dont_have_account',
                             ),
-                            style: AppTextStyles
-                                .bodySmall
-                                .copyWith(
-                              color: AppColors
-                                  .grayTextSub,
+                            style: TextStyle(
+                              color: colorScheme
+                                  .onSurfaceVariant,
                             ),
                             textAlign:
                             TextAlign.center,
@@ -602,15 +555,14 @@ class _LoginPageState extends State<LoginPage> {
                               AppRouter.register,
                             );
                           },
+
                           child: Text(
                             localization.translate(
                               'sign_up',
                             ),
-                            style: AppTextStyles
-                                .labelMedium
-                                .copyWith(
-                              color: AppColors
-                                  .navyPrimary,
+                            style: TextStyle(
+                              color:
+                              colorScheme.primary,
                               fontWeight:
                               FontWeight.w700,
                             ),
@@ -619,9 +571,7 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
 
-                    const SizedBox(
-                      height: 10,
-                    ),
+                    const SizedBox(height: 10),
 
                     const LegalAgreementText(
                       centered: true,

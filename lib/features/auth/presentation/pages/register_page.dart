@@ -5,11 +5,10 @@ import 'package:vibe_locate_ai/features/auth/presentation/pages/verification_pag
 import '../../../../app/app_router.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/localization/localization.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 import '../../auth_dependencies.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/legal_agreement_text.dart';
+import '../widgets/password_strength_indicator.dart';
 import '../widgets/phone_number_field.dart';
 import '../widgets/social_login_button.dart';
 
@@ -17,23 +16,28 @@ class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
   @override
-  State<RegisterPage> createState() => _RegisterPageState();
+  State<RegisterPage> createState() =>
+      _RegisterPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
+class _RegisterPageState
+    extends State<RegisterPage> {
   final GlobalKey<FormState> _formKey =
   GlobalKey<FormState>();
 
-  final TextEditingController _firstNameController =
+  final TextEditingController
+  _firstNameController =
   TextEditingController();
 
-  final TextEditingController _lastNameController =
+  final TextEditingController
+  _lastNameController =
   TextEditingController();
 
   final TextEditingController _cityController =
   TextEditingController();
 
-  final TextEditingController _countryController =
+  final TextEditingController
+  _countryController =
   TextEditingController();
 
   final TextEditingController _phoneController =
@@ -42,10 +46,12 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _emailController =
   TextEditingController();
 
-  final TextEditingController _passwordController =
+  final TextEditingController
+  _passwordController =
   TextEditingController();
 
-  final TextEditingController _confirmPasswordController =
+  final TextEditingController
+  _confirmPasswordController =
   TextEditingController();
 
   Country _selectedCountry = Country(
@@ -76,6 +82,7 @@ class _RegisterPageState extends State<RegisterPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+
     super.dispose();
   }
 
@@ -83,7 +90,8 @@ class _RegisterPageState extends State<RegisterPage> {
       String? value,
       String message,
       ) {
-    if (value == null || value.trim().isEmpty) {
+    if (value == null ||
+        value.trim().isEmpty) {
       return message;
     }
 
@@ -94,7 +102,8 @@ class _RegisterPageState extends State<RegisterPage> {
       String? value,
       AppLocalization localization,
       ) {
-    if (value == null || value.trim().isEmpty) {
+    if (value == null ||
+        value.trim().isEmpty) {
       return localization.translate(
         'email_required',
       );
@@ -104,7 +113,9 @@ class _RegisterPageState extends State<RegisterPage> {
       r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
     );
 
-    if (!emailRegex.hasMatch(value.trim())) {
+    if (!emailRegex.hasMatch(
+      value.trim(),
+    )) {
       return localization.translate(
         'email_invalid',
       );
@@ -123,10 +134,11 @@ class _RegisterPageState extends State<RegisterPage> {
       );
     }
 
-    if (value.length < 6) {
-      return localization.translate(
-        'password_min',
-      );
+    final result =
+    checkPasswordStrength(value);
+
+    if (!result.isStrong) {
+      return 'Password must be at least 8 characters and contain uppercase, lowercase, number, and special character.';
     }
 
     return null;
@@ -186,15 +198,33 @@ class _RegisterPageState extends State<RegisterPage> {
     final passwordConfirmation =
         _confirmPasswordController.text;
 
+    final strength =
+    checkPasswordStrength(password);
+
+    if (!strength.isStrong) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please choose a stronger password.',
+          ),
+        ),
+      );
+      return;
+    }
+
     if (firstName.isEmpty ||
         lastName.isEmpty ||
         city.isEmpty ||
         country.isEmpty ||
         email.isEmpty ||
-        _phoneController.text.trim().isEmpty ||
+        _phoneController.text
+            .trim()
+            .isEmpty ||
         password.isEmpty ||
         passwordConfirmation.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         SnackBar(
           content: Text(
             localization.translate(
@@ -207,7 +237,8 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     if (!_acceptedTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         SnackBar(
           content: Text(
             localization.translate(
@@ -243,7 +274,8 @@ class _RegisterPageState extends State<RegisterPage> {
       Navigator.pushNamed(
         context,
         AppRouter.verification,
-        arguments: VerificationPageArgs(
+        arguments:
+        VerificationPageArgs(
           email: email,
           purpose:
           VerificationPurpose
@@ -255,7 +287,8 @@ class _RegisterPageState extends State<RegisterPage> {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         SnackBar(
           content: Text(e.message),
         ),
@@ -265,7 +298,8 @@ class _RegisterPageState extends State<RegisterPage> {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         SnackBar(
           content: Text(e.message),
         ),
@@ -275,7 +309,8 @@ class _RegisterPageState extends State<RegisterPage> {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         SnackBar(
           content: Text(
             localization.translate(
@@ -293,12 +328,13 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-
   void _continueWithGoogle() {
-    ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context)
+        .showSnackBar(
       SnackBar(
         content: Text(
-          AppLocalization.of(context).translate(
+          AppLocalization.of(context)
+              .translate(
             'google_signup_demo',
           ),
         ),
@@ -311,7 +347,12 @@ class _RegisterPageState extends State<RegisterPage> {
     final localization =
     AppLocalization.of(context);
 
-    final size = MediaQuery.sizeOf(context);
+    final colorScheme =
+        Theme.of(context).colorScheme;
+
+    final size =
+    MediaQuery.sizeOf(context);
+
     final width = size.width;
     final height = size.height;
 
@@ -319,84 +360,113 @@ class _RegisterPageState extends State<RegisterPage> {
     width < 360 ? 20.0 : 24.0;
 
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor:
+      colorScheme.surface,
+
       body: SafeArea(
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
+          physics:
+          const BouncingScrollPhysics(),
+
           padding: EdgeInsets.symmetric(
             horizontal: horizontalPadding,
-            vertical: height < 700 ? 18 : 28,
+            vertical:
+            height < 700 ? 18 : 28,
           ),
+
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
+              constraints:
+              const BoxConstraints(
                 maxWidth: 430,
               ),
+
               child: Form(
                 key: _formKey,
+
                 child: Column(
                   crossAxisAlignment:
                   CrossAxisAlignment.stretch,
+
                   children: [
                     const SizedBox(height: 26),
 
                     Row(
                       crossAxisAlignment:
                       CrossAxisAlignment.start,
+
                       children: [
                         Expanded(
                           child: AuthTextField(
                             controller:
                             _firstNameController,
+
                             label:
                             localization.translate(
                               'first_name',
                             ),
+
                             hint:
                             localization.translate(
                               'first_name_hint',
                             ),
+
                             prefixIcon:
                             Icons.person_outline,
+
                             keyboardType:
                             TextInputType.name,
+
                             textInputAction:
                             TextInputAction.next,
+
                             validator:
-                                (value) => _required(
-                              value,
-                              localization.translate(
-                                'first_name_required',
-                              ),
-                            ),
+                                (value) =>
+                                _required(
+                                  value,
+                                  localization
+                                      .translate(
+                                    'first_name_required',
+                                  ),
+                                ),
                           ),
                         ),
+
                         const SizedBox(width: 12),
+
                         Expanded(
                           child: AuthTextField(
                             controller:
                             _lastNameController,
+
                             label:
                             localization.translate(
                               'last_name',
                             ),
+
                             hint:
                             localization.translate(
                               'last_name_hint',
                             ),
+
                             prefixIcon:
                             Icons.person_outline,
+
                             keyboardType:
                             TextInputType.name,
+
                             textInputAction:
                             TextInputAction.next,
+
                             validator:
-                                (value) => _required(
-                              value,
-                              localization.translate(
-                                'last_name_required',
-                              ),
-                            ),
+                                (value) =>
+                                _required(
+                                  value,
+                                  localization
+                                      .translate(
+                                    'last_name_required',
+                                  ),
+                                ),
                           ),
                         ),
                       ],
@@ -407,60 +477,79 @@ class _RegisterPageState extends State<RegisterPage> {
                     Row(
                       crossAxisAlignment:
                       CrossAxisAlignment.start,
+
                       children: [
                         Expanded(
                           child: AuthTextField(
                             controller:
                             _cityController,
+
                             label:
                             localization.translate(
                               'city',
                             ),
+
                             hint:
                             localization.translate(
                               'city_hint',
                             ),
+
                             prefixIcon:
                             Icons.location_city_outlined,
+
                             keyboardType:
                             TextInputType.text,
+
                             textInputAction:
                             TextInputAction.next,
+
                             validator:
-                                (value) => _required(
-                              value,
-                              localization.translate(
-                                'city_required',
-                              ),
-                            ),
+                                (value) =>
+                                _required(
+                                  value,
+                                  localization
+                                      .translate(
+                                    'city_required',
+                                  ),
+                                ),
                           ),
                         ),
+
                         const SizedBox(width: 12),
+
                         Expanded(
                           child: AuthTextField(
                             controller:
                             _countryController,
+
                             label:
                             localization.translate(
                               'country',
                             ),
+
                             hint:
                             localization.translate(
                               'country_hint',
                             ),
+
                             prefixIcon:
                             Icons.public_outlined,
+
                             keyboardType:
                             TextInputType.text,
+
                             textInputAction:
                             TextInputAction.next,
+
                             validator:
-                                (value) => _required(
-                              value,
-                              localization.translate(
-                                'country_required',
-                              ),
-                            ),
+                                (value) =>
+                                _required(
+                                  value,
+                                  localization
+                                      .translate(
+                                    'country_required',
+                                  ),
+                                ),
                           ),
                         ),
                       ],
@@ -471,8 +560,10 @@ class _RegisterPageState extends State<RegisterPage> {
                     PhoneNumberField(
                       controller:
                       _phoneController,
+
                       country:
                       _selectedCountry,
+
                       onCountryChanged:
                           (country) {
                         setState(() {
@@ -480,14 +571,17 @@ class _RegisterPageState extends State<RegisterPage> {
                               country;
                         });
                       },
+
                       label:
                       localization.translate(
                         'phone_number',
                       ),
+
                       hint:
                       localization.translate(
                         'phone_hint',
                       ),
+
                       errorText:
                       localization.translate(
                         'phone_required',
@@ -499,20 +593,26 @@ class _RegisterPageState extends State<RegisterPage> {
                     AuthTextField(
                       controller:
                       _emailController,
+
                       label:
                       localization.translate(
                         'email',
                       ),
+
                       hint:
                       localization.translate(
                         'email_hint',
                       ),
+
                       prefixIcon:
                       Icons.email_outlined,
+
                       keyboardType:
                       TextInputType.emailAddress,
+
                       textInputAction:
                       TextInputAction.next,
+
                       validator:
                           (value) =>
                           _emailValidator(
@@ -526,33 +626,50 @@ class _RegisterPageState extends State<RegisterPage> {
                     AuthTextField(
                       controller:
                       _passwordController,
+
                       label:
                       localization.translate(
                         'password',
                       ),
+
                       hint:
                       localization.translate(
                         'password_hint',
                       ),
+
                       prefixIcon:
                       Icons.lock_outline,
+
                       obscureText:
                       _obscurePassword,
+
                       showPasswordToggle: true,
+
                       onTogglePassword: () {
                         setState(() {
                           _obscurePassword =
                           !_obscurePassword;
                         });
                       },
+
                       textInputAction:
                       TextInputAction.next,
+
                       validator:
                           (value) =>
                           _passwordValidator(
                             value,
                             localization,
                           ),
+
+                      onChanged: (_) {
+                        setState(() {});
+                      },
+                    ),
+
+                    PasswordStrengthIndicator(
+                      password:
+                      _passwordController.text,
                     ),
 
                     const SizedBox(height: 16),
@@ -560,27 +677,35 @@ class _RegisterPageState extends State<RegisterPage> {
                     AuthTextField(
                       controller:
                       _confirmPasswordController,
+
                       label:
                       localization.translate(
                         'confirm_password',
                       ),
+
                       hint:
                       localization.translate(
                         'confirm_password_hint',
                       ),
+
                       prefixIcon:
                       Icons.lock_outline,
+
                       obscureText:
                       _obscureConfirmPassword,
+
                       showPasswordToggle: true,
+
                       onTogglePassword: () {
                         setState(() {
                           _obscureConfirmPassword =
                           !_obscureConfirmPassword;
                         });
                       },
+
                       textInputAction:
                       TextInputAction.done,
+
                       validator:
                           (value) =>
                           _confirmPasswordValidator(
@@ -594,13 +719,16 @@ class _RegisterPageState extends State<RegisterPage> {
                     Row(
                       crossAxisAlignment:
                       CrossAxisAlignment.start,
+
                       children: [
                         SizedBox(
                           width: 30,
                           height: 30,
+
                           child: Checkbox(
                             value:
                             _acceptedTerms,
+
                             onChanged:
                                 (value) {
                               setState(() {
@@ -609,17 +737,19 @@ class _RegisterPageState extends State<RegisterPage> {
                                         false;
                               });
                             },
+
                             activeColor:
-                            AppColors
-                                .navyPrimary,
+                            colorScheme
+                                .primary,
+
                             materialTapTargetSize:
                             MaterialTapTargetSize
                                 .shrinkWrap,
                           ),
                         ),
-                        const SizedBox(
-                          width: 8,
-                        ),
+
+                        const SizedBox(width: 8),
+
                         const Expanded(
                           child:
                           LegalAgreementText(),
@@ -631,14 +761,14 @@ class _RegisterPageState extends State<RegisterPage> {
 
                     SizedBox(
                       height: 52,
-                      child:
-                      ElevatedButton(
+
+                      child: ElevatedButton(
                         onPressed:
                         _isLoading
                             ? null
                             : _register,
-                        child:
-                        _isLoading
+
+                        child: _isLoading
                             ? const SizedBox(
                           width: 22,
                           height: 22,
@@ -652,9 +782,6 @@ class _RegisterPageState extends State<RegisterPage> {
                               .translate(
                             'sign_up',
                           ),
-                          style:
-                          AppTextStyles
-                              .button,
                         ),
                       ),
                     ),
@@ -663,35 +790,37 @@ class _RegisterPageState extends State<RegisterPage> {
 
                     Row(
                       children: [
-                        const Expanded(
+                        Expanded(
                           child: Divider(
-                            color: AppColors
-                                .grayBorderLight,
+                            color:
+                            colorScheme
+                                .outlineVariant,
                           ),
                         ),
+
                         Padding(
                           padding:
                           const EdgeInsets
                               .symmetric(
                             horizontal: 12,
                           ),
+
                           child: Text(
-                            localization
-                                .translate(
+                            localization.translate(
                               'or',
                             ),
-                            style: AppTextStyles
-                                .labelSmall
-                                .copyWith(
-                              color: AppColors
-                                  .grayTextMuted,
+                            style: TextStyle(
+                              color: colorScheme
+                                  .onSurfaceVariant,
                             ),
                           ),
                         ),
-                        const Expanded(
+
+                        Expanded(
                           child: Divider(
-                            color: AppColors
-                                .grayBorderLight,
+                            color:
+                            colorScheme
+                                .outlineVariant,
                           ),
                         ),
                       ],
@@ -713,40 +842,36 @@ class _RegisterPageState extends State<RegisterPage> {
                     Row(
                       mainAxisAlignment:
                       MainAxisAlignment.center,
+
                       children: [
                         Flexible(
                           child: Text(
-                            localization
-                                .translate(
+                            localization.translate(
                               'already_have_account',
                             ),
-                            style: AppTextStyles
-                                .bodySmall
-                                .copyWith(
-                              color: AppColors
-                                  .grayTextSub,
+                            style: TextStyle(
+                              color: colorScheme
+                                  .onSurfaceVariant,
                             ),
                           ),
                         ),
+
                         TextButton(
                           onPressed: () {
                             Navigator
                                 .pushReplacementNamed(
                               context,
-                              AppRouter
-                                  .login,
+                              AppRouter.login,
                             );
                           },
+
                           child: Text(
-                            localization
-                                .translate(
+                            localization.translate(
                               'login',
                             ),
-                            style: AppTextStyles
-                                .labelMedium
-                                .copyWith(
-                              color: AppColors
-                                  .navyPrimary,
+                            style: TextStyle(
+                              color:
+                              colorScheme.primary,
                               fontWeight:
                               FontWeight.w700,
                             ),

@@ -3,14 +3,15 @@ import 'package:flutter/material.dart';
 import '../../../../app/app_router.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/localization/localization.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../auth_dependencies.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_text_field.dart';
 import 'verification_page.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
-  const ForgotPasswordPage({super.key});
+  const ForgotPasswordPage({
+    super.key,
+  });
 
   @override
   State<ForgotPasswordPage> createState() =>
@@ -109,6 +110,9 @@ class _ForgotPasswordPageState
     final localization =
     AppLocalization.of(context);
 
+    final colorScheme =
+        Theme.of(context).colorScheme;
+
     final width =
         MediaQuery.sizeOf(context).width;
 
@@ -116,24 +120,29 @@ class _ForgotPasswordPageState
     width < 360 ? 20.0 : 24.0;
 
     return Scaffold(
-      backgroundColor: AppColors.grayBg,
+      backgroundColor: colorScheme.surface,
+
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(
             horizontal: horizontalPadding,
             vertical: 32,
           ),
+
           child: Center(
             child: ConstrainedBox(
               constraints:
               const BoxConstraints(
                 maxWidth: 430,
               ),
+
               child: Form(
                 key: _formKey,
+
                 child: Column(
                   crossAxisAlignment:
                   CrossAxisAlignment.stretch,
+
                   children: [
                     const SizedBox(height: 20),
 
@@ -201,11 +210,13 @@ class _ForgotPasswordPageState
 
                     SizedBox(
                       height: 52,
+
                       child: ElevatedButton(
                         onPressed:
                         _isLoading
                             ? null
                             : _sendCode,
+
                         child: _isLoading
                             ? const SizedBox(
                           width: 22,
@@ -234,9 +245,14 @@ class _ForgotPasswordPageState
                           AppRouter.login,
                         );
                       },
+
                       child: Text(
                         localization.translate(
                           'back_to_login',
+                        ),
+                        style: TextStyle(
+                          color:
+                          colorScheme.primary,
                         ),
                       ),
                     ),

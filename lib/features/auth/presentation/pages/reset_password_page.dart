@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import '../../../../app/app_router.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/localization/localization.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../auth_dependencies.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_text_field.dart';
+import '../widgets/password_strength_indicator.dart';
 
 class ResetPasswordArgs {
   const ResetPasswordArgs({
@@ -65,10 +65,11 @@ class _ResetPasswordPageState
       );
     }
 
-    if (value.length < 6) {
-      return localization.translate(
-        'password_min',
-      );
+    final result =
+    checkPasswordStrength(value);
+
+    if (!result.isStrong) {
+      return 'Password must be at least 8 characters and contain uppercase, lowercase, number, and special character.';
     }
 
     return null;
@@ -103,6 +104,24 @@ class _ResetPasswordPageState
       return;
     }
 
+    final password =
+        _passwordController.text;
+
+    final strength =
+    checkPasswordStrength(password);
+
+    if (!strength.isStrong) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please choose a stronger password.',
+          ),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -111,8 +130,7 @@ class _ResetPasswordPageState
       await AuthDependencies.resetPassword(
         email: widget.args.email,
         token: widget.args.token,
-        newPassword:
-        _passwordController.text,
+        newPassword: password,
       );
 
       if (!mounted) {
@@ -163,6 +181,9 @@ class _ResetPasswordPageState
     final localization =
     AppLocalization.of(context);
 
+    final colorScheme =
+        Theme.of(context).colorScheme;
+
     final width =
         MediaQuery.sizeOf(context).width;
 
@@ -170,24 +191,30 @@ class _ResetPasswordPageState
     width < 360 ? 20.0 : 24.0;
 
     return Scaffold(
-      backgroundColor: AppColors.grayBg,
+      backgroundColor:
+      colorScheme.surface,
+
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(
             horizontal: horizontalPadding,
             vertical: 30,
           ),
+
           child: Center(
             child: ConstrainedBox(
               constraints:
               const BoxConstraints(
                 maxWidth: 430,
               ),
+
               child: Form(
                 key: _formKey,
+
                 child: Column(
                   crossAxisAlignment:
                   CrossAxisAlignment.stretch,
+
                   children: [
                     const SizedBox(height: 18),
 
@@ -208,12 +235,13 @@ class _ResetPasswordPageState
                       widget.args.email,
                       textAlign:
                       TextAlign.center,
+
                       style: Theme.of(context)
                           .textTheme
                           .labelMedium
                           ?.copyWith(
                         color:
-                        AppColors.navyPrimary,
+                        colorScheme.primary,
                         fontWeight:
                         FontWeight.w700,
                       ),
@@ -224,33 +252,50 @@ class _ResetPasswordPageState
                     AuthTextField(
                       controller:
                       _passwordController,
+
                       label:
                       localization.translate(
                         'password',
                       ),
+
                       hint:
                       localization.translate(
                         'new_password_hint',
                       ),
+
                       prefixIcon:
                       Icons.lock_outline,
+
                       obscureText:
                       _obscurePassword,
+
                       showPasswordToggle: true,
+
                       onTogglePassword: () {
                         setState(() {
                           _obscurePassword =
                           !_obscurePassword;
                         });
                       },
+
                       textInputAction:
                       TextInputAction.next,
+
                       validator:
                           (value) =>
                           _passwordValidator(
                             value,
                             localization,
                           ),
+
+                      onChanged: (_) {
+                        setState(() {});
+                      },
+                    ),
+
+                    PasswordStrengthIndicator(
+                      password:
+                      _passwordController.text,
                     ),
 
                     const SizedBox(height: 20),
@@ -258,33 +303,42 @@ class _ResetPasswordPageState
                     AuthTextField(
                       controller:
                       _confirmPasswordController,
+
                       label:
                       localization.translate(
                         'confirm_password',
                       ),
+
                       hint:
                       localization.translate(
                         'confirm_password_hint',
                       ),
+
                       prefixIcon:
                       Icons.lock_outline,
+
                       obscureText:
                       _obscureConfirmPassword,
+
                       showPasswordToggle: true,
+
                       onTogglePassword: () {
                         setState(() {
                           _obscureConfirmPassword =
                           !_obscureConfirmPassword;
                         });
                       },
+
                       textInputAction:
                       TextInputAction.done,
+
                       validator:
                           (value) =>
                           _confirmPasswordValidator(
                             value,
                             localization,
                           ),
+
                       onSubmitted: (_) =>
                           _resetPassword(),
                     ),
@@ -293,11 +347,13 @@ class _ResetPasswordPageState
 
                     SizedBox(
                       height: 52,
+
                       child: ElevatedButton(
                         onPressed:
                         _isLoading
                             ? null
                             : _resetPassword,
+
                         child: _isLoading
                             ? const SizedBox(
                           width: 22,

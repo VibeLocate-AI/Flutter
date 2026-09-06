@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
-
 class OnboardingIndicator extends StatelessWidget {
   const OnboardingIndicator({
     super.key,
@@ -14,6 +12,8 @@ class OnboardingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(
@@ -22,7 +22,9 @@ class OnboardingIndicator extends StatelessWidget {
           final isActive = index == currentPage;
 
           return AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
+            duration: const Duration(
+              milliseconds: 250,
+            ),
             curve: Curves.easeInOut,
             width: isActive ? 18 : 7,
             height: 7,
@@ -31,8 +33,8 @@ class OnboardingIndicator extends StatelessWidget {
             ),
             decoration: BoxDecoration(
               color: isActive
-                  ? AppColors.navyPrimary
-                  : AppColors.grayBorderLight,
+                  ? colorScheme.primary
+                  : colorScheme.outlineVariant,
               borderRadius: BorderRadius.circular(10),
             ),
           );

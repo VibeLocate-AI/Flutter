@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 
 class OnboardingContent extends StatelessWidget {
@@ -19,6 +18,8 @@ class OnboardingContent extends StatelessWidget {
 
     final horizontalPadding = width < 360 ? 20.0 : 24.0;
 
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Padding(
       padding: EdgeInsets.symmetric(
         horizontal: horizontalPadding,
@@ -29,7 +30,7 @@ class OnboardingContent extends StatelessWidget {
             title,
             textAlign: TextAlign.center,
             style: AppTextStyles.headingSmall.copyWith(
-              color: AppColors.navyDark,
+              color: colorScheme.onSurface,
               fontWeight: FontWeight.w700,
               fontSize: 16,
             ),
@@ -45,7 +46,7 @@ class OnboardingContent extends StatelessWidget {
               description,
               textAlign: TextAlign.center,
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.navyDark,
+                color: colorScheme.onSurfaceVariant,
                 fontSize: 11,
                 height: 1.45,
               ),
