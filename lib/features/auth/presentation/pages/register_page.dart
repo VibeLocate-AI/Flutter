@@ -90,8 +90,7 @@ class _RegisterPageState
       String? value,
       String message,
       ) {
-    if (value == null ||
-        value.trim().isEmpty) {
+    if (value == null || value.trim().isEmpty) {
       return message;
     }
 
@@ -102,8 +101,7 @@ class _RegisterPageState
       String? value,
       AppLocalization localization,
       ) {
-    if (value == null ||
-        value.trim().isEmpty) {
+    if (value == null || value.trim().isEmpty) {
       return localization.translate(
         'email_required',
       );
@@ -113,9 +111,7 @@ class _RegisterPageState
       r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
     );
 
-    if (!emailRegex.hasMatch(
-      value.trim(),
-    )) {
+    if (!emailRegex.hasMatch(value.trim())) {
       return localization.translate(
         'email_invalid',
       );
@@ -328,18 +324,76 @@ class _RegisterPageState
     }
   }
 
-  void _continueWithGoogle() {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(
-      SnackBar(
-        content: Text(
-          AppLocalization.of(context)
-              .translate(
-            'google_signup_demo',
+  Future<void> _continueWithGoogle() async {
+    if (_isLoading) {
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
+
+    final localization =
+    AppLocalization.of(context);
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await AuthDependencies.loginWithGoogle();
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRouter.home,
+            (route) => false,
+      );
+    } on ValidationException catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+        ),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        SnackBar(
+          content: Text(
+            localization.translate(
+              'generic_api_error',
+            ),
           ),
         ),
-      ),
-    );
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -369,7 +423,8 @@ class _RegisterPageState
           const BouncingScrollPhysics(),
 
           padding: EdgeInsets.symmetric(
-            horizontal: horizontalPadding,
+            horizontal:
+            horizontalPadding,
             vertical:
             height < 700 ? 18 : 28,
           ),
@@ -389,7 +444,9 @@ class _RegisterPageState
                   CrossAxisAlignment.stretch,
 
                   children: [
-                    const SizedBox(height: 26),
+                    const SizedBox(
+                      height: 26,
+                    ),
 
                     Row(
                       crossAxisAlignment:
@@ -397,28 +454,33 @@ class _RegisterPageState
 
                       children: [
                         Expanded(
-                          child: AuthTextField(
+                          child:
+                          AuthTextField(
                             controller:
                             _firstNameController,
 
                             label:
-                            localization.translate(
+                            localization
+                                .translate(
                               'first_name',
                             ),
 
                             hint:
-                            localization.translate(
+                            localization
+                                .translate(
                               'first_name_hint',
                             ),
 
                             prefixIcon:
-                            Icons.person_outline,
+                            Icons
+                                .person_outline,
 
                             keyboardType:
                             TextInputType.name,
 
                             textInputAction:
-                            TextInputAction.next,
+                            TextInputAction
+                                .next,
 
                             validator:
                                 (value) =>
@@ -432,31 +494,38 @@ class _RegisterPageState
                           ),
                         ),
 
-                        const SizedBox(width: 12),
+                        const SizedBox(
+                          width: 12,
+                        ),
 
                         Expanded(
-                          child: AuthTextField(
+                          child:
+                          AuthTextField(
                             controller:
                             _lastNameController,
 
                             label:
-                            localization.translate(
+                            localization
+                                .translate(
                               'last_name',
                             ),
 
                             hint:
-                            localization.translate(
+                            localization
+                                .translate(
                               'last_name_hint',
                             ),
 
                             prefixIcon:
-                            Icons.person_outline,
+                            Icons
+                                .person_outline,
 
                             keyboardType:
                             TextInputType.name,
 
                             textInputAction:
-                            TextInputAction.next,
+                            TextInputAction
+                                .next,
 
                             validator:
                                 (value) =>
@@ -472,7 +541,9 @@ class _RegisterPageState
                       ],
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(
+                      height: 16,
+                    ),
 
                     Row(
                       crossAxisAlignment:
@@ -480,28 +551,33 @@ class _RegisterPageState
 
                       children: [
                         Expanded(
-                          child: AuthTextField(
+                          child:
+                          AuthTextField(
                             controller:
                             _cityController,
 
                             label:
-                            localization.translate(
+                            localization
+                                .translate(
                               'city',
                             ),
 
                             hint:
-                            localization.translate(
+                            localization
+                                .translate(
                               'city_hint',
                             ),
 
                             prefixIcon:
-                            Icons.location_city_outlined,
+                            Icons
+                                .location_city_outlined,
 
                             keyboardType:
                             TextInputType.text,
 
                             textInputAction:
-                            TextInputAction.next,
+                            TextInputAction
+                                .next,
 
                             validator:
                                 (value) =>
@@ -515,20 +591,25 @@ class _RegisterPageState
                           ),
                         ),
 
-                        const SizedBox(width: 12),
+                        const SizedBox(
+                          width: 12,
+                        ),
 
                         Expanded(
-                          child: AuthTextField(
+                          child:
+                          AuthTextField(
                             controller:
                             _countryController,
 
                             label:
-                            localization.translate(
+                            localization
+                                .translate(
                               'country',
                             ),
 
                             hint:
-                            localization.translate(
+                            localization
+                                .translate(
                               'country_hint',
                             ),
 
@@ -539,7 +620,8 @@ class _RegisterPageState
                             TextInputType.text,
 
                             textInputAction:
-                            TextInputAction.next,
+                            TextInputAction
+                                .next,
 
                             validator:
                                 (value) =>
@@ -555,7 +637,9 @@ class _RegisterPageState
                       ],
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(
+                      height: 16,
+                    ),
 
                     PhoneNumberField(
                       controller:
@@ -573,45 +657,55 @@ class _RegisterPageState
                       },
 
                       label:
-                      localization.translate(
+                      localization
+                          .translate(
                         'phone_number',
                       ),
 
                       hint:
-                      localization.translate(
+                      localization
+                          .translate(
                         'phone_hint',
                       ),
 
                       errorText:
-                      localization.translate(
+                      localization
+                          .translate(
                         'phone_required',
                       ),
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(
+                      height: 16,
+                    ),
 
                     AuthTextField(
                       controller:
                       _emailController,
 
                       label:
-                      localization.translate(
+                      localization
+                          .translate(
                         'email',
                       ),
 
                       hint:
-                      localization.translate(
+                      localization
+                          .translate(
                         'email_hint',
                       ),
 
                       prefixIcon:
-                      Icons.email_outlined,
+                      Icons
+                          .email_outlined,
 
                       keyboardType:
-                      TextInputType.emailAddress,
+                      TextInputType
+                          .emailAddress,
 
                       textInputAction:
-                      TextInputAction.next,
+                      TextInputAction
+                          .next,
 
                       validator:
                           (value) =>
@@ -621,19 +715,23 @@ class _RegisterPageState
                           ),
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(
+                      height: 16,
+                    ),
 
                     AuthTextField(
                       controller:
                       _passwordController,
 
                       label:
-                      localization.translate(
+                      localization
+                          .translate(
                         'password',
                       ),
 
                       hint:
-                      localization.translate(
+                      localization
+                          .translate(
                         'password_hint',
                       ),
 
@@ -643,7 +741,8 @@ class _RegisterPageState
                       obscureText:
                       _obscurePassword,
 
-                      showPasswordToggle: true,
+                      showPasswordToggle:
+                      true,
 
                       onTogglePassword: () {
                         setState(() {
@@ -653,7 +752,8 @@ class _RegisterPageState
                       },
 
                       textInputAction:
-                      TextInputAction.next,
+                      TextInputAction
+                          .next,
 
                       validator:
                           (value) =>
@@ -669,22 +769,27 @@ class _RegisterPageState
 
                     PasswordStrengthIndicator(
                       password:
-                      _passwordController.text,
+                      _passwordController
+                          .text,
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(
+                      height: 16,
+                    ),
 
                     AuthTextField(
                       controller:
                       _confirmPasswordController,
 
                       label:
-                      localization.translate(
+                      localization
+                          .translate(
                         'confirm_password',
                       ),
 
                       hint:
-                      localization.translate(
+                      localization
+                          .translate(
                         'confirm_password_hint',
                       ),
 
@@ -694,7 +799,8 @@ class _RegisterPageState
                       obscureText:
                       _obscureConfirmPassword,
 
-                      showPasswordToggle: true,
+                      showPasswordToggle:
+                      true,
 
                       onTogglePassword: () {
                         setState(() {
@@ -714,7 +820,9 @@ class _RegisterPageState
                           ),
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(
+                      height: 16,
+                    ),
 
                     Row(
                       crossAxisAlignment:
@@ -748,7 +856,9 @@ class _RegisterPageState
                           ),
                         ),
 
-                        const SizedBox(width: 8),
+                        const SizedBox(
+                          width: 8,
+                        ),
 
                         const Expanded(
                           child:
@@ -757,24 +867,29 @@ class _RegisterPageState
                       ],
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(
+                      height: 20,
+                    ),
 
                     SizedBox(
                       height: 52,
 
-                      child: ElevatedButton(
+                      child:
+                      ElevatedButton(
                         onPressed:
                         _isLoading
                             ? null
                             : _register,
 
-                        child: _isLoading
+                        child:
+                        _isLoading
                             ? const SizedBox(
                           width: 22,
                           height: 22,
                           child:
                           CircularProgressIndicator(
-                            strokeWidth: 2,
+                            strokeWidth:
+                            2,
                           ),
                         )
                             : Text(
@@ -786,7 +901,9 @@ class _RegisterPageState
                       ),
                     ),
 
-                    const SizedBox(height: 18),
+                    const SizedBox(
+                      height: 18,
+                    ),
 
                     Row(
                       children: [
@@ -806,10 +923,12 @@ class _RegisterPageState
                           ),
 
                           child: Text(
-                            localization.translate(
+                            localization
+                                .translate(
                               'or',
                             ),
-                            style: TextStyle(
+                            style:
+                            TextStyle(
                               color: colorScheme
                                   .onSurfaceVariant,
                             ),
@@ -826,30 +945,39 @@ class _RegisterPageState
                       ],
                     ),
 
-                    const SizedBox(height: 18),
+                    const SizedBox(
+                      height: 18,
+                    ),
 
                     SocialLoginButton(
                       label:
-                      localization.translate(
+                      localization
+                          .translate(
                         'continue_with_google',
                       ),
+
                       onPressed:
                       _continueWithGoogle,
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(
+                      height: 16,
+                    ),
 
                     Row(
                       mainAxisAlignment:
-                      MainAxisAlignment.center,
+                      MainAxisAlignment
+                          .center,
 
                       children: [
                         Flexible(
                           child: Text(
-                            localization.translate(
+                            localization
+                                .translate(
                               'already_have_account',
                             ),
-                            style: TextStyle(
+                            style:
+                            TextStyle(
                               color: colorScheme
                                   .onSurfaceVariant,
                             ),
@@ -866,12 +994,15 @@ class _RegisterPageState
                           },
 
                           child: Text(
-                            localization.translate(
+                            localization
+                                .translate(
                               'login',
                             ),
-                            style: TextStyle(
+                            style:
+                            TextStyle(
                               color:
-                              colorScheme.primary,
+                              colorScheme
+                                  .primary,
                               fontWeight:
                               FontWeight.w700,
                             ),
