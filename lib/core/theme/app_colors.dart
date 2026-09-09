@@ -29,4 +29,24 @@ abstract final class AppColors {
 
   // Status
   static const Color errorRed = Color(0xFFEF4444);
+
+  // Dark Theme
+  static const Color darkBg = Color(0xFF0B1120);
+  static const Color darkSurface = Color(0xFF111827);
+  static const Color darkSurfaceAlt = Color(0xFF1E293B);
+
+  // Dark Borders
+  static const Color darkBorder = Color(0xFF334155);
+  static const Color darkBorderLight = Color(0xFF1E293B);
+  static const Color darkBorderFocus = Color(0xFF60A5FA);
+
+  // Dark Text
+  static const Color darkTextPrimary = Color(0xFFF8FAFC);
+  static const Color darkTextSecondary = Color(0xFFCBD5E1);
+  static const Color darkTextMuted = Color(0xFF94A3B8);
+
+  // Dark Status
+  static const Color successGreen = Color(0xFF22C55E);
+  static const Color warningAmber = Color(0xFFF59E0B);
+  static const Color infoBlue = Color(0xFF3B82F6);
 }
