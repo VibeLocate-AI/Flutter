@@ -23,6 +23,8 @@ class AuthDependencies {
   GoogleAuthDataSource(
     serverClientId: const String.fromEnvironment(
       'GOOGLE_SERVER_CLIENT_ID',
+      defaultValue:
+      '25578254432-pf7p233hl5g0l7c4stt7ol421u48vlfa.apps.googleusercontent.com',
     ),
   );
 
@@ -57,15 +59,13 @@ class AuthDependencies {
 
   static Future<void> loginWithGoogle() async {
     final idToken =
-    await googleAuthDataSource
-        .signInAndGetIdToken();
+    await googleAuthDataSource.signInAndGetIdToken();
 
     final deviceUuid =
     await DeviceIdentity.getDeviceUuid();
 
     final deviceType =
-    defaultTargetPlatform ==
-        TargetPlatform.iOS
+    defaultTargetPlatform == TargetPlatform.iOS
         ? 'ios'
         : 'android';
 
