@@ -45,37 +45,24 @@ class LegalPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor:
-      colorScheme.surface,
-
+      Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           title,
-          style:
-          AppTextStyles.headingSmall.copyWith(
-            color:
-            colorScheme.onSurface,
+          style: AppTextStyles.headingSmall.copyWith(
+            color: colorScheme.onSurface,
           ),
         ),
-
-        backgroundColor:
-        colorScheme.surface,
-
-        foregroundColor:
-        colorScheme.onSurface,
-
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
         elevation: 0,
       ),
-
       body: SafeArea(
         child: SingleChildScrollView(
-          padding:
-          const EdgeInsets.all(24),
-
+          padding: const EdgeInsets.all(24),
           child: Text(
             content,
-
-            style:
-            AppTextStyles.bodyMedium.copyWith(
+            style: AppTextStyles.bodyMedium.copyWith(
               color:
               colorScheme.onSurfaceVariant,
               height: 1.65,

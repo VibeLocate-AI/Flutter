@@ -17,7 +17,6 @@ class PhoneNumberField extends StatelessWidget {
   final TextEditingController controller;
   final Country country;
   final ValueChanged<Country> onCountryChanged;
-
   final String label;
   final String hint;
   final String errorText;
@@ -32,21 +31,15 @@ class PhoneNumberField extends StatelessWidget {
       onSelect: onCountryChanged,
       countryListTheme: CountryListThemeData(
         backgroundColor: colorScheme.surface,
-
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(24),
         ),
-
         bottomSheetHeight:
         MediaQuery.sizeOf(context).height * 0.75,
-
-        searchTextStyle:
-        AppTextStyles.bodyMedium.copyWith(
+        searchTextStyle: AppTextStyles.bodyMedium.copyWith(
           color: colorScheme.onSurface,
         ),
-
-        textStyle:
-        AppTextStyles.bodyMedium.copyWith(
+        textStyle: AppTextStyles.bodyMedium.copyWith(
           color: colorScheme.onSurface,
         ),
       ),
@@ -65,10 +58,10 @@ class PhoneNumberField extends StatelessWidget {
 
         return null;
       },
-
       builder: (field) {
         return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment:
+          CrossAxisAlignment.start,
           children: [
             Text(
               label,
@@ -91,22 +84,18 @@ class PhoneNumberField extends StatelessWidget {
                       : colorScheme.outline,
                 ),
               ),
-
               child: Row(
                 children: [
                   InkWell(
                     onTap: () =>
                         _openCountryPicker(context),
-
                     borderRadius:
                     BorderRadius.circular(10),
-
                     child: Padding(
                       padding:
                       const EdgeInsets.symmetric(
                         horizontal: 12,
                       ),
-
                       child: Row(
                         children: [
                           Text(
@@ -121,8 +110,7 @@ class PhoneNumberField extends StatelessWidget {
 
                           Text(
                             '+${country.phoneCode}',
-                            style:
-                            AppTextStyles.bodyMedium
+                            style: AppTextStyles.bodyMedium
                                 .copyWith(
                               color:
                               colorScheme.onSurface,
@@ -137,7 +125,8 @@ class PhoneNumberField extends StatelessWidget {
                             Icons
                                 .keyboard_arrow_down_rounded,
                             size: 18,
-                            color: colorScheme
+                            color:
+                            colorScheme
                                 .onSurfaceVariant,
                           ),
                         ],
@@ -158,27 +147,18 @@ class PhoneNumberField extends StatelessWidget {
                       TextInputType.phone,
                       textInputAction:
                       TextInputAction.next,
-
-                      style:
-                      AppTextStyles.bodyMedium
+                      style: AppTextStyles.bodyMedium
                           .copyWith(
-                        color:
-                        colorScheme.onSurface,
+                        color: colorScheme.onSurface,
                       ),
-
-                      cursorColor:
-                      colorScheme.primary,
-
                       decoration: InputDecoration(
                         hintText: hint,
-
-                        hintStyle:
-                        AppTextStyles.bodyMedium
+                        hintStyle: AppTextStyles
+                            .bodyMedium
                             .copyWith(
                           color: colorScheme
                               .onSurfaceVariant,
                         ),
-
                         border: InputBorder.none,
                         enabledBorder:
                         InputBorder.none,
@@ -188,7 +168,6 @@ class PhoneNumberField extends StatelessWidget {
                         InputBorder.none,
                         focusedErrorBorder:
                         InputBorder.none,
-
                         contentPadding:
                         const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -202,17 +181,14 @@ class PhoneNumberField extends StatelessWidget {
 
             if (field.hasError) ...[
               const SizedBox(height: 5),
-
               Padding(
                 padding:
                 const EdgeInsetsDirectional.only(
                   start: 4,
                 ),
-
                 child: Text(
                   field.errorText!,
-                  style:
-                  AppTextStyles.bodySmall.copyWith(
+                  style: AppTextStyles.bodySmall.copyWith(
                     color: colorScheme.error,
                     fontSize: 11,
                   ),

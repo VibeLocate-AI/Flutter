@@ -20,15 +20,9 @@ class ResetPasswordSuccessPage
 
   @override
   Widget build(BuildContext context) {
-    final localization =
-    AppLocalization.of(context);
+    final localization = AppLocalization.of(context);
 
-    final colorScheme =
-        Theme.of(context).colorScheme;
-
-    final size =
-    MediaQuery.sizeOf(context);
-
+    final size = MediaQuery.sizeOf(context);
     final width = size.width;
     final height = size.height;
 
@@ -36,40 +30,30 @@ class ResetPasswordSuccessPage
     width < 360 ? 20.0 : 24.0;
 
     return Scaffold(
-      backgroundColor:
-      colorScheme.surface,
-
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: EdgeInsets.symmetric(
               horizontal: horizontalPadding,
-              vertical:
-              height < 700 ? 20 : 32,
+              vertical: height < 700 ? 20 : 32,
             ),
-
             child: ConstrainedBox(
-              constraints:
-              const BoxConstraints(
+              constraints: const BoxConstraints(
                 maxWidth: 430,
               ),
-
               child: Column(
                 children: [
                   Container(
                     width: 88,
                     height: 88,
-
                     decoration: BoxDecoration(
-                      color:
-                      colorScheme.primary,
+                      color: Theme.of(context).colorScheme.primary,
                       shape: BoxShape.circle,
                     ),
-
                     child: Icon(
                       Icons.check_rounded,
-                      color:
-                      colorScheme.onPrimary,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       size: 46,
                     ),
                   ),
@@ -80,39 +64,27 @@ class ResetPasswordSuccessPage
                     localization.translate(
                       'reset_password_success_title',
                     ),
-
-                    textAlign:
-                    TextAlign.center,
-
+                    textAlign: TextAlign.center,
                     style:
-                    AppTextStyles.headingLarge
-                        .copyWith(
-                      color:
-                      colorScheme.onSurface,
+                    AppTextStyles.headingLarge.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
 
                   const SizedBox(height: 12),
 
                   ConstrainedBox(
-                    constraints:
-                    const BoxConstraints(
+                    constraints: const BoxConstraints(
                       maxWidth: 340,
                     ),
-
                     child: Text(
                       localization.translate(
                         'reset_password_success_subtitle',
                       ),
-
-                      textAlign:
-                      TextAlign.center,
-
+                      textAlign: TextAlign.center,
                       style:
-                      AppTextStyles.bodyMedium
-                          .copyWith(
-                        color: colorScheme
-                            .onSurfaceVariant,
+                      AppTextStyles.bodyMedium.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         height: 1.5,
                       ),
                     ),
@@ -123,11 +95,9 @@ class ResetPasswordSuccessPage
                   SizedBox(
                     width: double.infinity,
                     height: 52,
-
                     child: ElevatedButton(
                       onPressed: () =>
                           _goToLogin(context),
-
                       child: Text(
                         localization.translate(
                           'go_to_login',

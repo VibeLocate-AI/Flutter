@@ -116,18 +116,63 @@
   "login_success": "تم تسجيل الدخول بنجاح.",
   "email_verified_success": "تم تأكيد البريد الإلكتروني بنجاح.",
 
-  "complete_required_fields": "يرجى تعبئة جميع الحقول المطلوبة."
+  "complete_required_fields": "يرجى تعبئة جميع الحقول المطلوبة.",
+  "home_location": "مرسى دبي، الإمارات",
+  "search_hint": "البحث الذكي بالذكاء الاصطناعي...",
+  "recommended_property": "العقارات المقترحة",
+  "nearby_property": "العقارات القريبة",
+  "see_all": "عرض الكل",
+
+  "property_house": "منزل",
+  "property_villa": "فيلا",
+  "property_apartment": "شقة",
+  "property_bungalow": "بنغالو",
+  "property_penthouse": "بنتهاوس",
+
+  "per_month": "/شهريًا",
+
+  "nav_home": "الرئيسية",
+  "nav_map": "الخريطة",
+  "nav_favorites": "المفضلة",
+  "nav_profile": "الملف الشخصي",
+
+  "notifications": "الإشعارات",
+  "favorite": "إضافة للمفضلة",
+  "remove_favorite": "إزالة من المفضلة",
+
+  "no_properties": "لا توجد عقارات متاحة",
+  "home_load_error": "تعذر تحميل بيانات الصفحة الرئيسية",
+  "retry": "إعادة المحاولة",
+
+
+  "popular_areas": "المناطق الشائعة",
+  "top_agent": "أفضل وكيل",
+  "properties": "عقارات",
+
+  "property_all": "الكل",
+  "ai_searching": "جاري البحث...",
+  "ai_search_error": "تعذر تنفيذ البحث الذكي",
+  "no_search_results": "لا توجد عقارات تطابق بحثك",
+
+  "current_location": "الموقع الحالي",
+  "per_year": "/سنويًا",
+  "per_week": "/أسبوعيًا",
+  "per_day": "/يوميًا",
+  "clear": "مسح",
+  "no_notifications": "لا توجد إشعارات",
 
 
 
-
-
-
-
-
-
-
-
+  "profile": "الملف الشخصي",
+  "personal_information": "المعلومات الشخصية",
+  "full_name": "الاسم الكامل",
+  "phone": "رقم الهاتف",
+  "bio": "نبذة عني",
+  "preferences": "التفضيلات",
+  "preferred_language": "اللغة المفضلة",
+  "currency": "العملة",
+  "save_changes": "حفظ التغييرات",
+  "save_preferences": "حفظ التفضيلات"
 
 
 

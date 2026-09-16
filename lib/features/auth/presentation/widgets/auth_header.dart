@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 
 class AuthHeader extends StatelessWidget {
@@ -15,10 +14,11 @@ class AuthHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     final width = MediaQuery.sizeOf(context).width;
+
     final logoSize = width < 360 ? 58.0 : 68.0;
+
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Column(
       children: [
@@ -27,7 +27,7 @@ class AuthHeader extends StatelessWidget {
           height: logoSize,
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: AppColors.navyPrimary,
+            color: colorScheme.primary,
             borderRadius: BorderRadius.circular(18),
           ),
           child: Image.asset(

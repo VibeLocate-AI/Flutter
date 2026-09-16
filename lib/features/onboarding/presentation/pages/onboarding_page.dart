@@ -100,6 +100,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     ];
 
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: PageView.builder(
           controller: _pageController,
@@ -166,8 +167,6 @@ class _OnboardingView extends StatelessWidget {
 
     final screenSize = MediaQuery.sizeOf(context);
     final width = screenSize.width;
-    final height = screenSize.height;
-
     final horizontalPadding = width < 360 ? 20.0 : 24.0;
 
     return Column(
@@ -178,9 +177,7 @@ class _OnboardingView extends StatelessWidget {
             imagePath: data.image,
           ),
         ),
-
         const SizedBox(height: 12),
-
         Padding(
           padding: EdgeInsets.symmetric(
             horizontal: horizontalPadding,
@@ -190,9 +187,7 @@ class _OnboardingView extends StatelessWidget {
             description: data.description,
           ),
         ),
-
         const SizedBox(height: 20),
-
         Padding(
           padding: EdgeInsets.symmetric(
             horizontal: horizontalPadding,
@@ -204,15 +199,13 @@ class _OnboardingView extends StatelessWidget {
             onPressed: onNext,
           ),
         ),
-
         const Spacer(),
-
         Padding(
           padding: EdgeInsets.fromLTRB(
             horizontalPadding,
             0,
             horizontalPadding,
-            height < 700 ? 12 : 20,
+            20,
           ),
           child: Row(
             children: [
@@ -220,12 +213,9 @@ class _OnboardingView extends StatelessWidget {
                 IconButton(
                   onPressed: onPrevious,
                   icon: const Icon(
-                    Icons.arrow_back_rounded,
+                    Icons.arrow_back,
                     size: 18,
                   ),
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurfaceVariant,
                   tooltip: localization.translate('back'),
                 )
               else
@@ -233,16 +223,12 @@ class _OnboardingView extends StatelessWidget {
                   width: 48,
                   height: 48,
                 ),
-
               const Spacer(),
-
               OnboardingIndicator(
                 currentPage: currentPage,
                 itemCount: pageCount,
               ),
-
               const Spacer(),
-
               if (!isLastPage)
                 TextButton(
                   onPressed: onSkip,

@@ -22,21 +22,14 @@ class AuthTextField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
   final String hint;
-
   final IconData? prefixIcon;
-
   final bool obscureText;
   final bool showPasswordToggle;
-
   final VoidCallback? onTogglePassword;
-
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
-
   final String? Function(String?)? validator;
-
   final void Function(String)? onSubmitted;
-
   final void Function(String)? onChanged;
 
   @override
@@ -52,9 +45,7 @@ class AuthTextField extends StatelessWidget {
             color: colorScheme.onSurface,
           ),
         ),
-
         const SizedBox(height: 8),
-
         TextFormField(
           controller: controller,
           obscureText: obscureText,
@@ -63,20 +54,14 @@ class AuthTextField extends StatelessWidget {
           validator: validator,
           onFieldSubmitted: onSubmitted,
           onChanged: onChanged,
-
           style: AppTextStyles.bodyMedium.copyWith(
             color: colorScheme.onSurface,
           ),
-
-          cursorColor: colorScheme.primary,
-
           decoration: InputDecoration(
             hintText: hint,
-
             hintStyle: AppTextStyles.bodyMedium.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
-
             prefixIcon: prefixIcon == null
                 ? null
                 : Icon(
@@ -84,7 +69,6 @@ class AuthTextField extends StatelessWidget {
               size: 20,
               color: colorScheme.onSurfaceVariant,
             ),
-
             suffixIcon: showPasswordToggle
                 ? IconButton(
               onPressed: onTogglePassword,

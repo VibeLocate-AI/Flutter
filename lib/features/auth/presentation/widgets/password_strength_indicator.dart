@@ -1,64 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_text_styles.dart';
-
-class PasswordStrengthResult {
-  const PasswordStrengthResult({
-    required this.score,
-    required this.hasMinLength,
-    required this.hasUppercase,
-    required this.hasLowercase,
-    required this.hasNumber,
-    required this.hasSpecial,
-  });
-
-  final int score;
-
-  final bool hasMinLength;
-  final bool hasUppercase;
-  final bool hasLowercase;
-  final bool hasNumber;
-  final bool hasSpecial;
-
-  bool get isStrong => score == 5;
-}
-
-PasswordStrengthResult checkPasswordStrength(
-    String password,
-    ) {
-  final hasMinLength = password.length >= 8;
-  final hasUppercase =
-  RegExp(r'[A-Z]').hasMatch(password);
-  final hasLowercase =
-  RegExp(r'[a-z]').hasMatch(password);
-  final hasNumber =
-  RegExp(r'[0-9]').hasMatch(password);
-  final hasSpecial =
-  RegExp(r'[^A-Za-z0-9]').hasMatch(password);
-
-  final checks = [
-    hasMinLength,
-    hasUppercase,
-    hasLowercase,
-    hasNumber,
-    hasSpecial,
-  ];
-
-  final score =
-      checks.where((item) => item).length;
-
-  return PasswordStrengthResult(
-    score: score,
-    hasMinLength: hasMinLength,
-    hasUppercase: hasUppercase,
-    hasLowercase: hasLowercase,
-    hasNumber: hasNumber,
-    hasSpecial: hasSpecial,
-  );
-}
-
-class PasswordStrengthIndicator
-    extends StatelessWidget {
+class PasswordStrengthIndicator extends StatelessWidget {
   const PasswordStrengthIndicator({
     super.key,
     required this.password,
@@ -66,190 +8,350 @@ class PasswordStrengthIndicator
 
   final String password;
 
+  bool get hasMinLength => password.length >= 8;
+
+  bool get hasUppercase => RegExp(r'[A-Z]').hasMatch(password);
+
+  bool get hasLowercase => RegExp(r'[a-z]').hasMatch(password);
+
+  bool get hasNumber => RegExp(r'[0-9]').hasMatch(password);
+
+  bool get hasSpecialCharacter =>
+      RegExp(r'[!@#$%^&*(),.?":{}|<>_\-\\/\[\]+=;]').hasMatch(password);
+
+  bool get isStrong =>
+      hasMinLength &&
+          hasUppercase &&
+          hasLowercase &&
+          hasNumber &&
+          hasSpecialCharacter;
+
+  int get strength {
+    int score = 0;
+
+    if (hasMinLength) {
+      score++;
+    }
+
+    if (hasUppercase && hasLowercase) {
+      score++;
+    }
+
+    if (hasNumber) {
+      score++;
+    }
+
+    if (hasSpecialCharacter) {
+      score++;
+    }
+
+    return score;
+  }
+
+  String get strengthLabel {
+    if (strength <= 1) {
+      return 'Weak';
+    }
+
+    if (strength <= 3) {
+      return 'Medium';
+    }
+
+    return 'Strong';
+  }
+
+  Color get strengthColor {
+    if (strength <= 1) {
+      return const Color(0xFFEF4444);
+    }
+
+    if (strength <= 3) {
+      return const Color(0xFFF97316);
+    }
+
+    return const Color(0xFF16A34A);
+  }
+
+  Color get cardBackgroundColor {
+    if (strength <= 1) {
+      return const Color(0xFFFFF1F2);
+    }
+
+    if (strength <= 3) {
+      return const Color(0xFFFFF7ED);
+    }
+
+    return const Color(0xFFF0FDF4);
+  }
+
+  Color get cardBorderColor {
+    if (strength <= 1) {
+      return const Color(0xFFFECACA);
+    }
+
+    if (strength <= 3) {
+      return const Color(0xFFFED7AA);
+    }
+
+    return const Color(0xFFBBF7D0);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (password.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    final colorScheme =
-        Theme.of(context).colorScheme;
-
-    final result =
-    checkPasswordStrength(password);
-
-    final Color strengthColor;
-
-    if (result.score <= 2) {
-      strengthColor = colorScheme.error;
-    } else if (result.score <= 4) {
-      strengthColor = Colors.amber;
-    } else {
-      strengthColor = Colors.green;
-    }
-
-    final String strengthText;
-
-    if (result.score <= 2) {
-      strengthText = 'Weak';
-    } else if (result.score <= 4) {
-      strengthText = 'Medium';
-    } else {
-      strengthText = 'Strong';
-    }
-
     return AnimatedSize(
-      duration:
-      const Duration(milliseconds: 200),
-
-      child: Padding(
-        padding:
-        const EdgeInsets.only(top: 10),
-
-        child: Column(
-          crossAxisAlignment:
-          CrossAxisAlignment.start,
-
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Row(
-                    children:
-                    List.generate(
-                      5,
-                          (index) {
-                        final active =
-                            index < result.score;
-
-                        return Expanded(
-                          child:
-                          AnimatedContainer(
-                            duration:
-                            const Duration(
-                              milliseconds: 200,
-                            ),
-                            height: 5,
-                            margin:
-                            EdgeInsets.only(
-                              right:
-                              index == 4
-                                  ? 0
-                                  : 4,
-                            ),
-                            decoration:
-                            BoxDecoration(
-                              color: active
-                                  ? strengthColor
-                                  : colorScheme
-                                  .outlineVariant,
-                              borderRadius:
-                              BorderRadius
-                                  .circular(
-                                10,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-
-                const SizedBox(width: 12),
-
-                Text(
-                  strengthText,
-                  style:
-                  AppTextStyles.labelSmall
-                      .copyWith(
-                    color: strengthColor,
-                    fontWeight:
-                    FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 8),
-
-            _Requirement(
-              text: 'At least 8 characters',
-              valid: result.hasMinLength,
-            ),
-
-            _Requirement(
-              text:
-              'At least one uppercase letter',
-              valid: result.hasUppercase,
-            ),
-
-            _Requirement(
-              text:
-              'At least one lowercase letter',
-              valid: result.hasLowercase,
-            ),
-
-            _Requirement(
-              text: 'At least one number',
-              valid: result.hasNumber,
-            ),
-
-            _Requirement(
-              text:
-              'At least one special character',
-              valid: result.hasSpecial,
-            ),
-          ],
-        ),
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 10),
+          _buildStrengthHeader(context),
+          const SizedBox(height: 8),
+          _buildStrengthBars(),
+          const SizedBox(height: 12),
+          _buildRequirementsCard(context),
+        ],
       ),
     );
   }
-}
 
-class _Requirement extends StatelessWidget {
-  const _Requirement({
-    required this.text,
-    required this.valid,
-  });
+  Widget _buildStrengthHeader(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
 
-  final String text;
-  final bool valid;
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            'Password strength',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: Text(
+            strengthLabel,
+            key: ValueKey(strengthLabel),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: strengthColor,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme =
-        Theme.of(context).colorScheme;
+  Widget _buildStrengthBars() {
+    return Row(
+      children: List.generate(
+        4,
+            (index) {
+          final active = index < strength;
+
+          return Expanded(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+              height: 7,
+              margin: EdgeInsets.only(
+                right: index == 3 ? 0 : 5,
+              ),
+              decoration: BoxDecoration(
+                gradient: active
+                    ? LinearGradient(
+                  colors: _barGradient(index),
+                )
+                    : null,
+                color: active
+                    ? null
+                    : const Color(0xFFE5E7EB),
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  List<Color> _barGradient(int index) {
+    if (strength <= 1) {
+      return const [
+        Color(0xFFEF4444),
+        Color(0xFFF87171),
+      ];
+    }
+
+    if (strength <= 3) {
+      if (index == 0) {
+        return const [
+          Color(0xFFF97316),
+          Color(0xFFFB923C),
+        ];
+      }
+
+      if (index == 1) {
+        return const [
+          Color(0xFFF59E0B),
+          Color(0xFFFBBF24),
+        ];
+      }
+
+      return const [
+        Color(0xFFFBBF24),
+        Color(0xFFA3E635),
+      ];
+    }
+
+    return const [
+      Color(0xFF16A34A),
+      Color(0xFF4ADE80),
+    ];
+  }
+
+  Widget _buildRequirementsCard(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardBackgroundColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: cardBorderColor,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: strengthColor.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isStrong
+                      ? Icons.verified_rounded
+                      : Icons.shield_outlined,
+                  color: strengthColor,
+                  size: 23,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isStrong
+                          ? 'Strong password!'
+                          : 'Your password needs more work',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: strengthColor,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      isStrong
+                          ? 'Your password meets all requirements.'
+                          : 'Please meet the requirements below:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.4,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          _buildRequirement(
+            text: 'At least 8 characters',
+            isValid: hasMinLength,
+          ),
+          _buildRequirement(
+            text: 'One uppercase letter (A-Z)',
+            isValid: hasUppercase,
+          ),
+          _buildRequirement(
+            text: 'One lowercase letter (a-z)',
+            isValid: hasLowercase,
+          ),
+          _buildRequirement(
+            text: 'One number (0-9)',
+            isValid: hasNumber,
+          ),
+          _buildRequirement(
+            text: 'One special character (!@#\$...)',
+            isValid: hasSpecialCharacter,
+            isLast: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRequirement({
+    required String text,
+    required bool isValid,
+    bool isLast = false,
+  }) {
+    final color = isValid
+        ? const Color(0xFF16A34A)
+        : const Color(0xFFEF4444);
 
     return Padding(
-      padding:
-      const EdgeInsets.only(bottom: 3),
-
+      padding: EdgeInsets.only(
+        bottom: isLast ? 0 : 10,
+      ),
       child: Row(
         children: [
-          Icon(
-            valid
-                ? Icons.check_circle_rounded
-                : Icons.circle_outlined,
-            size: 14,
-            color: valid
-                ? Colors.green
-                : colorScheme
-                .onSurfaceVariant,
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isValid
+                  ? Icons.check_rounded
+                  : Icons.close_rounded,
+              color: Colors.white,
+              size: 14,
+            ),
           ),
-
-          const SizedBox(width: 6),
-
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               text,
-              style:
-              AppTextStyles.labelSmall
-                  .copyWith(
-                color: valid
-                    ? colorScheme.onSurface
-                    : colorScheme
-                    .onSurfaceVariant,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight:
+                isValid ? FontWeight.w500 : FontWeight.w400,
+                color: const Color(0xFF334155),
               ),
             ),
           ),

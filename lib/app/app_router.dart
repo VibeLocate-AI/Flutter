@@ -122,11 +122,14 @@ class AppRouter {
           ),
         );
 
+
       case home:
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => const HomePage(),
         );
+
+
 
       default:
         return MaterialPageRoute(

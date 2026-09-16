@@ -5,6 +5,7 @@ import 'package:vibe_locate_ai/features/auth/presentation/pages/verification_pag
 import '../../../../app/app_router.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/localization/localization.dart';
+import '../../../../core/theme/app_text_styles.dart';
 import '../../auth_dependencies.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/legal_agreement_text.dart';
@@ -16,28 +17,23 @@ class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
   @override
-  State<RegisterPage> createState() =>
-      _RegisterPageState();
+  State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _RegisterPageState
-    extends State<RegisterPage> {
+class _RegisterPageState extends State<RegisterPage> {
   final GlobalKey<FormState> _formKey =
   GlobalKey<FormState>();
 
-  final TextEditingController
-  _firstNameController =
+  final TextEditingController _firstNameController =
   TextEditingController();
 
-  final TextEditingController
-  _lastNameController =
+  final TextEditingController _lastNameController =
   TextEditingController();
 
   final TextEditingController _cityController =
   TextEditingController();
 
-  final TextEditingController
-  _countryController =
+  final TextEditingController _countryController =
   TextEditingController();
 
   final TextEditingController _phoneController =
@@ -46,12 +42,10 @@ class _RegisterPageState
   final TextEditingController _emailController =
   TextEditingController();
 
-  final TextEditingController
-  _passwordController =
+  final TextEditingController _passwordController =
   TextEditingController();
 
-  final TextEditingController
-  _confirmPasswordController =
+  final TextEditingController _confirmPasswordController =
   TextEditingController();
 
   Country _selectedCountry = Country(
@@ -82,7 +76,6 @@ class _RegisterPageState
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-
     super.dispose();
   }
 
@@ -120,6 +113,16 @@ class _RegisterPageState
     return null;
   }
 
+  bool _isStrongPassword(String password) {
+    return password.length >= 8 &&
+        RegExp(r'[A-Z]').hasMatch(password) &&
+        RegExp(r'[a-z]').hasMatch(password) &&
+        RegExp(r'[0-9]').hasMatch(password) &&
+        RegExp(
+          r'[!@#$%^&*(),.?":{}|<>_\-\\/\[\]+=;]',
+        ).hasMatch(password);
+  }
+
   String? _passwordValidator(
       String? value,
       AppLocalization localization,
@@ -130,11 +133,26 @@ class _RegisterPageState
       );
     }
 
-    final result =
-    checkPasswordStrength(value);
+    if (value.length < 8) {
+      return 'Password must be at least 8 characters';
+    }
 
-    if (!result.isStrong) {
-      return 'Password must be at least 8 characters and contain uppercase, lowercase, number, and special character.';
+    if (!RegExp(r'[A-Z]').hasMatch(value)) {
+      return 'Password must contain an uppercase letter';
+    }
+
+    if (!RegExp(r'[a-z]').hasMatch(value)) {
+      return 'Password must contain a lowercase letter';
+    }
+
+    if (!RegExp(r'[0-9]').hasMatch(value)) {
+      return 'Password must contain a number';
+    }
+
+    if (!RegExp(
+      r'[!@#$%^&*(),.?":{}|<>_\-\\/\[\]+=;]',
+    ).hasMatch(value)) {
+      return 'Password must contain a special character';
     }
 
     return null;
@@ -194,33 +212,15 @@ class _RegisterPageState
     final passwordConfirmation =
         _confirmPasswordController.text;
 
-    final strength =
-    checkPasswordStrength(password);
-
-    if (!strength.isStrong) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Please choose a stronger password.',
-          ),
-        ),
-      );
-      return;
-    }
-
     if (firstName.isEmpty ||
         lastName.isEmpty ||
         city.isEmpty ||
         country.isEmpty ||
         email.isEmpty ||
-        _phoneController.text
-            .trim()
-            .isEmpty ||
+        _phoneController.text.trim().isEmpty ||
         password.isEmpty ||
         passwordConfirmation.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             localization.translate(
@@ -232,9 +232,30 @@ class _RegisterPageState
       return;
     }
 
+    if (!_isStrongPassword(password)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please create a strong password before continuing.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (password != passwordConfirmation) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Passwords do not match.',
+          ),
+        ),
+      );
+      return;
+    }
+
     if (!_acceptedTerms) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             localization.translate(
@@ -270,12 +291,10 @@ class _RegisterPageState
       Navigator.pushNamed(
         context,
         AppRouter.verification,
-        arguments:
-        VerificationPageArgs(
+        arguments: VerificationPageArgs(
           email: email,
           purpose:
-          VerificationPurpose
-              .emailVerification,
+          VerificationPurpose.emailVerification,
         ),
       );
     } on ValidationException catch (e) {
@@ -283,8 +302,7 @@ class _RegisterPageState
         return;
       }
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.message),
         ),
@@ -294,8 +312,7 @@ class _RegisterPageState
         return;
       }
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.message),
         ),
@@ -305,8 +322,7 @@ class _RegisterPageState
         return;
       }
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             localization.translate(
@@ -331,15 +347,20 @@ class _RegisterPageState
 
     FocusScope.of(context).unfocus();
 
-    final localization =
-    AppLocalization.of(context);
-
     setState(() {
       _isLoading = true;
     });
 
     try {
+      debugPrint(
+        'GOOGLE REGISTER: Starting Google Sign-In...',
+      );
+
       await AuthDependencies.loginWithGoogle();
+
+      debugPrint(
+        'GOOGLE REGISTER: Laravel authentication successful.',
+      );
 
       if (!mounted) {
         return;
@@ -350,41 +371,44 @@ class _RegisterPageState
         AppRouter.home,
             (route) => false,
       );
-    } on ValidationException catch (e) {
-      if (!mounted) {
-        return;
-      }
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-        ),
-      );
     } on ApiException catch (e) {
-      if (!mounted) {
-        return;
-      }
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-        ),
+      debugPrint(
+        'GOOGLE REGISTER API ERROR: ${e.message}',
       );
-    } catch (_) {
+
       if (!mounted) {
         return;
       }
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            localization.translate(
-              'generic_api_error',
-            ),
+            'Google API Error: ${e.message}',
           ),
+          duration:
+          const Duration(seconds: 8),
+        ),
+      );
+    } catch (e, stackTrace) {
+      debugPrint(
+        'GOOGLE REGISTER ERROR: $e',
+      );
+
+      debugPrint(
+        'GOOGLE REGISTER STACK TRACE: $stackTrace',
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Google Register Error: $e',
+          ),
+          duration:
+          const Duration(seconds: 8),
         ),
       );
     } finally {
@@ -401,253 +425,174 @@ class _RegisterPageState
     final localization =
     AppLocalization.of(context);
 
-    final colorScheme =
-        Theme.of(context).colorScheme;
-
-    final size =
-    MediaQuery.sizeOf(context);
-
+    final size = MediaQuery.sizeOf(context);
     final width = size.width;
     final height = size.height;
 
     final horizontalPadding =
     width < 360 ? 20.0 : 24.0;
 
-    return Scaffold(
-      backgroundColor:
-      colorScheme.surface,
+    final colorScheme =
+        Theme.of(context).colorScheme;
 
+    final passwordsMatch =
+        _confirmPasswordController.text.isNotEmpty &&
+            _confirmPasswordController.text ==
+                _passwordController.text;
+
+    return Scaffold(
+      backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
           physics:
           const BouncingScrollPhysics(),
-
           padding: EdgeInsets.symmetric(
-            horizontal:
-            horizontalPadding,
-            vertical:
-            height < 700 ? 18 : 28,
+            horizontal: horizontalPadding,
+            vertical: height < 700 ? 18 : 28,
           ),
-
           child: Center(
             child: ConstrainedBox(
               constraints:
               const BoxConstraints(
                 maxWidth: 430,
               ),
-
               child: Form(
                 key: _formKey,
-
                 child: Column(
                   crossAxisAlignment:
                   CrossAxisAlignment.stretch,
-
                   children: [
-                    const SizedBox(
-                      height: 26,
-                    ),
-
+                    const SizedBox(height: 26),
                     Row(
                       crossAxisAlignment:
                       CrossAxisAlignment.start,
-
                       children: [
                         Expanded(
-                          child:
-                          AuthTextField(
+                          child: AuthTextField(
                             controller:
                             _firstNameController,
-
                             label:
-                            localization
-                                .translate(
+                            localization.translate(
                               'first_name',
                             ),
-
                             hint:
-                            localization
-                                .translate(
+                            localization.translate(
                               'first_name_hint',
                             ),
-
                             prefixIcon:
-                            Icons
-                                .person_outline,
-
+                            Icons.person_outline,
                             keyboardType:
                             TextInputType.name,
-
                             textInputAction:
-                            TextInputAction
-                                .next,
-
+                            TextInputAction.next,
                             validator:
-                                (value) =>
-                                _required(
-                                  value,
-                                  localization
-                                      .translate(
-                                    'first_name_required',
-                                  ),
-                                ),
+                                (value) => _required(
+                              value,
+                              localization.translate(
+                                'first_name_required',
+                              ),
+                            ),
                           ),
                         ),
-
-                        const SizedBox(
-                          width: 12,
-                        ),
-
+                        const SizedBox(width: 12),
                         Expanded(
-                          child:
-                          AuthTextField(
+                          child: AuthTextField(
                             controller:
                             _lastNameController,
-
                             label:
-                            localization
-                                .translate(
+                            localization.translate(
                               'last_name',
                             ),
-
                             hint:
-                            localization
-                                .translate(
+                            localization.translate(
                               'last_name_hint',
                             ),
-
                             prefixIcon:
-                            Icons
-                                .person_outline,
-
+                            Icons.person_outline,
                             keyboardType:
                             TextInputType.name,
-
                             textInputAction:
-                            TextInputAction
-                                .next,
-
+                            TextInputAction.next,
                             validator:
-                                (value) =>
-                                _required(
-                                  value,
-                                  localization
-                                      .translate(
-                                    'last_name_required',
-                                  ),
-                                ),
+                                (value) => _required(
+                              value,
+                              localization.translate(
+                                'last_name_required',
+                              ),
+                            ),
                           ),
                         ),
                       ],
                     ),
-
-                    const SizedBox(
-                      height: 16,
-                    ),
-
+                    const SizedBox(height: 16),
                     Row(
                       crossAxisAlignment:
                       CrossAxisAlignment.start,
-
                       children: [
                         Expanded(
-                          child:
-                          AuthTextField(
+                          child: AuthTextField(
                             controller:
                             _cityController,
-
                             label:
-                            localization
-                                .translate(
+                            localization.translate(
                               'city',
                             ),
-
                             hint:
-                            localization
-                                .translate(
+                            localization.translate(
                               'city_hint',
                             ),
-
                             prefixIcon:
                             Icons
                                 .location_city_outlined,
-
                             keyboardType:
                             TextInputType.text,
-
                             textInputAction:
-                            TextInputAction
-                                .next,
-
+                            TextInputAction.next,
                             validator:
-                                (value) =>
-                                _required(
-                                  value,
-                                  localization
-                                      .translate(
-                                    'city_required',
-                                  ),
-                                ),
+                                (value) => _required(
+                              value,
+                              localization.translate(
+                                'city_required',
+                              ),
+                            ),
                           ),
                         ),
-
-                        const SizedBox(
-                          width: 12,
-                        ),
-
+                        const SizedBox(width: 12),
                         Expanded(
-                          child:
-                          AuthTextField(
+                          child: AuthTextField(
                             controller:
                             _countryController,
-
                             label:
-                            localization
-                                .translate(
+                            localization.translate(
                               'country',
                             ),
-
                             hint:
-                            localization
-                                .translate(
+                            localization.translate(
                               'country_hint',
                             ),
-
                             prefixIcon:
                             Icons.public_outlined,
-
                             keyboardType:
                             TextInputType.text,
-
                             textInputAction:
-                            TextInputAction
-                                .next,
-
+                            TextInputAction.next,
                             validator:
-                                (value) =>
-                                _required(
-                                  value,
-                                  localization
-                                      .translate(
-                                    'country_required',
-                                  ),
-                                ),
+                                (value) => _required(
+                              value,
+                              localization.translate(
+                                'country_required',
+                              ),
+                            ),
                           ),
                         ),
                       ],
                     ),
-
-                    const SizedBox(
-                      height: 16,
-                    ),
-
+                    const SizedBox(height: 16),
                     PhoneNumberField(
                       controller:
                       _phoneController,
-
                       country:
                       _selectedCountry,
-
                       onCountryChanged:
                           (country) {
                         setState(() {
@@ -655,58 +600,37 @@ class _RegisterPageState
                               country;
                         });
                       },
-
                       label:
-                      localization
-                          .translate(
+                      localization.translate(
                         'phone_number',
                       ),
-
                       hint:
-                      localization
-                          .translate(
+                      localization.translate(
                         'phone_hint',
                       ),
-
                       errorText:
-                      localization
-                          .translate(
+                      localization.translate(
                         'phone_required',
                       ),
                     ),
-
-                    const SizedBox(
-                      height: 16,
-                    ),
-
+                    const SizedBox(height: 16),
                     AuthTextField(
                       controller:
                       _emailController,
-
                       label:
-                      localization
-                          .translate(
+                      localization.translate(
                         'email',
                       ),
-
                       hint:
-                      localization
-                          .translate(
+                      localization.translate(
                         'email_hint',
                       ),
-
                       prefixIcon:
-                      Icons
-                          .email_outlined,
-
+                      Icons.email_outlined,
                       keyboardType:
-                      TextInputType
-                          .emailAddress,
-
+                      TextInputType.emailAddress,
                       textInputAction:
-                      TextInputAction
-                          .next,
-
+                      TextInputAction.next,
                       validator:
                           (value) =>
                           _emailValidator(
@@ -714,129 +638,126 @@ class _RegisterPageState
                             localization,
                           ),
                     ),
-
-                    const SizedBox(
-                      height: 16,
-                    ),
-
+                    const SizedBox(height: 16),
                     AuthTextField(
                       controller:
                       _passwordController,
-
                       label:
-                      localization
-                          .translate(
+                      localization.translate(
                         'password',
                       ),
-
                       hint:
-                      localization
-                          .translate(
+                      localization.translate(
                         'password_hint',
                       ),
-
                       prefixIcon:
                       Icons.lock_outline,
-
                       obscureText:
                       _obscurePassword,
-
-                      showPasswordToggle:
-                      true,
-
+                      showPasswordToggle: true,
                       onTogglePassword: () {
                         setState(() {
                           _obscurePassword =
                           !_obscurePassword;
                         });
                       },
-
+                      onChanged: (_) {
+                        setState(() {});
+                      },
                       textInputAction:
-                      TextInputAction
-                          .next,
-
+                      TextInputAction.next,
                       validator:
                           (value) =>
                           _passwordValidator(
                             value,
                             localization,
                           ),
-
-                      onChanged: (_) {
-                        setState(() {});
-                      },
                     ),
-
                     PasswordStrengthIndicator(
                       password:
-                      _passwordController
-                          .text,
+                      _passwordController.text,
                     ),
-
-                    const SizedBox(
-                      height: 16,
-                    ),
-
+                    const SizedBox(height: 16),
                     AuthTextField(
                       controller:
                       _confirmPasswordController,
-
                       label:
-                      localization
-                          .translate(
+                      localization.translate(
                         'confirm_password',
                       ),
-
                       hint:
-                      localization
-                          .translate(
+                      localization.translate(
                         'confirm_password_hint',
                       ),
-
                       prefixIcon:
                       Icons.lock_outline,
-
                       obscureText:
                       _obscureConfirmPassword,
-
-                      showPasswordToggle:
-                      true,
-
+                      showPasswordToggle: true,
                       onTogglePassword: () {
                         setState(() {
                           _obscureConfirmPassword =
                           !_obscureConfirmPassword;
                         });
                       },
-
+                      onChanged: (_) {
+                        setState(() {});
+                      },
                       textInputAction:
                       TextInputAction.done,
-
                       validator:
                           (value) =>
                           _confirmPasswordValidator(
                             value,
                             localization,
                           ),
+                      onSubmitted: (_) =>
+                          _register(),
                     ),
-
-                    const SizedBox(
-                      height: 16,
-                    ),
-
+                    if (passwordsMatch) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Container(
+                            width: 22,
+                            height: 22,
+                            decoration:
+                            const BoxDecoration(
+                              color:
+                              Color(0xFF16A34A),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.check_rounded,
+                              color: Colors.white,
+                              size: 14,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Passwords match',
+                            style: TextStyle(
+                              color:
+                              Color(0xFF16A34A),
+                              fontSize: 13,
+                              fontWeight:
+                              FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 16),
                     Row(
                       crossAxisAlignment:
                       CrossAxisAlignment.start,
-
                       children: [
                         SizedBox(
                           width: 30,
                           height: 30,
-
                           child: Checkbox(
                             value:
                             _acceptedTerms,
-
                             onChanged:
                                 (value) {
                               setState(() {
@@ -845,51 +766,36 @@ class _RegisterPageState
                                         false;
                               });
                             },
-
                             activeColor:
-                            colorScheme
-                                .primary,
-
+                            colorScheme.primary,
                             materialTapTargetSize:
                             MaterialTapTargetSize
                                 .shrinkWrap,
                           ),
                         ),
-
-                        const SizedBox(
-                          width: 8,
-                        ),
-
+                        const SizedBox(width: 8),
                         const Expanded(
                           child:
                           LegalAgreementText(),
                         ),
                       ],
                     ),
-
-                    const SizedBox(
-                      height: 20,
-                    ),
-
+                    const SizedBox(height: 20),
                     SizedBox(
                       height: 52,
-
                       child:
                       ElevatedButton(
                         onPressed:
                         _isLoading
                             ? null
                             : _register,
-
-                        child:
-                        _isLoading
+                        child: _isLoading
                             ? const SizedBox(
                           width: 22,
                           height: 22,
                           child:
                           CircularProgressIndicator(
-                            strokeWidth:
-                            2,
+                            strokeWidth: 2,
                           ),
                         )
                             : Text(
@@ -897,93 +803,77 @@ class _RegisterPageState
                               .translate(
                             'sign_up',
                           ),
+                          style:
+                          AppTextStyles
+                              .button,
                         ),
                       ),
                     ),
-
-                    const SizedBox(
-                      height: 18,
-                    ),
-
+                    const SizedBox(height: 18),
                     Row(
                       children: [
                         Expanded(
                           child: Divider(
-                            color:
-                            colorScheme
+                            color: colorScheme
                                 .outlineVariant,
                           ),
                         ),
-
                         Padding(
                           padding:
                           const EdgeInsets
                               .symmetric(
                             horizontal: 12,
                           ),
-
                           child: Text(
                             localization
                                 .translate(
                               'or',
                             ),
                             style:
-                            TextStyle(
+                            AppTextStyles
+                                .labelSmall
+                                .copyWith(
                               color: colorScheme
                                   .onSurfaceVariant,
                             ),
                           ),
                         ),
-
                         Expanded(
                           child: Divider(
-                            color:
-                            colorScheme
+                            color: colorScheme
                                 .outlineVariant,
                           ),
                         ),
                       ],
                     ),
-
-                    const SizedBox(
-                      height: 18,
-                    ),
-
+                    const SizedBox(height: 18),
                     SocialLoginButton(
                       label:
-                      localization
-                          .translate(
+                      localization.translate(
                         'continue_with_google',
                       ),
-
                       onPressed:
                       _continueWithGoogle,
                     ),
-
-                    const SizedBox(
-                      height: 16,
-                    ),
-
+                    const SizedBox(height: 16),
                     Row(
                       mainAxisAlignment:
-                      MainAxisAlignment
-                          .center,
-
+                      MainAxisAlignment.center,
                       children: [
                         Flexible(
                           child: Text(
-                            localization
-                                .translate(
+                            localization.translate(
                               'already_have_account',
                             ),
                             style:
-                            TextStyle(
+                            AppTextStyles
+                                .bodySmall
+                                .copyWith(
                               color: colorScheme
                                   .onSurfaceVariant,
                             ),
                           ),
                         ),
-
                         TextButton(
                           onPressed: () {
                             Navigator
@@ -992,17 +882,16 @@ class _RegisterPageState
                               AppRouter.login,
                             );
                           },
-
                           child: Text(
-                            localization
-                                .translate(
+                            localization.translate(
                               'login',
                             ),
                             style:
-                            TextStyle(
+                            AppTextStyles
+                                .labelMedium
+                                .copyWith(
                               color:
-                              colorScheme
-                                  .primary,
+                              colorScheme.primary,
                               fontWeight:
                               FontWeight.w700,
                             ),

@@ -5,35 +5,69 @@ class ApiEndpoints {
       'https://vibelocate-laravel.onrender.com';
 
   // Authentication
-  static const String register = '/api/register';
-  static const String verifyOtp = '/api/verify-otp';
-  static const String resendOtp = '/api/resend-otp';
-  static const String login = '/api/login';
+  static const String register =
+      '/api/register';
+
+  static const String verifyOtp =
+      '/api/verify-otp';
+
+  static const String resendOtp =
+      '/api/resend-otp';
+
+  static const String login =
+      '/api/login';
+
+  // Google Authentication
+  static const String googleLogin =
+      '/api/auth/google';
 
   // Tokens & Session
-  static const String refreshToken = '/api/refresh-token';
-  static const String rememberMe = '/api/remember-me';
-  static const String logout = '/api/logout';
+  static const String refreshToken =
+      '/api/refresh-token';
+
+  static const String rememberMe =
+      '/api/remember-me';
+
+  static const String logout =
+      '/api/logout';
 
   // Password Management
   static const String forgotPassword =
       '/api/forgot-password';
+
   static const String verifyResetOtp =
       '/api/verify-reset-otp';
+
   static const String resetPassword =
       '/api/reset-password';
 
   // Profile
-  static const String profile = '/api/profile';
+  static const String profile =
+      '/api/profile';
+
   static const String completeProfile =
       '/api/complete-profile';
 
   // Sessions
-  static const String sessions = '/api/sessions';
+  static const String sessions =
+      '/api/sessions';
 
   // Two Factor Authentication
-  static const String twoFactor = '/api/two-factor';
+  static const String twoFactor =
+      '/api/two-factor';
 
-  static const String googleLogin =
-      '/api/auth/google';
+  // Home
+  static const String home =
+      '/api/home';
+
+  // Properties
+  static const String properties =
+      '/api/properties';
+
+  static String propertyDetails(int id) =>
+      '/api/properties/$id';
+
+  // AI Contextual Search
+  static const String aiContextualSearch =
+      '/api/ai/contextual-search';
 }

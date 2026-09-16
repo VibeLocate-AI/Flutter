@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../../../../app/app_router.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/localization/localization.dart';
+import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/device_identity.dart';
 import '../../auth_dependencies.dart';
 import '../widgets/auth_header.dart';
@@ -42,8 +43,7 @@ class _VerificationPageState
     extends State<VerificationPage> {
   static const int _otpLength = 6;
 
-  final List<TextEditingController>
-  _controllers =
+  final List<TextEditingController> _controllers =
   List.generate(
     _otpLength,
         (_) => TextEditingController(),
@@ -93,7 +93,9 @@ class _VerificationPageState
 
   String get _code {
     return _controllers
-        .map((controller) => controller.text)
+        .map(
+          (controller) => controller.text,
+    )
         .join();
   }
 
@@ -107,24 +109,28 @@ class _VerificationPageState
       ) {
     if (value.length > 1) {
       final digitsOnly =
-      value.replaceAll(RegExp(r'\D'), '');
+      value.replaceAll(
+        RegExp(r'\D'),
+        '',
+      );
 
       if (digitsOnly.isEmpty) {
         _controllers[index].clear();
         return;
       }
 
-      final remaining =
-      digitsOnly.substring(
+      final remaining = digitsOnly.substring(
         0,
         digitsOnly.length > _otpLength
             ? _otpLength
             : digitsOnly.length,
       );
 
-      for (int i = 0;
+      for (
+      int i = 0;
       i < remaining.length;
-      i++) {
+      i++
+      ) {
         if (i < _otpLength) {
           _controllers[i].text =
           remaining[i];
@@ -149,7 +155,8 @@ class _VerificationPageState
 
     if (value.isNotEmpty &&
         index < _otpLength - 1) {
-      _focusNodes[index + 1].requestFocus();
+      _focusNodes[index + 1]
+          .requestFocus();
     }
 
     if (value.isNotEmpty &&
@@ -188,8 +195,7 @@ class _VerificationPageState
     AppLocalization.of(context);
 
     if (!_isCodeComplete) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             localization.translate(
@@ -210,7 +216,8 @@ class _VerificationPageState
           VerificationPurpose
               .emailVerification) {
         final deviceUuid =
-        await DeviceIdentity.getDeviceUuid();
+        await DeviceIdentity
+            .getDeviceUuid();
 
         final deviceType =
         defaultTargetPlatform ==
@@ -383,16 +390,15 @@ class _VerificationPageState
       int index,
       double width,
       ) {
-    final colorScheme =
-        Theme.of(context).colorScheme;
-
     final fieldWidth =
     width < 360 ? 42.0 : 46.0;
+
+    final colorScheme =
+        Theme.of(context).colorScheme;
 
     return SizedBox(
       width: fieldWidth,
       height: 54,
-
       child: Focus(
         onKeyEvent: (
             node,
@@ -403,95 +409,83 @@ class _VerificationPageState
             index,
           );
         },
-
         child: TextFormField(
           controller:
           _controllers[index],
           focusNode:
           _focusNodes[index],
-
-          textAlign:
-          TextAlign.center,
-
+          textAlign: TextAlign.center,
           keyboardType:
           TextInputType.number,
-
           textInputAction:
           index == _otpLength - 1
               ? TextInputAction.done
               : TextInputAction.next,
-
           maxLength: 1,
-
           inputFormatters: [
             FilteringTextInputFormatter
                 .digitsOnly,
           ],
-
           onChanged: (value) {
             _onCodeChanged(
               value,
               index,
             );
           },
-
           onFieldSubmitted: (_) {
             if (index ==
                 _otpLength - 1) {
               _verify();
             }
           },
-
           decoration: InputDecoration(
             counterText: '',
             contentPadding:
             EdgeInsets.zero,
-
             filled: true,
-
             fillColor:
             colorScheme.surface,
-
             border:
             OutlineInputBorder(
               borderRadius:
-              BorderRadius.circular(10),
-
-              borderSide: BorderSide(
+              BorderRadius.circular(
+                10,
+              ),
+              borderSide:
+              BorderSide(
                 color:
                 colorScheme.outline,
               ),
             ),
-
             enabledBorder:
             OutlineInputBorder(
               borderRadius:
-              BorderRadius.circular(10),
-
-              borderSide: BorderSide(
+              BorderRadius.circular(
+                10,
+              ),
+              borderSide:
+              BorderSide(
                 color:
                 colorScheme.outline,
               ),
             ),
-
             focusedBorder:
             OutlineInputBorder(
               borderRadius:
-              BorderRadius.circular(10),
-
-              borderSide: BorderSide(
+              BorderRadius.circular(
+                10,
+              ),
+              borderSide:
+              BorderSide(
                 color:
                 colorScheme.primary,
                 width: 1.5,
               ),
             ),
           ),
-
-          style:
-          Theme.of(context)
-              .textTheme
-              .headlineSmall
-              ?.copyWith(
+          style: AppTextStyles
+              .headingSmall
+              .copyWith(
             color:
             colorScheme.onSurface,
             fontWeight:
@@ -507,37 +501,34 @@ class _VerificationPageState
     final localization =
     AppLocalization.of(context);
 
-    final colorScheme =
-        Theme.of(context).colorScheme;
-
     final width =
         MediaQuery.sizeOf(context).width;
 
     final horizontalPadding =
     width < 360 ? 20.0 : 24.0;
 
+    final colorScheme =
+        Theme.of(context).colorScheme;
+
     return Scaffold(
       backgroundColor:
-      colorScheme.surface,
-
+      Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(
-            horizontal: horizontalPadding,
+            horizontal:
+            horizontalPadding,
             vertical: 30,
           ),
-
           child: Center(
             child: ConstrainedBox(
               constraints:
               const BoxConstraints(
                 maxWidth: 430,
               ),
-
               child: Column(
                 children: [
                   const SizedBox(height: 18),
-
                   AuthHeader(
                     title:
                     localization.translate(
@@ -548,32 +539,26 @@ class _VerificationPageState
                       'verification_subtitle',
                     ),
                   ),
-
                   const SizedBox(height: 8),
-
                   Text(
                     widget.args.email,
                     textAlign:
                     TextAlign.center,
-
-                    style: Theme.of(context)
-                        .textTheme
+                    style: AppTextStyles
                         .labelMedium
-                        ?.copyWith(
+                        .copyWith(
                       color:
                       colorScheme.primary,
                       fontWeight:
                       FontWeight.w700,
                     ),
                   ),
-
                   const SizedBox(height: 36),
-
                   Row(
                     mainAxisAlignment:
                     MainAxisAlignment.center,
-
-                    children: List.generate(
+                    children:
+                    List.generate(
                       _otpLength,
                           (index) {
                         return Padding(
@@ -591,19 +576,17 @@ class _VerificationPageState
                       },
                     ),
                   ),
-
                   const SizedBox(height: 32),
-
                   SizedBox(
-                    width: double.infinity,
+                    width:
+                    double.infinity,
                     height: 52,
-
-                    child: ElevatedButton(
+                    child:
+                    ElevatedButton(
                       onPressed:
                       _isLoading
                           ? null
                           : _verify,
-
                       child: _isLoading
                           ? const SizedBox(
                         width: 22,
@@ -621,32 +604,31 @@ class _VerificationPageState
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
                   Row(
                     mainAxisAlignment:
                     MainAxisAlignment.center,
-
                     children: [
                       Flexible(
                         child: Text(
-                          localization.translate(
+                          localization
+                              .translate(
                             'didnt_receive_code',
                           ),
-                          style: TextStyle(
+                          style:
+                          AppTextStyles
+                              .bodySmall
+                              .copyWith(
                             color: colorScheme
                                 .onSurfaceVariant,
                           ),
                         ),
                       ),
-
                       TextButton(
                         onPressed:
                         _isResending
                             ? null
                             : _resendCode,
-
                         child: _isResending
                             ? const SizedBox(
                           width: 18,
@@ -665,17 +647,20 @@ class _VerificationPageState
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 8),
-
                   TextButton(
                     onPressed: () {
-                      Navigator.pop(context);
+                      Navigator.pop(
+                        context,
+                      );
                     },
-
                     child: Text(
                       localization.translate(
                         'back',
+                      ),
+                      style: TextStyle(
+                        color:
+                        colorScheme.primary,
                       ),
                     ),
                   ),
