@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import '../../../../app/app_router.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/localization/localization.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/device_identity.dart';
 import '../../auth_dependencies.dart';
@@ -114,8 +113,7 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _login() async {
     FocusScope.of(context).unfocus();
 
-    final localization =
-    AppLocalization.of(context);
+
 
     if (!_formKey.currentState!.validate()) {
       return;
@@ -306,7 +304,7 @@ class _LoginPageState extends State<LoginPage> {
 
     return Scaffold(
       backgroundColor:
-      AppColors.grayBg,
+      Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -475,8 +473,7 @@ class _LoginPageState extends State<LoginPage> {
                           style: AppTextStyles
                               .labelMedium
                               .copyWith(
-                            color: AppColors
-                                .blueAccent,
+                            color: Theme.of(context).colorScheme.primary,
                             fontWeight:
                             FontWeight.w600,
                           ),
@@ -522,10 +519,9 @@ class _LoginPageState extends State<LoginPage> {
 
                     Row(
                       children: [
-                        const Expanded(
+                        Expanded(
                           child: Divider(
-                            color: AppColors
-                                .grayBorderLight,
+                            color: Theme.of(context).colorScheme.outlineVariant,
                           ),
                         ),
 
@@ -542,16 +538,14 @@ class _LoginPageState extends State<LoginPage> {
                             style: AppTextStyles
                                 .labelSmall
                                 .copyWith(
-                              color: AppColors
-                                  .grayTextMuted,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
 
-                        const Expanded(
+                        Expanded(
                           child: Divider(
-                            color: AppColors
-                                .grayBorderLight,
+                            color: Theme.of(context).colorScheme.outlineVariant,
                           ),
                         ),
                       ],
@@ -587,8 +581,7 @@ class _LoginPageState extends State<LoginPage> {
                             style: AppTextStyles
                                 .bodySmall
                                 .copyWith(
-                              color: AppColors
-                                  .grayTextSub,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                             textAlign:
                             TextAlign.center,
@@ -609,8 +602,7 @@ class _LoginPageState extends State<LoginPage> {
                             style: AppTextStyles
                                 .labelMedium
                                 .copyWith(
-                              color: AppColors
-                                  .navyPrimary,
+                              color: Theme.of(context).colorScheme.primary,
                               fontWeight:
                               FontWeight.w700,
                             ),

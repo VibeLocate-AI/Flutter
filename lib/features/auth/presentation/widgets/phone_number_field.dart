@@ -1,7 +1,6 @@
 import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 
 class PhoneNumberField extends StatelessWidget {
@@ -23,25 +22,25 @@ class PhoneNumberField extends StatelessWidget {
   final String errorText;
 
   void _openCountryPicker(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     showCountryPicker(
       context: context,
       showPhoneCode: true,
       useSafeArea: true,
       onSelect: onCountryChanged,
       countryListTheme: CountryListThemeData(
-        backgroundColor: AppColors.white,
+        backgroundColor: colorScheme.surface,
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(24),
         ),
         bottomSheetHeight:
         MediaQuery.sizeOf(context).height * 0.75,
-        searchTextStyle:
-        AppTextStyles.bodyMedium.copyWith(
-          color: AppColors.navyDark,
+        searchTextStyle: AppTextStyles.bodyMedium.copyWith(
+          color: colorScheme.onSurface,
         ),
-        textStyle:
-        AppTextStyles.bodyMedium.copyWith(
-          color: AppColors.navyDark,
+        textStyle: AppTextStyles.bodyMedium.copyWith(
+          color: colorScheme.onSurface,
         ),
       ),
     );
@@ -49,6 +48,8 @@ class PhoneNumberField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return FormField<String>(
       validator: (_) {
         if (controller.text.trim().isEmpty) {
@@ -64,9 +65,8 @@ class PhoneNumberField extends StatelessWidget {
           children: [
             Text(
               label,
-              style:
-              AppTextStyles.labelLarge.copyWith(
-                color: AppColors.navyDark,
+              style: AppTextStyles.labelLarge.copyWith(
+                color: colorScheme.onSurface,
               ),
             ),
 
@@ -75,13 +75,13 @@ class PhoneNumberField extends StatelessWidget {
             Container(
               height: 52,
               decoration: BoxDecoration(
-                color: AppColors.white,
+                color: colorScheme.surface,
                 borderRadius:
                 BorderRadius.circular(10),
                 border: Border.all(
                   color: field.hasError
-                      ? AppColors.errorRed
-                      : AppColors.grayBorder,
+                      ? colorScheme.error
+                      : colorScheme.outline,
                 ),
               ),
               child: Row(
@@ -110,11 +110,10 @@ class PhoneNumberField extends StatelessWidget {
 
                           Text(
                             '+${country.phoneCode}',
-                            style: AppTextStyles
-                                .bodyMedium
+                            style: AppTextStyles.bodyMedium
                                 .copyWith(
                               color:
-                              AppColors.navyDark,
+                              colorScheme.onSurface,
                               fontWeight:
                               FontWeight.w600,
                             ),
@@ -122,12 +121,13 @@ class PhoneNumberField extends StatelessWidget {
 
                           const SizedBox(width: 3),
 
-                          const Icon(
+                          Icon(
                             Icons
                                 .keyboard_arrow_down_rounded,
                             size: 18,
                             color:
-                            AppColors.grayTextSub,
+                            colorScheme
+                                .onSurfaceVariant,
                           ),
                         ],
                       ),
@@ -137,8 +137,7 @@ class PhoneNumberField extends StatelessWidget {
                   Container(
                     width: 1,
                     height: 28,
-                    color:
-                    AppColors.grayBorderLight,
+                    color: colorScheme.outlineVariant,
                   ),
 
                   Expanded(
@@ -148,25 +147,19 @@ class PhoneNumberField extends StatelessWidget {
                       TextInputType.phone,
                       textInputAction:
                       TextInputAction.next,
-                      style: AppTextStyles
-                          .bodyMedium
+                      style: AppTextStyles.bodyMedium
                           .copyWith(
-                        color:
-                        AppColors.navyDark,
+                        color: colorScheme.onSurface,
                       ),
-                      decoration:
-                      InputDecoration(
+                      decoration: InputDecoration(
                         hintText: hint,
-                        hintStyle:
-                        AppTextStyles
+                        hintStyle: AppTextStyles
                             .bodyMedium
                             .copyWith(
-                          color:
-                          AppColors
-                              .grayTextMuted,
+                          color: colorScheme
+                              .onSurfaceVariant,
                         ),
-                        border:
-                        InputBorder.none,
+                        border: InputBorder.none,
                         enabledBorder:
                         InputBorder.none,
                         focusedBorder:
@@ -176,8 +169,7 @@ class PhoneNumberField extends StatelessWidget {
                         focusedErrorBorder:
                         InputBorder.none,
                         contentPadding:
-                        const EdgeInsets
-                            .symmetric(
+                        const EdgeInsets.symmetric(
                           horizontal: 12,
                         ),
                       ),
@@ -196,11 +188,8 @@ class PhoneNumberField extends StatelessWidget {
                 ),
                 child: Text(
                   field.errorText!,
-                  style: AppTextStyles
-                      .bodySmall
-                      .copyWith(
-                    color:
-                    AppColors.errorRed,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: colorScheme.error,
                     fontSize: 11,
                   ),
                 ),

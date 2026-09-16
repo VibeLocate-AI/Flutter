@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 
 class AuthHeader extends StatelessWidget {
@@ -19,20 +18,22 @@ class AuthHeader extends StatelessWidget {
 
     final logoSize = width < 360 ? 58.0 : 68.0;
 
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Column(
       children: [
         Container(
           width: logoSize,
           height: logoSize,
-         padding: const EdgeInsets.all(10),
-         decoration: BoxDecoration(
-            color: AppColors.navyPrimary,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: colorScheme.primary,
             borderRadius: BorderRadius.circular(18),
           ),
           child: Image.asset(
-      'assets/icons/logo_without_background.png',
-      fit: BoxFit.contain,
-    ),
+            'assets/icons/logo_without_background.png',
+            fit: BoxFit.contain,
+          ),
         ),
 
         const SizedBox(height: 22),
@@ -41,7 +42,7 @@ class AuthHeader extends StatelessWidget {
           title,
           textAlign: TextAlign.center,
           style: AppTextStyles.headingLarge.copyWith(
-            color: AppColors.navyDark,
+            color: colorScheme.onSurface,
           ),
         ),
 
@@ -55,7 +56,7 @@ class AuthHeader extends StatelessWidget {
             subtitle,
             textAlign: TextAlign.center,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.grayTextSub,
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
         ),

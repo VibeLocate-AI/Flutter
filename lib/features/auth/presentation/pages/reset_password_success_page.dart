@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/app_router.dart';
 import '../../../../core/localization/localization.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 
 class ResetPasswordSuccessPage
@@ -31,7 +30,7 @@ class ResetPasswordSuccessPage
     width < 360 ? 20.0 : 24.0;
 
     return Scaffold(
-      backgroundColor: AppColors.grayBg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -48,13 +47,13 @@ class ResetPasswordSuccessPage
                   Container(
                     width: 88,
                     height: 88,
-                    decoration: const BoxDecoration(
-                      color: AppColors.navyPrimary,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.check_rounded,
-                      color: AppColors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       size: 46,
                     ),
                   ),
@@ -68,7 +67,7 @@ class ResetPasswordSuccessPage
                     textAlign: TextAlign.center,
                     style:
                     AppTextStyles.headingLarge.copyWith(
-                      color: AppColors.navyDark,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
 
@@ -85,7 +84,7 @@ class ResetPasswordSuccessPage
                       textAlign: TextAlign.center,
                       style:
                       AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.grayTextSub,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         height: 1.5,
                       ),
                     ),

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../../app/app_router.dart';
 import '../../../../core/localization/localization.dart';
 import '../../../../core/storage/onboarding_storage.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../widgets/onboarding_button.dart';
 import '../widgets/onboarding_content.dart';
 import '../widgets/onboarding_image.dart';
@@ -101,7 +100,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     ];
 
     return Scaffold(
-      backgroundColor: AppColors.grayBg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: PageView.builder(
           controller: _pageController,
@@ -168,8 +167,6 @@ class _OnboardingView extends StatelessWidget {
 
     final screenSize = MediaQuery.sizeOf(context);
     final width = screenSize.width;
-    final height = screenSize.height;
-
     final horizontalPadding = width < 360 ? 20.0 : 24.0;
 
     return Column(
@@ -180,9 +177,7 @@ class _OnboardingView extends StatelessWidget {
             imagePath: data.image,
           ),
         ),
-
         const SizedBox(height: 12),
-
         Padding(
           padding: EdgeInsets.symmetric(
             horizontal: horizontalPadding,
@@ -192,9 +187,7 @@ class _OnboardingView extends StatelessWidget {
             description: data.description,
           ),
         ),
-
         const SizedBox(height: 20),
-
         Padding(
           padding: EdgeInsets.symmetric(
             horizontal: horizontalPadding,
@@ -206,15 +199,13 @@ class _OnboardingView extends StatelessWidget {
             onPressed: onNext,
           ),
         ),
-
         const Spacer(),
-
         Padding(
           padding: EdgeInsets.fromLTRB(
             horizontalPadding,
             0,
             horizontalPadding,
-            height < 700 ? 12 : 20,
+            20,
           ),
           child: Row(
             children: [
@@ -225,7 +216,6 @@ class _OnboardingView extends StatelessWidget {
                     Icons.arrow_back,
                     size: 18,
                   ),
-                  color: AppColors.grayTextSub,
                   tooltip: localization.translate('back'),
                 )
               else
@@ -233,16 +223,12 @@ class _OnboardingView extends StatelessWidget {
                   width: 48,
                   height: 48,
                 ),
-
               const Spacer(),
-
               OnboardingIndicator(
                 currentPage: currentPage,
                 itemCount: pageCount,
               ),
-
               const Spacer(),
-
               if (!isLastPage)
                 TextButton(
                   onPressed: onSkip,
@@ -262,5 +248,3 @@ class _OnboardingView extends StatelessWidget {
     );
   }
 }
-
-

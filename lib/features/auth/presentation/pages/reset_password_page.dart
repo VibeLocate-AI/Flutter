@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import '../../../../app/app_router.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/localization/localization.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../auth_dependencies.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_text_field.dart';
+import '../widgets/password_strength_indicator.dart';
 
 class ResetPasswordArgs {
   const ResetPasswordArgs({
@@ -36,8 +36,7 @@ class _ResetPasswordPageState
   final GlobalKey<FormState> _formKey =
   GlobalKey<FormState>();
 
-  final TextEditingController
-  _passwordController =
+  final TextEditingController _passwordController =
   TextEditingController();
 
   final TextEditingController
@@ -55,6 +54,16 @@ class _ResetPasswordPageState
     super.dispose();
   }
 
+  bool _isStrongPassword(String password) {
+    return password.length >= 8 &&
+        RegExp(r'[A-Z]').hasMatch(password) &&
+        RegExp(r'[a-z]').hasMatch(password) &&
+        RegExp(r'[0-9]').hasMatch(password) &&
+        RegExp(
+          r'[!@#$%^&*(),.?":{}|<>_\-\\/\[\]+=;]',
+        ).hasMatch(password);
+  }
+
   String? _passwordValidator(
       String? value,
       AppLocalization localization,
@@ -65,10 +74,26 @@ class _ResetPasswordPageState
       );
     }
 
-    if (value.length < 6) {
-      return localization.translate(
-        'password_min',
-      );
+    if (value.length < 8) {
+      return 'Password must be at least 8 characters';
+    }
+
+    if (!RegExp(r'[A-Z]').hasMatch(value)) {
+      return 'Password must contain an uppercase letter';
+    }
+
+    if (!RegExp(r'[a-z]').hasMatch(value)) {
+      return 'Password must contain a lowercase letter';
+    }
+
+    if (!RegExp(r'[0-9]').hasMatch(value)) {
+      return 'Password must contain a number';
+    }
+
+    if (!RegExp(
+      r'[!@#$%^&*(),.?":{}|<>_\-\\/\[\]+=;]',
+    ).hasMatch(value)) {
+      return 'Password must contain a special character';
     }
 
     return null;
@@ -103,6 +128,34 @@ class _ResetPasswordPageState
       return;
     }
 
+    final password =
+        _passwordController.text;
+
+    final confirmPassword =
+        _confirmPasswordController.text;
+
+    if (!_isStrongPassword(password)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please create a strong password before continuing.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (password != confirmPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Passwords do not match.',
+          ),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -111,8 +164,7 @@ class _ResetPasswordPageState
       await AuthDependencies.resetPassword(
         email: widget.args.email,
         token: widget.args.token,
-        newPassword:
-        _passwordController.text,
+        newPassword: password,
       );
 
       if (!mounted) {
@@ -128,8 +180,7 @@ class _ResetPasswordPageState
         return;
       }
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.message),
         ),
@@ -139,8 +190,7 @@ class _ResetPasswordPageState
         return;
       }
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             localization.translate(
@@ -169,8 +219,18 @@ class _ResetPasswordPageState
     final horizontalPadding =
     width < 360 ? 20.0 : 24.0;
 
+    final colorScheme =
+        Theme.of(context).colorScheme;
+
+    final passwordsMatch =
+        _confirmPasswordController.text.isNotEmpty &&
+            _confirmPasswordController.text ==
+                _passwordController.text;
+
     return Scaffold(
-      backgroundColor: AppColors.grayBg,
+      backgroundColor:
+      Theme.of(context)
+          .scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(
@@ -190,7 +250,6 @@ class _ResetPasswordPageState
                   CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 18),
-
                     AuthHeader(
                       title:
                       localization.translate(
@@ -201,9 +260,7 @@ class _ResetPasswordPageState
                         'reset_password_subtitle',
                       ),
                     ),
-
                     const SizedBox(height: 8),
-
                     Text(
                       widget.args.email,
                       textAlign:
@@ -213,14 +270,12 @@ class _ResetPasswordPageState
                           .labelMedium
                           ?.copyWith(
                         color:
-                        AppColors.navyPrimary,
+                        colorScheme.primary,
                         fontWeight:
                         FontWeight.w700,
                       ),
                     ),
-
                     const SizedBox(height: 40),
-
                     AuthTextField(
                       controller:
                       _passwordController,
@@ -243,6 +298,9 @@ class _ResetPasswordPageState
                           !_obscurePassword;
                         });
                       },
+                      onChanged: (_) {
+                        setState(() {});
+                      },
                       textInputAction:
                       TextInputAction.next,
                       validator:
@@ -252,9 +310,11 @@ class _ResetPasswordPageState
                             localization,
                           ),
                     ),
-
+                    PasswordStrengthIndicator(
+                      password:
+                      _passwordController.text,
+                    ),
                     const SizedBox(height: 20),
-
                     AuthTextField(
                       controller:
                       _confirmPasswordController,
@@ -277,6 +337,9 @@ class _ResetPasswordPageState
                           !_obscureConfirmPassword;
                         });
                       },
+                      onChanged: (_) {
+                        setState(() {});
+                      },
                       textInputAction:
                       TextInputAction.done,
                       validator:
@@ -288,12 +351,44 @@ class _ResetPasswordPageState
                       onSubmitted: (_) =>
                           _resetPassword(),
                     ),
-
+                    if (passwordsMatch) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Container(
+                            width: 22,
+                            height: 22,
+                            decoration:
+                            const BoxDecoration(
+                              color:
+                              Color(0xFF16A34A),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.check_rounded,
+                              color: Colors.white,
+                              size: 14,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Passwords match',
+                            style: TextStyle(
+                              color:
+                              Color(0xFF16A34A),
+                              fontSize: 13,
+                              fontWeight:
+                              FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 28),
-
                     SizedBox(
                       height: 52,
-                      child: ElevatedButton(
+                      child:
+                      ElevatedButton(
                         onPressed:
                         _isLoading
                             ? null

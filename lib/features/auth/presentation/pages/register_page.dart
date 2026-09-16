@@ -5,11 +5,11 @@ import 'package:vibe_locate_ai/features/auth/presentation/pages/verification_pag
 import '../../../../app/app_router.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/localization/localization.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../auth_dependencies.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/legal_agreement_text.dart';
+import '../widgets/password_strength_indicator.dart';
 import '../widgets/phone_number_field.dart';
 import '../widgets/social_login_button.dart';
 
@@ -113,6 +113,16 @@ class _RegisterPageState extends State<RegisterPage> {
     return null;
   }
 
+  bool _isStrongPassword(String password) {
+    return password.length >= 8 &&
+        RegExp(r'[A-Z]').hasMatch(password) &&
+        RegExp(r'[a-z]').hasMatch(password) &&
+        RegExp(r'[0-9]').hasMatch(password) &&
+        RegExp(
+          r'[!@#$%^&*(),.?":{}|<>_\-\\/\[\]+=;]',
+        ).hasMatch(password);
+  }
+
   String? _passwordValidator(
       String? value,
       AppLocalization localization,
@@ -123,10 +133,26 @@ class _RegisterPageState extends State<RegisterPage> {
       );
     }
 
-    if (value.length < 6) {
-      return localization.translate(
-        'password_min',
-      );
+    if (value.length < 8) {
+      return 'Password must be at least 8 characters';
+    }
+
+    if (!RegExp(r'[A-Z]').hasMatch(value)) {
+      return 'Password must contain an uppercase letter';
+    }
+
+    if (!RegExp(r'[a-z]').hasMatch(value)) {
+      return 'Password must contain a lowercase letter';
+    }
+
+    if (!RegExp(r'[0-9]').hasMatch(value)) {
+      return 'Password must contain a number';
+    }
+
+    if (!RegExp(
+      r'[!@#$%^&*(),.?":{}|<>_\-\\/\[\]+=;]',
+    ).hasMatch(value)) {
+      return 'Password must contain a special character';
     }
 
     return null;
@@ -206,6 +232,28 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
+    if (!_isStrongPassword(password)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please create a strong password before continuing.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (password != passwordConfirmation) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Passwords do not match.',
+          ),
+        ),
+      );
+      return;
+    }
+
     if (!_acceptedTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -246,8 +294,7 @@ class _RegisterPageState extends State<RegisterPage> {
         arguments: VerificationPageArgs(
           email: email,
           purpose:
-          VerificationPurpose
-              .emailVerification,
+          VerificationPurpose.emailVerification,
         ),
       );
     } on ValidationException catch (e) {
@@ -293,17 +340,84 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
+  Future<void> _continueWithGoogle() async {
+    if (_isLoading) {
+      return;
+    }
 
-  void _continueWithGoogle() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          AppLocalization.of(context).translate(
-            'google_signup_demo',
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      debugPrint(
+        'GOOGLE REGISTER: Starting Google Sign-In...',
+      );
+
+      await AuthDependencies.loginWithGoogle();
+
+      debugPrint(
+        'GOOGLE REGISTER: Laravel authentication successful.',
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRouter.home,
+            (route) => false,
+      );
+    } on ApiException catch (e) {
+      debugPrint(
+        'GOOGLE REGISTER API ERROR: ${e.message}',
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Google API Error: ${e.message}',
           ),
+          duration:
+          const Duration(seconds: 8),
         ),
-      ),
-    );
+      );
+    } catch (e, stackTrace) {
+      debugPrint(
+        'GOOGLE REGISTER ERROR: $e',
+      );
+
+      debugPrint(
+        'GOOGLE REGISTER STACK TRACE: $stackTrace',
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Google Register Error: $e',
+          ),
+          duration:
+          const Duration(seconds: 8),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -318,18 +432,28 @@ class _RegisterPageState extends State<RegisterPage> {
     final horizontalPadding =
     width < 360 ? 20.0 : 24.0;
 
+    final colorScheme =
+        Theme.of(context).colorScheme;
+
+    final passwordsMatch =
+        _confirmPasswordController.text.isNotEmpty &&
+            _confirmPasswordController.text ==
+                _passwordController.text;
+
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
+          physics:
+          const BouncingScrollPhysics(),
           padding: EdgeInsets.symmetric(
             horizontal: horizontalPadding,
             vertical: height < 700 ? 18 : 28,
           ),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
+              constraints:
+              const BoxConstraints(
                 maxWidth: 430,
               ),
               child: Form(
@@ -339,7 +463,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 26),
-
                     Row(
                       crossAxisAlignment:
                       CrossAxisAlignment.start,
@@ -401,9 +524,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 16),
-
                     Row(
                       crossAxisAlignment:
                       CrossAxisAlignment.start,
@@ -421,7 +542,8 @@ class _RegisterPageState extends State<RegisterPage> {
                               'city_hint',
                             ),
                             prefixIcon:
-                            Icons.location_city_outlined,
+                            Icons
+                                .location_city_outlined,
                             keyboardType:
                             TextInputType.text,
                             textInputAction:
@@ -465,9 +587,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 16),
-
                     PhoneNumberField(
                       controller:
                       _phoneController,
@@ -493,9 +613,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         'phone_required',
                       ),
                     ),
-
                     const SizedBox(height: 16),
-
                     AuthTextField(
                       controller:
                       _emailController,
@@ -520,9 +638,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             localization,
                           ),
                     ),
-
                     const SizedBox(height: 16),
-
                     AuthTextField(
                       controller:
                       _passwordController,
@@ -545,6 +661,9 @@ class _RegisterPageState extends State<RegisterPage> {
                           !_obscurePassword;
                         });
                       },
+                      onChanged: (_) {
+                        setState(() {});
+                      },
                       textInputAction:
                       TextInputAction.next,
                       validator:
@@ -554,9 +673,11 @@ class _RegisterPageState extends State<RegisterPage> {
                             localization,
                           ),
                     ),
-
+                    PasswordStrengthIndicator(
+                      password:
+                      _passwordController.text,
+                    ),
                     const SizedBox(height: 16),
-
                     AuthTextField(
                       controller:
                       _confirmPasswordController,
@@ -579,6 +700,9 @@ class _RegisterPageState extends State<RegisterPage> {
                           !_obscureConfirmPassword;
                         });
                       },
+                      onChanged: (_) {
+                        setState(() {});
+                      },
                       textInputAction:
                       TextInputAction.done,
                       validator:
@@ -587,10 +711,43 @@ class _RegisterPageState extends State<RegisterPage> {
                             value,
                             localization,
                           ),
+                      onSubmitted: (_) =>
+                          _register(),
                     ),
-
+                    if (passwordsMatch) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Container(
+                            width: 22,
+                            height: 22,
+                            decoration:
+                            const BoxDecoration(
+                              color:
+                              Color(0xFF16A34A),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.check_rounded,
+                              color: Colors.white,
+                              size: 14,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Passwords match',
+                            style: TextStyle(
+                              color:
+                              Color(0xFF16A34A),
+                              fontSize: 13,
+                              fontWeight:
+                              FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 16),
-
                     Row(
                       crossAxisAlignment:
                       CrossAxisAlignment.start,
@@ -610,25 +767,20 @@ class _RegisterPageState extends State<RegisterPage> {
                               });
                             },
                             activeColor:
-                            AppColors
-                                .navyPrimary,
+                            colorScheme.primary,
                             materialTapTargetSize:
                             MaterialTapTargetSize
                                 .shrinkWrap,
                           ),
                         ),
-                        const SizedBox(
-                          width: 8,
-                        ),
+                        const SizedBox(width: 8),
                         const Expanded(
                           child:
                           LegalAgreementText(),
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 20),
-
                     SizedBox(
                       height: 52,
                       child:
@@ -637,8 +789,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         _isLoading
                             ? null
                             : _register,
-                        child:
-                        _isLoading
+                        child: _isLoading
                             ? const SizedBox(
                           width: 22,
                           height: 22,
@@ -658,15 +809,13 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 18),
-
                     Row(
                       children: [
-                        const Expanded(
+                        Expanded(
                           child: Divider(
-                            color: AppColors
-                                .grayBorderLight,
+                            color: colorScheme
+                                .outlineVariant,
                           ),
                         ),
                         Padding(
@@ -680,25 +829,24 @@ class _RegisterPageState extends State<RegisterPage> {
                                 .translate(
                               'or',
                             ),
-                            style: AppTextStyles
+                            style:
+                            AppTextStyles
                                 .labelSmall
                                 .copyWith(
-                              color: AppColors
-                                  .grayTextMuted,
+                              color: colorScheme
+                                  .onSurfaceVariant,
                             ),
                           ),
                         ),
-                        const Expanded(
+                        Expanded(
                           child: Divider(
-                            color: AppColors
-                                .grayBorderLight,
+                            color: colorScheme
+                                .outlineVariant,
                           ),
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 18),
-
                     SocialLoginButton(
                       label:
                       localization.translate(
@@ -707,24 +855,22 @@ class _RegisterPageState extends State<RegisterPage> {
                       onPressed:
                       _continueWithGoogle,
                     ),
-
                     const SizedBox(height: 16),
-
                     Row(
                       mainAxisAlignment:
                       MainAxisAlignment.center,
                       children: [
                         Flexible(
                           child: Text(
-                            localization
-                                .translate(
+                            localization.translate(
                               'already_have_account',
                             ),
-                            style: AppTextStyles
+                            style:
+                            AppTextStyles
                                 .bodySmall
                                 .copyWith(
-                              color: AppColors
-                                  .grayTextSub,
+                              color: colorScheme
+                                  .onSurfaceVariant,
                             ),
                           ),
                         ),
@@ -733,20 +879,19 @@ class _RegisterPageState extends State<RegisterPage> {
                             Navigator
                                 .pushReplacementNamed(
                               context,
-                              AppRouter
-                                  .login,
+                              AppRouter.login,
                             );
                           },
                           child: Text(
-                            localization
-                                .translate(
+                            localization.translate(
                               'login',
                             ),
-                            style: AppTextStyles
+                            style:
+                            AppTextStyles
                                 .labelMedium
                                 .copyWith(
-                              color: AppColors
-                                  .navyPrimary,
+                              color:
+                              colorScheme.primary,
                               fontWeight:
                               FontWeight.w700,
                             ),

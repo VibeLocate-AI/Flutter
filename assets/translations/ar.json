@@ -159,9 +159,20 @@
   "per_week": "/أسبوعيًا",
   "per_day": "/يوميًا",
   "clear": "مسح",
-  "no_notifications": "لا توجد إشعارات"
+  "no_notifications": "لا توجد إشعارات",
 
 
+
+  "profile": "الملف الشخصي",
+  "personal_information": "المعلومات الشخصية",
+  "full_name": "الاسم الكامل",
+  "phone": "رقم الهاتف",
+  "bio": "نبذة عني",
+  "preferences": "التفضيلات",
+  "preferred_language": "اللغة المفضلة",
+  "currency": "العملة",
+  "save_changes": "حفظ التغييرات",
+  "save_preferences": "حفظ التفضيلات"
 
 
 
