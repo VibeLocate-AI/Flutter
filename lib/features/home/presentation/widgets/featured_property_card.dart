@@ -1,10 +1,13 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/localization/localization.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../data/models/property_model.dart';
 
-class FeaturedPropertyCard extends StatelessWidget {
+class FeaturedPropertyCard extends StatefulWidget {
   const FeaturedPropertyCard({
     super.key,
     required this.property,
@@ -15,206 +18,347 @@ class FeaturedPropertyCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
+  State<FeaturedPropertyCard> createState() =>
+      _FeaturedPropertyCardState();
+}
+
+class _FeaturedPropertyCardState
+    extends State<FeaturedPropertyCard> {
+  bool _isFavorite = false;
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final localization =
-    AppLocalization.of(context);
+    final localization = AppLocalization.of(context);
+    final screenWidth = MediaQuery.sizeOf(context).width;
+
+    final cardWidth = math.min(
+      screenWidth * 0.82,
+      315.0,
+    );
 
     final imageUrl =
-        property.primaryImage?.imageUrl ?? '';
+        widget.property.primaryImage?.imageUrl ?? '';
 
     final location =
-        property.location?.addressLine1 ?? '';
+        widget.property.location?.addressLine1 ?? '';
 
-    return SizedBox(
-      width: 310,
-      child: Card(
-        elevation: 0,
-        color: theme.colorScheme.surface,
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(22),
-          side: BorderSide(
-            color: theme.colorScheme.outlineVariant,
+    return AnimatedScale(
+      scale: _pressed ? 0.985 : 1,
+      duration: const Duration(milliseconds: 120),
+      child: SizedBox(
+        width: cardWidth,
+        child: Card(
+          elevation: 0,
+          margin: EdgeInsets.zero,
+          color: theme.colorScheme.surface,
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: BorderSide(
+              color: theme.colorScheme.outlineVariant
+                  .withValues(alpha: 0.65),
+            ),
           ),
-        ),
-        child: InkWell(
-          onTap: onTap,
-          child: Column(
-            crossAxisAlignment:
-            CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 6,
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: imageUrl.isEmpty
-                          ? _imageFallback(theme)
-                          : Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder:
-                            (_, _, _) {
-                          return _imageFallback(
-                            theme,
-                          );
-                        },
-                      ),
-                    ),
-
-                    Positioned(
-                      top: 12,
-                      left: 12,
-                      child: Container(
-                        padding:
-                        const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                          theme.colorScheme.primary,
-                          borderRadius:
-                          BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          localization.translate(
-                            _propertyTypeKey(
-                              property.typeId,
-                            ),
-                          ),
-                          style:
-                          AppTextStyles.labelSmall
-                              .copyWith(
-                            color: theme.colorScheme
-                                .onPrimary,
+          child: InkWell(
+            onTap: widget.onTap,
+            onTapDown: (_) {
+              setState(() {
+                _pressed = true;
+              });
+            },
+            onTapCancel: () {
+              setState(() {
+                _pressed = false;
+              });
+            },
+            onTapUp: (_) {
+              setState(() {
+                _pressed = false;
+              });
+            },
+            child: AspectRatio(
+              aspectRatio: 0.82,
+              child: Column(
+                crossAxisAlignment:
+                CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 7,
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: imageUrl.isEmpty
+                              ? _imageFallback(theme)
+                              : Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (_, _, _) {
+                              return _imageFallback(
+                                theme,
+                              );
+                            },
                           ),
                         ),
-                      ),
-                    ),
-
-                    Positioned(
-                      top: 12,
-                      right: 12,
-                      child: Material(
-                        color: Colors.white
-                            .withValues(alpha: 0.92),
-                        shape:
-                        const CircleBorder(),
-                        child: InkWell(
-                          customBorder:
-                          const CircleBorder(),
-                          onTap: () {
-                            // Favorite functionality
-                            // will be connected later.
-                          },
-                          child: const SizedBox(
-                            width: 38,
-                            height: 38,
-                            child: Icon(
-                              Icons
-                                  .favorite_border_rounded,
-                              size: 20,
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin:
+                                  Alignment.topCenter,
+                                  end:
+                                  Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.black.withValues(
+                                      alpha: 0.08,
+                                    ),
+                                    Colors.transparent,
+                                    Colors.black.withValues(
+                                      alpha: 0.45,
+                                    ),
+                                  ],
+                                  stops: const [
+                                    0,
+                                    0.48,
+                                    1,
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              Expanded(
-                flex: 4,
-                child: Padding(
-                  padding:
-                  const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        property.title,
-                        maxLines: 1,
-                        overflow:
-                        TextOverflow.ellipsis,
-                        style:
-                        AppTextStyles.labelLarge
-                            .copyWith(
-                          color: theme
-                              .colorScheme
-                              .onSurface,
-                        ),
-                      ),
-
-                      const SizedBox(height: 5),
-
-                      Row(
-                        children: [
-                          Icon(
-                            Icons
-                                .location_on_outlined,
-                            size: 15,
-                            color: theme
-                                .colorScheme
-                                .onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 3),
-                          Expanded(
+                        Positioned(
+                          top: 14,
+                          left: 14,
+                          child: Container(
+                            padding:
+                            const EdgeInsets.symmetric(
+                              horizontal: 11,
+                              vertical: 7,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.warningAmber,
+                              borderRadius:
+                              BorderRadius.circular(11),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors
+                                      .warningAmber
+                                      .withValues(
+                                    alpha: 0.25,
+                                  ),
+                                  blurRadius: 12,
+                                  offset:
+                                  const Offset(0, 5),
+                                ),
+                              ],
+                            ),
                             child: Text(
-                              location.isEmpty
-                                  ? localization
-                                  .translate(
-                                'home_location',
-                              )
-                                  : location,
-                              maxLines: 1,
-                              overflow:
-                              TextOverflow.ellipsis,
+                              localization.translate(
+                                _propertyTypeKey(
+                                  widget.property.typeId,
+                                ),
+                              ),
                               style: AppTextStyles
-                                  .bodySmall
+                                  .labelSmall
                                   .copyWith(
-                                color: theme
-                                    .colorScheme
-                                    .onSurfaceVariant,
+                                color: AppColors.white,
+                                fontWeight:
+                                FontWeight.w800,
                               ),
                             ),
                           ),
-                        ],
-                      ),
-
-                      const Spacer(),
-
-                      Row(
-                        crossAxisAlignment:
-                        CrossAxisAlignment.end,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              _formatPrice(
-                                property,
-                                localization,
-                              ),
-                              maxLines: 1,
-                              overflow:
-                              TextOverflow.ellipsis,
-                              style: AppTextStyles
-                                  .headingSmall
-                                  .copyWith(
-                                color: theme
-                                    .colorScheme
-                                    .primary,
+                        ),
+                        Positioned(
+                          top: 14,
+                          right: 14,
+                          child: Material(
+                            color: Colors.white
+                                .withValues(alpha: 0.94),
+                            shape:
+                            const CircleBorder(),
+                            child: InkWell(
+                              customBorder:
+                              const CircleBorder(),
+                              onTap: () {
+                                setState(() {
+                                  _isFavorite =
+                                  !_isFavorite;
+                                });
+                              },
+                              child:
+                              AnimatedContainer(
+                                duration:
+                                const Duration(
+                                  milliseconds: 180,
+                                ),
+                                width: 42,
+                                height: 42,
+                                decoration:
+                                BoxDecoration(
+                                  shape:
+                                  BoxShape.circle,
+                                  color: _isFavorite
+                                      ? AppColors
+                                      .warningAmber
+                                      .withValues(
+                                    alpha: 0.12,
+                                  )
+                                      : Colors.transparent,
+                                ),
+                                child:
+                                AnimatedSwitcher(
+                                  duration:
+                                  const Duration(
+                                    milliseconds: 180,
+                                  ),
+                                  child: Icon(
+                                    _isFavorite
+                                        ? Icons
+                                        .favorite_rounded
+                                        : Icons
+                                        .favorite_border_rounded,
+                                    key: ValueKey(
+                                      _isFavorite,
+                                    ),
+                                    size: 21,
+                                    color: _isFavorite
+                                        ? AppColors
+                                        .warningAmber
+                                        : AppColors
+                                        .navyDark,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        Positioned(
+                          left: 16,
+                          right: 16,
+                          bottom: 14,
+                          child: Row(
+                            children: [
+                              _ImageInfoChip(
+                                icon: Icons.star_rounded,
+                                label:
+                                localization.translate(
+                                  'featured',
+                                ),
+                              ),
+                              const Spacer(),
+                              const Icon(
+                                Icons.arrow_outward_rounded,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                  Expanded(
+                    flex: 4,
+                    child: Padding(
+                      padding:
+                      const EdgeInsets.fromLTRB(
+                        16,
+                        14,
+                        16,
+                        14,
+                      ),
+                      child: Column(
+                        crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.property.title,
+                            maxLines: 1,
+                            overflow:
+                            TextOverflow.ellipsis,
+                            style: AppTextStyles
+                                .labelLarge
+                                .copyWith(
+                              color: theme
+                                  .colorScheme
+                                  .onSurface,
+                              fontWeight:
+                              FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons
+                                    .location_on_rounded,
+                                size: 15,
+                                color:
+                                AppColors.blueAccent,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  location.isEmpty
+                                      ? localization
+                                      .translate(
+                                    'home_location',
+                                  )
+                                      : location,
+                                  maxLines: 1,
+                                  overflow:
+                                  TextOverflow.ellipsis,
+                                  style: AppTextStyles
+                                      .bodySmall
+                                      .copyWith(
+                                    color: theme
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Spacer(),
+                          Row(
+                            crossAxisAlignment:
+                            CrossAxisAlignment.end,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _formatPrice(
+                                    widget.property,
+                                    localization,
+                                  ),
+                                  maxLines: 1,
+                                  overflow:
+                                  TextOverflow.ellipsis,
+                                  style: AppTextStyles
+                                      .headingSmall
+                                      .copyWith(
+                                    color:
+                                    AppColors
+                                        .blueAccent,
+                                    fontWeight:
+                                    FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const _DetailsArrow(),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -222,12 +366,13 @@ class FeaturedPropertyCard extends StatelessWidget {
   }
 
   Widget _imageFallback(ThemeData theme) {
-    return ColoredBox(
+    return Container(
       color:
       theme.colorScheme.surfaceContainerHighest,
       child: Center(
         child: Icon(
-          Icons.image_not_supported_outlined,
+          Icons.home_work_outlined,
+          size: 42,
           color:
           theme.colorScheme.onSurfaceVariant,
         ),
@@ -247,8 +392,7 @@ class FeaturedPropertyCard extends StatelessWidget {
         ? ''
         : '${property.currency.trim()} ';
 
-    final frequency =
-    _formatFrequency(
+    final frequency = _formatFrequency(
       property.rentFrequency,
       localization,
     );
@@ -259,7 +403,6 @@ class FeaturedPropertyCard extends StatelessWidget {
   String _formatNumber(double value) {
     final rounded = value.round();
     final digits = rounded.toString();
-
     final buffer = StringBuffer();
 
     for (int i = 0; i < digits.length; i++) {
@@ -337,5 +480,86 @@ class FeaturedPropertyCard extends StatelessWidget {
       default:
         return 'property_house';
     }
+  }
+}
+
+class _ImageInfoChip extends StatelessWidget {
+  const _ImageInfoChip({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(
+          alpha: 0.34,
+        ),
+        borderRadius:
+        BorderRadius.circular(10),
+        border: Border.all(
+          color: Colors.white.withValues(
+            alpha: 0.18,
+          ),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: AppColors.warningAmber,
+          ),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: AppTextStyles.labelSmall
+                .copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailsArrow extends StatelessWidget {
+  const _DetailsArrow();
+
+  @override
+  Widget build(BuildContext context) {
+    final isRtl =
+        Directionality.of(context) ==
+            TextDirection.rtl;
+
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: AppColors.blueAccent.withValues(
+          alpha: 0.09,
+        ),
+        borderRadius:
+        BorderRadius.circular(10),
+      ),
+      child: Icon(
+        isRtl
+            ? Icons.arrow_back_rounded
+            : Icons.arrow_forward_rounded,
+        size: 17,
+        color: AppColors.blueAccent,
+      ),
+    );
   }
 }

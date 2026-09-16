@@ -174,7 +174,68 @@
   "preferred_language": "Preferred Language",
   "currency": "Currency",
   "save_changes": "Save Changes",
-  "save_preferences": "Save Preferences"
+  "save_preferences": "Save Preferences",
+
+  "featured_properties": "Featured Properties",
+  "nearby_recommended": "Nearby & Recommended",
+  "showing_properties": "Showing",
+  "showing_recommendations": "Showing",
+  "load_more_properties": "Load More Properties",
+  "load_more_recommendations": "Load More Recommendations",
+  "ai_powered_platform": "AI-POWERED REAL ESTATE PLATFORM",
+  "hero_title": "Find Your Dream",
+  "hero_title_highlight": "Property in Dubai",
+  "hero_description": "Discover premium Dubai properties tailored to your lifestyle, comfort, and aspirations with intelligent AI recommendations.",
+  "demo_prompts": "DEMO PROMPTS:",
+  "prompt_one": "Two-bedroom house in Dubai",
+  "prompt_two": "Modern villa under AED 5M",
+  "prompt_three": "Quiet apartment near Marina",
+  "beds_short": "Beds",
+  "view_details": "View Details",
+  "why_vibelocate": "Why VibeLocate",
+  "benefit_verified": "Verified Listings",
+  "benefit_verified_desc": "Properties are verified for a more reliable experience.",
+  "benefit_agents": "Expert Agents",
+  "benefit_agents_desc": "Connect with experienced real estate professionals.",
+  "benefit_price": "Best Price Guarantee",
+  "benefit_price_desc": "Explore competitive property prices in the market.",
+  "benefit_support": "24/7 Support",
+  "benefit_support_desc": "Our team is here to assist you whenever you need.",
+  "list_property_title": "List Your Property",
+  "list_property_desc": "Reach thousands of potential buyers and renters with VibeLocate AI.",
+  "list_property_button": "List Your Property",
+  "footer_description": "Discover properties with AI-powered recommendations and a smarter way to find your next home.",
+  "footer_quick_links": "Quick Links",
+  "footer_links": "Home\nProperties\nMap\nFavorites\nProfile\nAbout Us",
+  "footer_contact": "Contact",
+  "footer_contact_value": "Dubai, UAE\nsupport@vibelocate.ai\n+1 (800) 456-7890",
+  "footer_copyright": "© 2026 VibeLocate AI. All rights reserved.",
+
+
+
+  "current_location": "Current Location",
+
+  "property": "Property",
+
+  "featured": "Featured",
+
+
+
+  "properties_found": "properties found",
+
+  "ai_results": "AI Results",
+  "ai_match": "AI MATCH",
+
+  "bedrooms": "bedrooms",
+  "bathrooms": "bathrooms",
+  "separator": " • ",
+
+
+
+
+
+
+
 
 
 }

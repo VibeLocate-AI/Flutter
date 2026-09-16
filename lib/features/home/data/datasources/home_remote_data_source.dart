@@ -1,4 +1,5 @@
 import '../../../../core/constants/api_endpoints.dart';
+import '../../../../core/localization/locale_manager.dart';
 import '../../../../core/network/api_client.dart';
 
 abstract class HomeRemoteDataSource {
@@ -13,6 +14,9 @@ class HomeRemoteDataSourceImpl
   Future<Map<String, dynamic>> getHome() {
     return ApiClient.get(
       ApiEndpoints.home,
+      queryParameters: {
+        'lang': LocaleManager.instance.languageCode,
+      },
       authenticated: true,
     );
   }

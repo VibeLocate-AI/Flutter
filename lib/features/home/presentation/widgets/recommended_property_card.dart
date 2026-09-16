@@ -17,8 +17,11 @@ class RecommendedPropertyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final localization =
-    AppLocalization.of(context);
+    final localization = AppLocalization.of(context);
+    final width = MediaQuery.sizeOf(context).width;
+
+    final cardHeight = width < 360 ? 104.0 : 112.0;
+    final imageWidth = width < 360 ? 104.0 : 112.0;
 
     final imageUrl =
         property.primaryImage?.imageUrl ?? '';
@@ -40,23 +43,25 @@ class RecommendedPropertyCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: SizedBox(
-          height: 108,
+          height: cardHeight,
           child: Row(
             children: [
               SizedBox(
-                width: 112,
+                width: imageWidth,
                 height: double.infinity,
                 child: _PropertyImage(
                   imageUrl: imageUrl,
                 ),
               ),
-
               Expanded(
                 child: Padding(
                   padding:
-                  const EdgeInsets.symmetric(
-                    horizontal: 13,
-                    vertical: 11,
+                  const EdgeInsetsDirectional
+                      .fromSTEB(
+                    12,
+                    10,
+                    6,
+                    10,
                   ),
                   child: Column(
                     crossAxisAlignment:
@@ -67,22 +72,19 @@ class RecommendedPropertyCard extends StatelessWidget {
                         maxLines: 1,
                         overflow:
                         TextOverflow.ellipsis,
-                        style: AppTextStyles
-                            .labelLarge
+                        style: AppTextStyles.labelLarge
                             .copyWith(
                           color: theme
                               .colorScheme
                               .onSurface,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-
                       const SizedBox(height: 5),
-
                       Row(
                         children: [
                           Icon(
-                            Icons
-                                .location_on_outlined,
+                            Icons.location_on_outlined,
                             size: 14,
                             color: theme
                                 .colorScheme
@@ -111,9 +113,7 @@ class RecommendedPropertyCard extends StatelessWidget {
                           ),
                         ],
                       ),
-
                       const Spacer(),
-
                       Text(
                         _formatPrice(
                           property,
@@ -122,26 +122,30 @@ class RecommendedPropertyCard extends StatelessWidget {
                         maxLines: 1,
                         overflow:
                         TextOverflow.ellipsis,
-                        style: AppTextStyles
-                            .labelLarge
+                        style:
+                        AppTextStyles.labelLarge
                             .copyWith(
                           color: theme
                               .colorScheme
                               .primary,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-
               Padding(
                 padding:
-                const EdgeInsets.only(
-                  right: 10,
+                const EdgeInsetsDirectional.only(
+                  end: 10,
                 ),
                 child: Icon(
-                  Icons.arrow_forward_ios_rounded,
+                  Directionality.of(context) ==
+                      TextDirection.rtl
+                      ? Icons.arrow_back_ios_new_rounded
+                      : Icons
+                      .arrow_forward_ios_rounded,
                   size: 15,
                   color: theme
                       .colorScheme
@@ -159,13 +163,9 @@ class RecommendedPropertyCard extends StatelessWidget {
       PropertyModel property,
       AppLocalization localization,
       ) {
-    final formattedPrice =
-    _formatNumber(property.price);
+    final price = property.price.round();
 
-    final currency =
-    property.currency.trim().isEmpty
-        ? ''
-        : '${property.currency.trim()} ';
+    final currency = property.currency.trim();
 
     final frequency =
     _formatFrequency(
@@ -173,13 +173,11 @@ class RecommendedPropertyCard extends StatelessWidget {
       localization,
     );
 
-    return '$currency$formattedPrice$frequency';
+    return '$currency ${_formatNumber(price)}$frequency';
   }
 
-  String _formatNumber(double value) {
-    final rounded = value.round();
-    final digits = rounded.toString();
-
+  String _formatNumber(int value) {
+    final digits = value.toString();
     final buffer = StringBuffer();
 
     for (int i = 0; i < digits.length; i++) {
@@ -198,43 +196,28 @@ class RecommendedPropertyCard extends StatelessWidget {
       String frequency,
       AppLocalization localization,
       ) {
-    final normalized =
-    frequency.trim().toLowerCase();
-
-    if (normalized.isEmpty) {
-      return '';
-    }
-
-    String key;
-
-    switch (normalized) {
+    switch (frequency.trim().toLowerCase()) {
       case 'month':
       case 'monthly':
-        key = 'per_month';
-        break;
+        return ' ${localization.translate('per_month')}';
 
       case 'year':
       case 'yearly':
       case 'annual':
       case 'annually':
-        key = 'per_year';
-        break;
+        return ' ${localization.translate('per_year')}';
 
       case 'week':
       case 'weekly':
-        key = 'per_week';
-        break;
+        return ' ${localization.translate('per_week')}';
 
       case 'day':
       case 'daily':
-        key = 'per_day';
-        break;
+        return ' ${localization.translate('per_day')}';
 
       default:
         return '';
     }
-
-    return ' ${localization.translate(key)}';
   }
 }
 
@@ -265,14 +248,13 @@ class _PropertyImage extends StatelessWidget {
           return child;
         }
 
-        return Container(
-          color: theme
-              .colorScheme
-              .surfaceContainerHighest,
+        return ColoredBox(
+          color:
+          theme.colorScheme.surfaceContainerHighest,
           child: Center(
             child: SizedBox(
-              width: 20,
-              height: 20,
+              width: 19,
+              height: 19,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
                 color:
@@ -286,12 +268,12 @@ class _PropertyImage extends StatelessWidget {
   }
 
   Widget _fallback(ThemeData theme) {
-    return Container(
+    return ColoredBox(
       color:
       theme.colorScheme.surfaceContainerHighest,
       child: Icon(
         Icons.home_work_outlined,
-        size: 30,
+        size: 28,
         color:
         theme.colorScheme.onSurfaceVariant,
       ),

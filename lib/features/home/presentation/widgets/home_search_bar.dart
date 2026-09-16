@@ -22,65 +22,64 @@ class HomeSearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final localization =
-    AppLocalization.of(context);
+    final localization = AppLocalization.of(context);
+    final width = MediaQuery.sizeOf(context).width;
+
+    final height = width < 360 ? 54.0 : 58.0;
+    final buttonSize = width < 360 ? 42.0 : 44.0;
 
     return Container(
-      height: 58,
+      height: height,
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius:
-        BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color:
-          theme.colorScheme.outlineVariant,
+          color: theme.colorScheme.outlineVariant,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: TextField(
         controller: controller,
         onChanged: onChanged,
         onSubmitted: onSubmitted,
-        textInputAction:
-        TextInputAction.search,
+        textInputAction: TextInputAction.search,
         style: AppTextStyles.bodyMedium.copyWith(
-          color:
-          theme.colorScheme.onSurface,
+          color: theme.colorScheme.onSurface,
         ),
         decoration: InputDecoration(
-          hintText:
-          localization.translate(
+          hintText: localization.translate(
             'search_hint',
           ),
-          hintStyle:
-          AppTextStyles.bodyMedium.copyWith(
-            color: theme.colorScheme
-                .onSurfaceVariant,
+          hintStyle: AppTextStyles.bodyMedium.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
           ),
           prefixIcon: Icon(
             Icons.auto_awesome_rounded,
-            color:
-            theme.colorScheme.primary,
+            color: theme.colorScheme.primary,
+            size: 22,
           ),
           suffixIcon: Padding(
-            padding:
-            const EdgeInsets.all(7),
+            padding: const EdgeInsets.all(7),
             child: Material(
               color: theme.colorScheme.primary,
-              borderRadius:
-              BorderRadius.circular(13),
+              borderRadius: BorderRadius.circular(13),
               child: InkWell(
-                borderRadius:
-                BorderRadius.circular(13),
-                onTap:
-                isLoading ? null : onSearch,
+                borderRadius: BorderRadius.circular(13),
+                onTap: isLoading ? null : onSearch,
                 child: SizedBox(
-                  width: 44,
-                  height: 44,
+                  width: buttonSize,
+                  height: buttonSize,
                   child: Center(
                     child: isLoading
                         ? SizedBox(
-                      width: 20,
-                      height: 20,
+                      width: 19,
+                      height: 19,
                       child:
                       CircularProgressIndicator(
                         strokeWidth: 2,
@@ -91,6 +90,7 @@ class HomeSearchBar extends StatelessWidget {
                     )
                         : Icon(
                       Icons.search_rounded,
+                      size: 21,
                       color: theme
                           .colorScheme
                           .onPrimary,
@@ -103,7 +103,7 @@ class HomeSearchBar extends StatelessWidget {
           border: InputBorder.none,
           contentPadding:
           const EdgeInsets.symmetric(
-            horizontal: 16,
+            horizontal: 14,
             vertical: 16,
           ),
         ),

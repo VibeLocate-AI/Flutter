@@ -16,8 +16,8 @@ class PropertyCategories extends StatefulWidget {
       _PropertyCategoriesState();
 }
 
-class _PropertyCategoriesState extends State<PropertyCategories> {
-  // null = All
+class _PropertyCategoriesState
+    extends State<PropertyCategories> {
   int? _selectedTypeId;
 
   final List<_PropertyCategory> _categories = const [
@@ -61,7 +61,9 @@ class _PropertyCategoriesState extends State<PropertyCategories> {
     return SizedBox(
       height: 48,
       child: ListView.separated(
-        padding: const EdgeInsets.only(right: 20),
+        padding: const EdgeInsetsDirectional.only(
+          end: 20,
+        ),
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         itemCount: _categories.length,
@@ -70,7 +72,6 @@ class _PropertyCategoriesState extends State<PropertyCategories> {
         },
         itemBuilder: (context, index) {
           final category = _categories[index];
-
           final selected =
               _selectedTypeId == category.id;
 
@@ -83,23 +84,29 @@ class _PropertyCategoriesState extends State<PropertyCategories> {
                   _selectedTypeId = category.id;
                 });
 
-                widget.onCategorySelected(category.id);
+                widget.onCategorySelected(
+                  category.id,
+                );
               },
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOut,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 15,
+                duration:
+                const Duration(milliseconds: 180),
+                padding:
+                const EdgeInsets.symmetric(
+                  horizontal: 14,
                 ),
                 decoration: BoxDecoration(
                   color: selected
                       ? theme.colorScheme.primary
                       : theme.colorScheme.surface,
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius:
+                  BorderRadius.circular(15),
                   border: Border.all(
                     color: selected
                         ? theme.colorScheme.primary
-                        : theme.colorScheme.outlineVariant,
+                        : theme
+                        .colorScheme
+                        .outlineVariant,
                   ),
                 ),
                 child: Row(
@@ -110,18 +117,25 @@ class _PropertyCategoriesState extends State<PropertyCategories> {
                       size: 19,
                       color: selected
                           ? theme.colorScheme.onPrimary
-                          : theme.colorScheme.onSurfaceVariant,
+                          : theme
+                          .colorScheme
+                          .onSurfaceVariant,
                     ),
                     const SizedBox(width: 7),
                     Text(
                       localization.translate(
                         category.labelKey,
                       ),
-                      style:
-                      AppTextStyles.labelMedium.copyWith(
+                      style: AppTextStyles.labelMedium
+                          .copyWith(
                         color: selected
-                            ? theme.colorScheme.onPrimary
-                            : theme.colorScheme.onSurface,
+                            ? theme
+                            .colorScheme
+                            .onPrimary
+                            : theme
+                            .colorScheme
+                            .onSurface,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],

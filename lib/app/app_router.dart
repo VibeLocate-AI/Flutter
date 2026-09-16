@@ -7,8 +7,8 @@ import '../features/auth/presentation/pages/register_page.dart';
 import '../features/auth/presentation/pages/reset_password_page.dart';
 import '../features/auth/presentation/pages/reset_password_success_page.dart';
 import '../features/auth/presentation/pages/verification_page.dart';
-import '../features/home/presentation/pages/home_page.dart';
 import '../features/onboarding/presentation/pages/onboarding_page.dart';
+import 'navigation/main_navigation_page.dart';
 import 'startup_page.dart';
 
 class AppRouter {
@@ -122,14 +122,12 @@ class AppRouter {
           ),
         );
 
-
       case home:
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => const HomePage(),
+          builder: (_) =>
+          const MainNavigationPage(),
         );
-
-
 
       default:
         return MaterialPageRoute(
