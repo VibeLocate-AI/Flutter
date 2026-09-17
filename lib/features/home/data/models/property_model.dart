@@ -25,6 +25,10 @@ class PropertyModel {
     required this.images,
     required this.location,
     required this.features,
+    this.propertyCondition,
+    this.floorNumber,
+    this.totalFloors,
+    this.yearBuilt,
   });
 
   final int id;
@@ -47,6 +51,11 @@ class PropertyModel {
 
   final String isFurnished;
 
+  final String? propertyCondition;
+  final int? floorNumber;
+  final int? totalFloors;
+  final int? yearBuilt;
+
   final String? availabilityDate;
   final String? listingDate;
 
@@ -57,7 +66,9 @@ class PropertyModel {
 
   final List<PropertyFeatureModel> features;
 
-  factory PropertyModel.fromJson(Map<String, dynamic> json) {
+  factory PropertyModel.fromJson(
+      Map<String, dynamic> json,
+      ) {
     final primaryImageJson = json['primary_image'];
     final locationJson = json['location'];
 
@@ -80,40 +91,82 @@ class PropertyModel {
       description: json['description']?.toString() ?? '',
       price: _toDouble(json['price']),
       currency: json['currency']?.toString() ?? '',
-      rentFrequency: json['rent_frequency']?.toString() ?? '',
+      rentFrequency:
+      json['rent_frequency']?.toString() ?? '',
       areaSqft: _toDouble(json['area_sqft']),
       bedrooms: _toInt(json['bedrooms']),
       bathrooms: _toInt(json['bathrooms']),
-      isFurnished: json['is_furnished']?.toString() ?? '',
-      availabilityDate: json['availability_date']?.toString(),
-      listingDate: json['listing_date']?.toString(),
-      primaryImage: primaryImageJson is Map<String, dynamic>
-          ? PropertyImageModel.fromJson(primaryImageJson)
+      isFurnished:
+      json['is_furnished']?.toString() ?? '',
+      propertyCondition:
+      json['property_condition']?.toString(),
+      floorNumber:
+      _toNullableInt(json['floor_number']),
+      totalFloors:
+      _toNullableInt(json['total_floors']),
+      yearBuilt:
+      _toNullableInt(json['year_built']),
+      availabilityDate:
+      json['availability_date']?.toString(),
+      listingDate:
+      json['listing_date']?.toString(),
+      primaryImage:
+      primaryImageJson is Map<String, dynamic>
+          ? PropertyImageModel.fromJson(
+        primaryImageJson,
+      )
           : null,
       images: imagesJson
           .whereType<Map<String, dynamic>>()
-          .map(PropertyImageModel.fromJson)
+          .map(
+        PropertyImageModel.fromJson,
+      )
           .toList(),
-      location: locationJson is Map<String, dynamic>
-          ? PropertyLocationModel.fromJson(locationJson)
+      location:
+      locationJson is Map<String, dynamic>
+          ? PropertyLocationModel.fromJson(
+        locationJson,
+      )
           : null,
       features: featuresJson
           .whereType<Map<String, dynamic>>()
-          .map(PropertyFeatureModel.fromJson)
+          .map(
+        PropertyFeatureModel.fromJson,
+      )
           .toList(),
     );
   }
 
   static int _toInt(dynamic value) {
-    return int.tryParse(value?.toString() ?? '') ?? 0;
+    return int.tryParse(
+      value?.toString() ?? '',
+    ) ??
+        0;
+  }
+
+  static int? _toNullableInt(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    return int.tryParse(
+      value.toString(),
+    );
   }
 
   static double _toDouble(dynamic value) {
-    return double.tryParse(value?.toString() ?? '') ?? 0;
+    return double.tryParse(
+      value?.toString() ?? '',
+    ) ??
+        0;
   }
 
   static bool _toBool(dynamic value) {
-    if (value is bool) return value;
-    return value?.toString() == '1';
+    if (value is bool) {
+      return value;
+    }
+
+    return value?.toString() == '1' ||
+        value?.toString().toLowerCase() == 'true';
   }
 }

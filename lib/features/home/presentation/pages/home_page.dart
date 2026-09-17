@@ -12,9 +12,9 @@ import '../widgets/home_loading_view.dart';
 import '../widgets/home_search_bar.dart';
 import '../widgets/popular_area_card.dart';
 import '../widgets/property_categories.dart';
+import '../widgets/property_filter_sheet.dart';
 import '../widgets/property_section_header.dart';
 import '../widgets/recommended_property_card.dart';
-import '../widgets/top_agent_card.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({
@@ -42,6 +42,9 @@ class _HomePageState extends State<HomePage> {
   bool _isAiSearching = false;
 
   AiSearchResponseModel? _aiSearchResponse;
+
+  PropertyFilterValues _filterValues =
+  const PropertyFilterValues();
 
   @override
   void initState() {
@@ -96,6 +99,32 @@ class _HomePageState extends State<HomePage> {
       _searchController.clear();
       _isAiSearching = false;
     });
+  }
+
+  Future<void> _showFilters() async {
+    final currentValues = _filterValues;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor:
+      Theme.of(context).colorScheme.surface,
+      builder: (context) {
+        return SizedBox(
+          height:
+          MediaQuery.sizeOf(context).height * 0.90,
+          child: PropertyFilterSheet(
+            initialValues: currentValues,
+            onApply: (values) {
+              setState(() {
+                _filterValues = values;
+              });
+            },
+          ),
+        );
+      },
+    );
   }
 
   void _onSearchChanged(String value) {
@@ -186,6 +215,59 @@ class _HomePageState extends State<HomePage> {
         return false;
       }
 
+      final filter = _filterValues;
+
+      if (filter.categoryId != null &&
+          property.categoryId != filter.categoryId) {
+        return false;
+      }
+
+      if (filter.minPrice != null &&
+          property.price < filter.minPrice!) {
+        return false;
+      }
+
+      if (filter.maxPrice != null &&
+          property.price > filter.maxPrice!) {
+        return false;
+      }
+
+      if (filter.minBedrooms != null &&
+          property.bedrooms < filter.minBedrooms!) {
+        return false;
+      }
+
+      if (filter.minBathrooms != null &&
+          property.bathrooms < filter.minBathrooms!) {
+        return false;
+      }
+
+      if (filter.minArea != null &&
+          property.areaSqft < filter.minArea!) {
+        return false;
+      }
+
+      if (filter.maxArea != null &&
+          property.areaSqft > filter.maxArea!) {
+        return false;
+      }
+
+      if (filter.furnished != null &&
+          property.isFurnished != filter.furnished) {
+        return false;
+      }
+
+      if (filter.rentFrequency != null &&
+          property.rentFrequency !=
+              filter.rentFrequency) {
+        return false;
+      }
+
+      if (filter.featuredOnly &&
+          !property.isFeatured) {
+        return false;
+      }
+
       if (_searchQuery.isEmpty) {
         return true;
       }
@@ -219,6 +301,14 @@ class _HomePageState extends State<HomePage> {
       ) {
     return _filterProperties(
       home.featuredProperties,
+    );
+  }
+
+  List<PropertyModel> _recommendedProperties(
+      HomeModel home,
+      ) {
+    return _filterProperties(
+      home.recommendedProperties,
     );
   }
 
@@ -352,7 +442,8 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor:
-      Theme.of(context).scaffoldBackgroundColor,
+      Theme.of(context)
+          .scaffoldBackgroundColor,
       body: SafeArea(
         child: _buildBody(context),
       ),
@@ -396,6 +487,9 @@ class _HomePageState extends State<HomePage> {
 
     final featured =
     _featuredProperties(home);
+
+    final recommended =
+    _recommendedProperties(home);
 
     final nearby =
     _nearbyProperties(home);
@@ -458,6 +552,8 @@ class _HomePageState extends State<HomePage> {
               child: PropertyCategories(
                 onCategorySelected:
                 _onCategorySelected,
+                onMoreFilters:
+                _showFilters,
               ),
             ),
           ),
@@ -477,7 +573,8 @@ class _HomePageState extends State<HomePage> {
                   0,
                 ),
                 sliver: SliverToBoxAdapter(
-                  child: PropertySectionHeader(
+                  child:
+                  PropertySectionHeader(
                     titleKey:
                     'popular_areas',
                   ),
@@ -495,11 +592,14 @@ class _HomePageState extends State<HomePage> {
                     height: 128,
                     child: ListView.separated(
                       padding:
-                      const EdgeInsets.symmetric(
+                      const EdgeInsets
+                          .symmetric(
                         horizontal: 20,
                       ),
                       scrollDirection:
                       Axis.horizontal,
+                      physics:
+                      const BouncingScrollPhysics(),
                       itemCount:
                       home.popularAreas.length,
                       separatorBuilder:
@@ -511,8 +611,9 @@ class _HomePageState extends State<HomePage> {
                       itemBuilder:
                           (context, index) {
                         return PopularAreaCard(
-                          area: home
-                              .popularAreas[index],
+                          area:
+                          home.popularAreas[
+                          index],
                         );
                       },
                     ),
@@ -529,9 +630,10 @@ class _HomePageState extends State<HomePage> {
                   0,
                 ),
                 sliver: SliverToBoxAdapter(
-                  child: PropertySectionHeader(
+                  child:
+                  PropertySectionHeader(
                     titleKey:
-                    'recommended_property',
+                    'featured_properties',
                     onSeeAll: () {
                       _showAllProperties(
                         context,
@@ -553,11 +655,14 @@ class _HomePageState extends State<HomePage> {
                     height: 365,
                     child: ListView.separated(
                       padding:
-                      const EdgeInsets.symmetric(
+                      const EdgeInsets
+                          .symmetric(
                         horizontal: 20,
                       ),
                       scrollDirection:
                       Axis.horizontal,
+                      physics:
+                      const BouncingScrollPhysics(),
                       itemCount:
                       featured.length,
                       separatorBuilder:
@@ -577,7 +682,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
-            if (home.topAgent != null)
+            if (recommended.isNotEmpty)
               SliverPadding(
                 padding:
                 const EdgeInsets.fromLTRB(
@@ -587,13 +692,20 @@ class _HomePageState extends State<HomePage> {
                   0,
                 ),
                 sliver: SliverToBoxAdapter(
-                  child: PropertySectionHeader(
+                  child:
+                  PropertySectionHeader(
                     titleKey:
-                    'top_agent',
+                    'recommended_property',
+                    onSeeAll: () {
+                      _showAllProperties(
+                        context,
+                        recommended,
+                      );
+                    },
                   ),
                 ),
               ),
-            if (home.topAgent != null)
+            if (recommended.isNotEmpty)
               SliverPadding(
                 padding:
                 const EdgeInsets.fromLTRB(
@@ -603,8 +715,26 @@ class _HomePageState extends State<HomePage> {
                   0,
                 ),
                 sliver: SliverToBoxAdapter(
-                  child: TopAgentCard(
-                    agent: home.topAgent!,
+                  child: Column(
+                    children:
+                    recommended
+                        .map(
+                          (property) {
+                        return Padding(
+                          padding:
+                          const EdgeInsets
+                              .only(
+                            bottom: 12,
+                          ),
+                          child:
+                          RecommendedPropertyCard(
+                            property:
+                            property,
+                          ),
+                        );
+                      },
+                    )
+                        .toList(),
                   ),
                 ),
               ),
@@ -613,12 +743,13 @@ class _HomePageState extends State<HomePage> {
                 padding:
                 const EdgeInsets.fromLTRB(
                   20,
-                  28,
+                  16,
                   20,
                   0,
                 ),
                 sliver: SliverToBoxAdapter(
-                  child: PropertySectionHeader(
+                  child:
+                  PropertySectionHeader(
                     titleKey:
                     'nearby_property',
                     onSeeAll: () {
@@ -639,7 +770,8 @@ class _HomePageState extends State<HomePage> {
                   20,
                   30,
                 ),
-                sliver: SliverList.separated(
+                sliver:
+                SliverList.separated(
                   itemCount:
                   nearby.length > 6
                       ? 6
@@ -660,13 +792,16 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             if (featured.isEmpty &&
+                recommended.isEmpty &&
                 nearby.isEmpty)
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: Center(
                   child: Padding(
                     padding:
-                    const EdgeInsets.all(24),
+                    const EdgeInsets.all(
+                      24,
+                    ),
                     child: Text(
                       localization.translate(
                         'no_properties',
@@ -729,9 +864,7 @@ class _HomePageState extends State<HomePage> {
     if (response == null) {
       return [
         const SliverToBoxAdapter(
-          child: SizedBox(
-            height: 20,
-          ),
+          child: SizedBox(height: 20),
         ),
       ];
     }
@@ -792,8 +925,7 @@ class _HomePageState extends State<HomePage> {
                       localization.translate(
                         'clear',
                       ),
-                      onPressed:
-                      _clearSearch,
+                      onPressed: _clearSearch,
                       icon: const Icon(
                         Icons.close_rounded,
                       ),
@@ -922,7 +1054,8 @@ class _HomePageState extends State<HomePage> {
       BuildContext context,
       AiSearchPropertyModel result,
       ) {
-    final theme = Theme.of(context);
+    final theme =
+    Theme.of(context);
 
     return Container(
       decoration: BoxDecoration(
@@ -932,8 +1065,7 @@ class _HomePageState extends State<HomePage> {
         BorderRadius.circular(18),
         border: Border.all(
           color:
-          theme.colorScheme
-              .outlineVariant,
+          theme.colorScheme.outlineVariant,
         ),
       ),
       child: Stack(
@@ -955,7 +1087,8 @@ class _HomePageState extends State<HomePage> {
                 horizontal: 10,
                 vertical: 6,
               ),
-              decoration: BoxDecoration(
+              decoration:
+              BoxDecoration(
                 color:
                 theme.colorScheme.primary,
                 borderRadius:
@@ -964,9 +1097,8 @@ class _HomePageState extends State<HomePage> {
               child: Text(
                 '${result.matchScore}% AI MATCH',
                 style: TextStyle(
-                  color: theme
-                      .colorScheme
-                      .onPrimary,
+                  color:
+                  theme.colorScheme.onPrimary,
                   fontSize: 11,
                   fontWeight:
                   FontWeight.w700,

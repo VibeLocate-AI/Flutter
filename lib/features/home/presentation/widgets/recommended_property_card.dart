@@ -4,7 +4,8 @@ import '../../../../core/localization/localization.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../data/models/property_model.dart';
 
-class RecommendedPropertyCard extends StatelessWidget {
+class RecommendedPropertyCard
+    extends StatelessWidget {
   const RecommendedPropertyCard({
     super.key,
     required this.property,
@@ -15,13 +16,16 @@ class RecommendedPropertyCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final localization = AppLocalization.of(context);
-    final width = MediaQuery.sizeOf(context).width;
+  Widget build(
+      BuildContext context,
+      ) {
+    final theme =
+    Theme.of(context);
 
-    final cardHeight = width < 360 ? 104.0 : 112.0;
-    final imageWidth = width < 360 ? 104.0 : 112.0;
+    final localization =
+    AppLocalization.of(
+      context,
+    );
 
     final imageUrl =
         property.primaryImage?.imageUrl ?? '';
@@ -32,36 +36,41 @@ class RecommendedPropertyCard extends StatelessWidget {
     return Card(
       elevation: 0,
       margin: EdgeInsets.zero,
-      color: theme.colorScheme.surface,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
+      color:
+      theme.colorScheme.surface,
+      clipBehavior:
+      Clip.antiAlias,
+      shape:
+      RoundedRectangleBorder(
+        borderRadius:
+        BorderRadius.circular(18),
         side: BorderSide(
-          color: theme.colorScheme.outlineVariant,
+          color: theme
+              .colorScheme
+              .outlineVariant,
         ),
       ),
       child: InkWell(
         onTap: onTap,
         child: SizedBox(
-          height: cardHeight,
+          height: 108,
           child: Row(
             children: [
               SizedBox(
-                width: imageWidth,
+                width: 112,
                 height: double.infinity,
-                child: _PropertyImage(
-                  imageUrl: imageUrl,
+                child:
+                _PropertyImage(
+                  imageUrl:
+                  imageUrl,
                 ),
               ),
               Expanded(
                 child: Padding(
                   padding:
-                  const EdgeInsetsDirectional
-                      .fromSTEB(
-                    12,
-                    10,
-                    6,
-                    10,
+                  const EdgeInsets.symmetric(
+                    horizontal: 13,
+                    vertical: 11,
                   ),
                   child: Column(
                     crossAxisAlignment:
@@ -72,25 +81,33 @@ class RecommendedPropertyCard extends StatelessWidget {
                         maxLines: 1,
                         overflow:
                         TextOverflow.ellipsis,
-                        style: AppTextStyles.labelLarge
+                        style:
+                        AppTextStyles
+                            .labelLarge
                             .copyWith(
                           color: theme
                               .colorScheme
                               .onSurface,
-                          fontWeight: FontWeight.w700,
+                          fontWeight:
+                          FontWeight.w700,
                         ),
                       ),
-                      const SizedBox(height: 5),
+                      const SizedBox(
+                        height: 5,
+                      ),
                       Row(
                         children: [
                           Icon(
-                            Icons.location_on_outlined,
+                            Icons
+                                .location_on_outlined,
                             size: 14,
                             color: theme
                                 .colorScheme
                                 .onSurfaceVariant,
                           ),
-                          const SizedBox(width: 3),
+                          const SizedBox(
+                            width: 3,
+                          ),
                           Expanded(
                             child: Text(
                               location.isEmpty
@@ -101,8 +118,10 @@ class RecommendedPropertyCard extends StatelessWidget {
                                   : location,
                               maxLines: 1,
                               overflow:
-                              TextOverflow.ellipsis,
-                              style: AppTextStyles
+                              TextOverflow
+                                  .ellipsis,
+                              style:
+                              AppTextStyles
                                   .bodySmall
                                   .copyWith(
                                 color: theme
@@ -123,12 +142,14 @@ class RecommendedPropertyCard extends StatelessWidget {
                         overflow:
                         TextOverflow.ellipsis,
                         style:
-                        AppTextStyles.labelLarge
+                        AppTextStyles
+                            .labelLarge
                             .copyWith(
                           color: theme
                               .colorScheme
                               .primary,
-                          fontWeight: FontWeight.w800,
+                          fontWeight:
+                          FontWeight.w800,
                         ),
                       ),
                     ],
@@ -141,10 +162,7 @@ class RecommendedPropertyCard extends StatelessWidget {
                   end: 10,
                 ),
                 child: Icon(
-                  Directionality.of(context) ==
-                      TextDirection.rtl
-                      ? Icons.arrow_back_ios_new_rounded
-                      : Icons
+                  Icons
                       .arrow_forward_ios_rounded,
                   size: 15,
                   color: theme
@@ -163,9 +181,13 @@ class RecommendedPropertyCard extends StatelessWidget {
       PropertyModel property,
       AppLocalization localization,
       ) {
-    final price = property.price.round();
+    final formattedPrice =
+    _formatNumber(property.price);
 
-    final currency = property.currency.trim();
+    final currency =
+    property.currency.trim().isEmpty
+        ? ''
+        : '${property.currency.trim()} ';
 
     final frequency =
     _formatFrequency(
@@ -173,20 +195,32 @@ class RecommendedPropertyCard extends StatelessWidget {
       localization,
     );
 
-    return '$currency ${_formatNumber(price)}$frequency';
+    return '$currency$formattedPrice$frequency';
   }
 
-  String _formatNumber(int value) {
-    final digits = value.toString();
-    final buffer = StringBuffer();
+  String _formatNumber(
+      double value,
+      ) {
+    final rounded = value.round();
 
-    for (int i = 0; i < digits.length; i++) {
+    final digits =
+    rounded.toString();
+
+    final buffer =
+    StringBuffer();
+
+    for (int i = 0;
+    i < digits.length;
+    i++) {
       if (i > 0 &&
-          (digits.length - i) % 3 == 0) {
+          (digits.length - i) % 3 ==
+              0) {
         buffer.write(',');
       }
 
-      buffer.write(digits[i]);
+      buffer.write(
+        digits[i],
+      );
     }
 
     return buffer.toString();
@@ -196,32 +230,44 @@ class RecommendedPropertyCard extends StatelessWidget {
       String frequency,
       AppLocalization localization,
       ) {
-    switch (frequency.trim().toLowerCase()) {
+    final normalized =
+    frequency.trim().toLowerCase();
+
+    if (normalized.isEmpty) {
+      return '';
+    }
+
+    String key;
+
+    switch (normalized) {
       case 'month':
       case 'monthly':
-        return ' ${localization.translate('per_month')}';
-
+        key = 'per_month';
+        break;
       case 'year':
       case 'yearly':
       case 'annual':
       case 'annually':
-        return ' ${localization.translate('per_year')}';
-
+        key = 'per_year';
+        break;
       case 'week':
       case 'weekly':
-        return ' ${localization.translate('per_week')}';
-
+        key = 'per_week';
+        break;
       case 'day':
       case 'daily':
-        return ' ${localization.translate('per_day')}';
-
+        key = 'per_day';
+        break;
       default:
         return '';
     }
+
+    return ' ${localization.translate(key)}';
   }
 }
 
-class _PropertyImage extends StatelessWidget {
+class _PropertyImage
+    extends StatelessWidget {
   const _PropertyImage({
     required this.imageUrl,
   });
@@ -229,8 +275,11 @@ class _PropertyImage extends StatelessWidget {
   final String imageUrl;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  Widget build(
+      BuildContext context,
+      ) {
+    final theme =
+    Theme.of(context);
 
     if (imageUrl.isEmpty) {
       return _fallback(theme);
@@ -239,26 +288,35 @@ class _PropertyImage extends StatelessWidget {
     return Image.network(
       imageUrl,
       fit: BoxFit.cover,
-      errorBuilder: (_, _, _) {
+      errorBuilder:
+          (_, _, _) {
         return _fallback(theme);
       },
       loadingBuilder:
-          (context, child, loadingProgress) {
-        if (loadingProgress == null) {
+          (
+          context,
+          child,
+          loadingProgress,
+          ) {
+        if (loadingProgress ==
+            null) {
           return child;
         }
 
-        return ColoredBox(
-          color:
-          theme.colorScheme.surfaceContainerHighest,
+        return Container(
+          color: theme
+              .colorScheme
+              .surfaceContainerHighest,
           child: Center(
             child: SizedBox(
-              width: 19,
-              height: 19,
-              child: CircularProgressIndicator(
+              width: 20,
+              height: 20,
+              child:
+              CircularProgressIndicator(
                 strokeWidth: 2,
-                color:
-                theme.colorScheme.primary,
+                color: theme
+                    .colorScheme
+                    .primary,
               ),
             ),
           ),
@@ -267,15 +325,20 @@ class _PropertyImage extends StatelessWidget {
     );
   }
 
-  Widget _fallback(ThemeData theme) {
-    return ColoredBox(
-      color:
-      theme.colorScheme.surfaceContainerHighest,
+  Widget _fallback(
+      ThemeData theme,
+      ) {
+    return Container(
+      color: theme
+          .colorScheme
+          .surfaceContainerHighest,
       child: Icon(
-        Icons.home_work_outlined,
-        size: 28,
-        color:
-        theme.colorScheme.onSurfaceVariant,
+        Icons
+            .home_work_outlined,
+        size: 30,
+        color: theme
+            .colorScheme
+            .onSurfaceVariant,
       ),
     );
   }
