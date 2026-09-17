@@ -25,15 +25,24 @@ class PropertySectionHeader extends StatelessWidget {
             localization.translate(titleKey),
             style: AppTextStyles.headingSmall.copyWith(
               color: theme.colorScheme.onSurface,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ),
-        TextButton(
-          onPressed: onSeeAll,
-          child: Text(
-            localization.translate('see_all'),
+        if (onSeeAll != null)
+          TextButton(
+            onPressed: onSeeAll,
+            style: TextButton.styleFrom(
+              padding:
+              const EdgeInsets.symmetric(
+                horizontal: 8,
+              ),
+              minimumSize: const Size(0, 38),
+            ),
+            child: Text(
+              localization.translate('see_all'),
+            ),
           ),
-        ),
       ],
     );
   }

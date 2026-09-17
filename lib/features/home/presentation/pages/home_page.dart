@@ -12,12 +12,14 @@ import '../widgets/home_loading_view.dart';
 import '../widgets/home_search_bar.dart';
 import '../widgets/popular_area_card.dart';
 import '../widgets/property_categories.dart';
+import '../widgets/property_filter_sheet.dart';
 import '../widgets/property_section_header.dart';
 import '../widgets/recommended_property_card.dart';
-import '../widgets/top_agent_card.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({
+    super.key,
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -33,7 +35,6 @@ class _HomePageState extends State<HomePage> {
 
   bool _isLoading = true;
 
-  // null = All
   int? _selectedTypeId;
 
   String _searchQuery = '';
@@ -42,7 +43,8 @@ class _HomePageState extends State<HomePage> {
 
   AiSearchResponseModel? _aiSearchResponse;
 
-  int _currentNavIndex = 0;
+  PropertyFilterValues _filterValues =
+  const PropertyFilterValues();
 
   @override
   void initState() {
@@ -56,10 +58,6 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  // ===========================================================
-  // HOME API
-  // ===========================================================
-
   Future<void> _loadHome() async {
     if (mounted) {
       setState(() {
@@ -69,8 +67,7 @@ class _HomePageState extends State<HomePage> {
     }
 
     try {
-      final result =
-      await HomeDependencies.getHome();
+      final result = await HomeDependencies.getHome();
 
       if (!mounted) {
         return;
@@ -94,27 +91,41 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // ===========================================================
-  // CATEGORY
-  // ===========================================================
-
   void _onCategorySelected(int? typeId) {
     setState(() {
       _selectedTypeId = typeId;
-
       _searchQuery = '';
-
       _aiSearchResponse = null;
-
       _searchController.clear();
-
       _isAiSearching = false;
     });
   }
 
-  // ===========================================================
-  // SEARCH INPUT
-  // ===========================================================
+  Future<void> _showFilters() async {
+    final currentValues = _filterValues;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor:
+      Theme.of(context).colorScheme.surface,
+      builder: (context) {
+        return SizedBox(
+          height:
+          MediaQuery.sizeOf(context).height * 0.90,
+          child: PropertyFilterSheet(
+            initialValues: currentValues,
+            onApply: (values) {
+              setState(() {
+                _filterValues = values;
+              });
+            },
+          ),
+        );
+      },
+    );
+  }
 
   void _onSearchChanged(String value) {
     setState(() {
@@ -127,13 +138,8 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  // ===========================================================
-  // AI SEARCH
-  // ===========================================================
-
   Future<void> _performAiSearch() async {
-    final query =
-    _searchController.text.trim();
+    final query = _searchController.text.trim();
 
     if (query.isEmpty) {
       return;
@@ -189,18 +195,11 @@ class _HomePageState extends State<HomePage> {
   void _clearSearch() {
     setState(() {
       _searchController.clear();
-
       _searchQuery = '';
-
       _aiSearchResponse = null;
-
       _isAiSearching = false;
     });
   }
-
-  // ===========================================================
-  // LOCAL HOME FILTER
-  // ===========================================================
 
   List<PropertyModel> _filterProperties(
       List<PropertyModel> properties, {
@@ -216,9 +215,64 @@ class _HomePageState extends State<HomePage> {
         return false;
       }
 
+      final filter = _filterValues;
+
+      if (filter.categoryId != null &&
+          property.categoryId != filter.categoryId) {
+        return false;
+      }
+
+      if (filter.minPrice != null &&
+          property.price < filter.minPrice!) {
+        return false;
+      }
+
+      if (filter.maxPrice != null &&
+          property.price > filter.maxPrice!) {
+        return false;
+      }
+
+      if (filter.minBedrooms != null &&
+          property.bedrooms < filter.minBedrooms!) {
+        return false;
+      }
+
+      if (filter.minBathrooms != null &&
+          property.bathrooms < filter.minBathrooms!) {
+        return false;
+      }
+
+      if (filter.minArea != null &&
+          property.areaSqft < filter.minArea!) {
+        return false;
+      }
+
+      if (filter.maxArea != null &&
+          property.areaSqft > filter.maxArea!) {
+        return false;
+      }
+
+      if (filter.furnished != null &&
+          property.isFurnished != filter.furnished) {
+        return false;
+      }
+
+      if (filter.rentFrequency != null &&
+          property.rentFrequency !=
+              filter.rentFrequency) {
+        return false;
+      }
+
+      if (filter.featuredOnly &&
+          !property.isFeatured) {
+        return false;
+      }
+
       if (_searchQuery.isEmpty) {
         return true;
       }
+
+      final query = _searchQuery.toLowerCase();
 
       final title =
       property.title.toLowerCase();
@@ -227,19 +281,17 @@ class _HomePageState extends State<HomePage> {
       property.description.toLowerCase();
 
       final location =
-          property.location?.addressLine1
-              .toLowerCase() ??
-              '';
+          property.location?.addressLine1 ?? '';
+
+      final normalizedLocation =
+      location.toLowerCase();
 
       final slug =
       property.slug.toLowerCase();
 
-      final query =
-      _searchQuery.toLowerCase();
-
       return title.contains(query) ||
           description.contains(query) ||
-          location.contains(query) ||
+          normalizedLocation.contains(query) ||
           slug.contains(query);
     }).toList();
   }
@@ -252,6 +304,14 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  List<PropertyModel> _recommendedProperties(
+      HomeModel home,
+      ) {
+    return _filterProperties(
+      home.recommendedProperties,
+    );
+  }
+
   List<PropertyModel> _nearbyProperties(
       HomeModel home,
       ) {
@@ -261,10 +321,6 @@ class _HomePageState extends State<HomePage> {
 
     return _filterProperties(source);
   }
-
-  // ===========================================================
-  // NOTIFICATIONS
-  // ===========================================================
 
   void _showNotifications() {
     final localization =
@@ -300,7 +356,8 @@ class _HomePageState extends State<HomePage> {
                   localization.translate(
                     'notifications',
                   ),
-                  style: Theme.of(context)
+                  style:
+                  Theme.of(context)
                       .textTheme
                       .headlineSmall,
                 ),
@@ -310,7 +367,8 @@ class _HomePageState extends State<HomePage> {
                     'no_notifications',
                   ),
                   textAlign: TextAlign.center,
-                  style: Theme.of(context)
+                  style:
+                  Theme.of(context)
                       .textTheme
                       .bodyMedium,
                 ),
@@ -321,10 +379,6 @@ class _HomePageState extends State<HomePage> {
       },
     );
   }
-
-  // ===========================================================
-  // LOCATION
-  // ===========================================================
 
   void _showLocation() {
     final localization =
@@ -360,7 +414,8 @@ class _HomePageState extends State<HomePage> {
                   localization.translate(
                     'current_location',
                   ),
-                  style: Theme.of(context)
+                  style:
+                  Theme.of(context)
                       .textTheme
                       .headlineSmall,
                 ),
@@ -370,7 +425,8 @@ class _HomePageState extends State<HomePage> {
                     'home_location',
                   ),
                   textAlign: TextAlign.center,
-                  style: Theme.of(context)
+                  style:
+                  Theme.of(context)
                       .textTheme
                       .bodyLarge,
                 ),
@@ -382,20 +438,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ===========================================================
-  // NAVIGATION
-  // ===========================================================
-
-  void _handleNavigation(int index) {
-    setState(() {
-      _currentNavIndex = index;
-    });
-  }
-
-  // ===========================================================
-  // BUILD
-  // ===========================================================
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -405,18 +447,10 @@ class _HomePageState extends State<HomePage> {
       body: SafeArea(
         child: _buildBody(context),
       ),
-      bottomNavigationBar:
-      _buildBottomNavigation(context),
     );
   }
 
   Widget _buildBody(BuildContext context) {
-    if (_currentNavIndex != 0) {
-      return _buildNavigationPlaceholder(
-        context,
-      );
-    }
-
     if (_isLoading) {
       return const HomeLoadingView();
     }
@@ -431,8 +465,7 @@ class _HomePageState extends State<HomePage> {
     if (_home == null) {
       return HomeErrorView(
         message:
-        AppLocalization.of(context)
-            .translate(
+        AppLocalization.of(context).translate(
           'home_load_error',
         ),
         onRetry: _loadHome,
@@ -445,10 +478,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ===========================================================
-  // HOME CONTENT
-  // ===========================================================
-
   Widget _buildHomeContent(
       BuildContext context,
       HomeModel home,
@@ -458,6 +487,9 @@ class _HomePageState extends State<HomePage> {
 
     final featured =
     _featuredProperties(home);
+
+    final recommended =
+    _recommendedProperties(home);
 
     final nearby =
     _nearbyProperties(home);
@@ -471,10 +503,6 @@ class _HomePageState extends State<HomePage> {
         physics:
         const AlwaysScrollableScrollPhysics(),
         slivers: [
-          // ---------------------------------------------------
-          // HEADER
-          // ---------------------------------------------------
-
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(
               20,
@@ -490,11 +518,6 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
-
-          // ---------------------------------------------------
-          // AI SEARCH
-          // ---------------------------------------------------
-
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(
               20,
@@ -504,21 +527,20 @@ class _HomePageState extends State<HomePage> {
             ),
             sliver: SliverToBoxAdapter(
               child: HomeSearchBar(
-                controller: _searchController,
-                onChanged: _onSearchChanged,
+                controller:
+                _searchController,
+                onChanged:
+                _onSearchChanged,
                 onSubmitted: (_) {
                   _performAiSearch();
                 },
-                onSearch: _performAiSearch,
-                isLoading: _isAiSearching,
+                onSearch:
+                _performAiSearch,
+                isLoading:
+                _isAiSearching,
               ),
             ),
           ),
-
-          // ---------------------------------------------------
-          // CATEGORIES
-          // ---------------------------------------------------
-
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(
               20,
@@ -530,24 +552,17 @@ class _HomePageState extends State<HomePage> {
               child: PropertyCategories(
                 onCategorySelected:
                 _onCategorySelected,
+                onMoreFilters:
+                _showFilters,
               ),
             ),
           ),
-
-          // ---------------------------------------------------
-          // SEARCH RESULTS
-          // ---------------------------------------------------
-
           if (isSearchMode)
             ..._buildSearchResults(
               context,
               localization,
             )
           else ...[
-            // -----------------------------------------------
-            // POPULAR AREAS
-            // -----------------------------------------------
-
             if (home.popularAreas.isNotEmpty)
               SliverPadding(
                 padding:
@@ -558,15 +573,17 @@ class _HomePageState extends State<HomePage> {
                   0,
                 ),
                 sliver: SliverToBoxAdapter(
-                  child: PropertySectionHeader(
-                    titleKey: 'popular_areas',
+                  child:
+                  PropertySectionHeader(
+                    titleKey:
+                    'popular_areas',
                   ),
                 ),
               ),
-
             if (home.popularAreas.isNotEmpty)
               SliverPadding(
-                padding: const EdgeInsets.only(
+                padding:
+                const EdgeInsets.only(
                   top: 14,
                   bottom: 2,
                 ),
@@ -581,9 +598,12 @@ class _HomePageState extends State<HomePage> {
                       ),
                       scrollDirection:
                       Axis.horizontal,
+                      physics:
+                      const BouncingScrollPhysics(),
                       itemCount:
                       home.popularAreas.length,
-                      separatorBuilder: (_, _) {
+                      separatorBuilder:
+                          (_, _) {
                         return const SizedBox(
                           width: 12,
                         );
@@ -591,19 +611,15 @@ class _HomePageState extends State<HomePage> {
                       itemBuilder:
                           (context, index) {
                         return PopularAreaCard(
-                          area: home
-                              .popularAreas[index],
+                          area:
+                          home.popularAreas[
+                          index],
                         );
                       },
                     ),
                   ),
                 ),
               ),
-
-            // -----------------------------------------------
-            // FEATURED / RECOMMENDED
-            // -----------------------------------------------
-
             if (featured.isNotEmpty)
               SliverPadding(
                 padding:
@@ -614,9 +630,10 @@ class _HomePageState extends State<HomePage> {
                   0,
                 ),
                 sliver: SliverToBoxAdapter(
-                  child: PropertySectionHeader(
+                  child:
+                  PropertySectionHeader(
                     titleKey:
-                    'recommended_property',
+                    'featured_properties',
                     onSeeAll: () {
                       _showAllProperties(
                         context,
@@ -626,10 +643,10 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
-
             if (featured.isNotEmpty)
               SliverPadding(
-                padding: const EdgeInsets.only(
+                padding:
+                const EdgeInsets.only(
                   top: 14,
                   bottom: 2,
                 ),
@@ -644,8 +661,12 @@ class _HomePageState extends State<HomePage> {
                       ),
                       scrollDirection:
                       Axis.horizontal,
-                      itemCount: featured.length,
-                      separatorBuilder: (_, _) {
+                      physics:
+                      const BouncingScrollPhysics(),
+                      itemCount:
+                      featured.length,
+                      separatorBuilder:
+                          (_, _) {
                         return const SizedBox(
                           width: 14,
                         );
@@ -661,12 +682,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
-
-            // -----------------------------------------------
-            // TOP AGENT
-            // -----------------------------------------------
-
-            if (home.topAgent != null)
+            if (recommended.isNotEmpty)
               SliverPadding(
                 padding:
                 const EdgeInsets.fromLTRB(
@@ -676,13 +692,20 @@ class _HomePageState extends State<HomePage> {
                   0,
                 ),
                 sliver: SliverToBoxAdapter(
-                  child: PropertySectionHeader(
-                    titleKey: 'top_agent',
+                  child:
+                  PropertySectionHeader(
+                    titleKey:
+                    'recommended_property',
+                    onSeeAll: () {
+                      _showAllProperties(
+                        context,
+                        recommended,
+                      );
+                    },
                   ),
                 ),
               ),
-
-            if (home.topAgent != null)
+            if (recommended.isNotEmpty)
               SliverPadding(
                 padding:
                 const EdgeInsets.fromLTRB(
@@ -692,27 +715,41 @@ class _HomePageState extends State<HomePage> {
                   0,
                 ),
                 sliver: SliverToBoxAdapter(
-                  child: TopAgentCard(
-                    agent: home.topAgent!,
+                  child: Column(
+                    children:
+                    recommended
+                        .map(
+                          (property) {
+                        return Padding(
+                          padding:
+                          const EdgeInsets
+                              .only(
+                            bottom: 12,
+                          ),
+                          child:
+                          RecommendedPropertyCard(
+                            property:
+                            property,
+                          ),
+                        );
+                      },
+                    )
+                        .toList(),
                   ),
                 ),
               ),
-
-            // -----------------------------------------------
-            // NEARBY
-            // -----------------------------------------------
-
             if (nearby.isNotEmpty)
               SliverPadding(
                 padding:
                 const EdgeInsets.fromLTRB(
                   20,
-                  28,
+                  16,
                   20,
                   0,
                 ),
                 sliver: SliverToBoxAdapter(
-                  child: PropertySectionHeader(
+                  child:
+                  PropertySectionHeader(
                     titleKey:
                     'nearby_property',
                     onSeeAll: () {
@@ -724,7 +761,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
-
             if (nearby.isNotEmpty)
               SliverPadding(
                 padding:
@@ -734,11 +770,14 @@ class _HomePageState extends State<HomePage> {
                   20,
                   30,
                 ),
-                sliver: SliverList.separated(
-                  itemCount: nearby.length > 6
+                sliver:
+                SliverList.separated(
+                  itemCount:
+                  nearby.length > 6
                       ? 6
                       : nearby.length,
-                  separatorBuilder: (_, _) {
+                  separatorBuilder:
+                      (_, _) {
                     return const SizedBox(
                       height: 12,
                     );
@@ -746,31 +785,31 @@ class _HomePageState extends State<HomePage> {
                   itemBuilder:
                       (context, index) {
                     return RecommendedPropertyCard(
-                      property: nearby[index],
+                      property:
+                      nearby[index],
                     );
                   },
                 ),
               ),
-
-            // -----------------------------------------------
-            // EMPTY
-            // -----------------------------------------------
-
             if (featured.isEmpty &&
+                recommended.isEmpty &&
                 nearby.isEmpty)
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: Center(
                   child: Padding(
                     padding:
-                    const EdgeInsets.all(24),
+                    const EdgeInsets.all(
+                      24,
+                    ),
                     child: Text(
                       localization.translate(
                         'no_properties',
                       ),
                       textAlign:
                       TextAlign.center,
-                      style: Theme.of(context)
+                      style:
+                      Theme.of(context)
                           .textTheme
                           .bodyLarge,
                     ),
@@ -782,10 +821,6 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
-  // ===========================================================
-  // AI SEARCH RESULTS
-  // ===========================================================
 
   List<Widget> _buildSearchResults(
       BuildContext context,
@@ -811,7 +846,8 @@ class _HomePageState extends State<HomePage> {
                   localization.translate(
                     'ai_searching',
                   ),
-                  style: Theme.of(context)
+                  style:
+                  Theme.of(context)
                       .textTheme
                       .bodyLarge,
                 ),
@@ -828,18 +864,12 @@ class _HomePageState extends State<HomePage> {
     if (response == null) {
       return [
         const SliverToBoxAdapter(
-          child: SizedBox(
-            height: 20,
-          ),
+          child: SizedBox(height: 20),
         ),
       ];
     }
 
     return [
-      // -------------------------------------------------------
-      // SEARCH SUMMARY
-      // -------------------------------------------------------
-
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(
           20,
@@ -852,13 +882,15 @@ class _HomePageState extends State<HomePage> {
             padding:
             const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Theme.of(context)
+              color:
+              Theme.of(context)
                   .colorScheme
                   .surface,
               borderRadius:
               BorderRadius.circular(18),
               border: Border.all(
-                color: Theme.of(context)
+                color:
+                Theme.of(context)
                     .colorScheme
                     .outlineVariant,
               ),
@@ -882,7 +914,8 @@ class _HomePageState extends State<HomePage> {
                         localization.translate(
                           'recommended_property',
                         ),
-                        style: Theme.of(context)
+                        style:
+                        Theme.of(context)
                             .textTheme
                             .titleLarge,
                       ),
@@ -892,24 +925,21 @@ class _HomePageState extends State<HomePage> {
                       localization.translate(
                         'clear',
                       ),
-                      onPressed:
-                      _clearSearch,
+                      onPressed: _clearSearch,
                       icon: const Icon(
                         Icons.close_rounded,
                       ),
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 8),
-
                 Text(
                   '${response.totalResults} properties found',
-                  style: Theme.of(context)
+                  style:
+                  Theme.of(context)
                       .textTheme
                       .bodyMedium,
                 ),
-
                 if (response
                     .understood
                     .propertyType !=
@@ -919,7 +949,8 @@ class _HomePageState extends State<HomePage> {
                     _buildUnderstandingText(
                       response.understood,
                     ),
-                    style: Theme.of(context)
+                    style:
+                    Theme.of(context)
                         .textTheme
                         .bodySmall,
                   ),
@@ -929,11 +960,6 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
-
-      // -------------------------------------------------------
-      // RESULTS
-      // -------------------------------------------------------
-
       if (response.properties.isEmpty)
         SliverFillRemaining(
           hasScrollBody: false,
@@ -947,7 +973,8 @@ class _HomePageState extends State<HomePage> {
                 ),
                 textAlign:
                 TextAlign.center,
-                style: Theme.of(context)
+                style:
+                Theme.of(context)
                     .textTheme
                     .bodyLarge,
               ),
@@ -956,7 +983,8 @@ class _HomePageState extends State<HomePage> {
         )
       else
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(
+          padding:
+          const EdgeInsets.fromLTRB(
             20,
             14,
             20,
@@ -965,7 +993,8 @@ class _HomePageState extends State<HomePage> {
           sliver: SliverList.separated(
             itemCount:
             response.properties.length,
-            separatorBuilder: (_, _) {
+            separatorBuilder:
+                (_, _) {
               return const SizedBox(
                 height: 12,
               );
@@ -1049,17 +1078,17 @@ class _HomePageState extends State<HomePage> {
               result.property,
             ),
           ),
-
-          Positioned(
+          PositionedDirectional(
             top: 16,
-            left: 16,
+            start: 16,
             child: Container(
               padding:
               const EdgeInsets.symmetric(
                 horizontal: 10,
                 vertical: 6,
               ),
-              decoration: BoxDecoration(
+              decoration:
+              BoxDecoration(
                 color:
                 theme.colorScheme.primary,
                 borderRadius:
@@ -1068,9 +1097,8 @@ class _HomePageState extends State<HomePage> {
               child: Text(
                 '${result.matchScore}% AI MATCH',
                 style: TextStyle(
-                  color: theme
-                      .colorScheme
-                      .onPrimary,
+                  color:
+                  theme.colorScheme.onPrimary,
                   fontSize: 11,
                   fontWeight:
                   FontWeight.w700,
@@ -1082,10 +1110,6 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
-  // ===========================================================
-  // SEE ALL
-  // ===========================================================
 
   void _showAllProperties(
       BuildContext context,
@@ -1113,8 +1137,7 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Padding(
                   padding:
-                  const EdgeInsets
-                      .fromLTRB(
+                  const EdgeInsets.fromLTRB(
                     20,
                     4,
                     20,
@@ -1128,17 +1151,18 @@ class _HomePageState extends State<HomePage> {
                       localization.translate(
                         'properties',
                       ),
-                      style: Theme.of(context)
+                      style:
+                      Theme.of(context)
                           .textTheme
                           .headlineSmall,
                     ),
                   ),
                 ),
                 Expanded(
-                  child: ListView.separated(
+                  child:
+                  ListView.separated(
                     padding:
-                    const EdgeInsets
-                        .fromLTRB(
+                    const EdgeInsets.fromLTRB(
                       20,
                       0,
                       20,
@@ -1166,125 +1190,6 @@ class _HomePageState extends State<HomePage> {
           ),
         );
       },
-    );
-  }
-
-  // ===========================================================
-  // NAVIGATION PLACEHOLDER
-  // ===========================================================
-
-  Widget _buildNavigationPlaceholder(
-      BuildContext context,
-      ) {
-    final localization =
-    AppLocalization.of(context);
-
-    final titles = [
-      'nav_home',
-      'nav_map',
-      'nav_favorites',
-      'nav_profile',
-    ];
-
-    final icons = [
-      Icons.home_rounded,
-      Icons.map_outlined,
-      Icons.favorite_border_rounded,
-      Icons.person_outline_rounded,
-    ];
-
-    return Center(
-      child: Column(
-        mainAxisAlignment:
-        MainAxisAlignment.center,
-        children: [
-          Icon(
-            icons[_currentNavIndex],
-            size: 54,
-            color:
-            Theme.of(context)
-                .colorScheme
-                .primary,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            localization.translate(
-              titles[_currentNavIndex],
-            ),
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall,
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ===========================================================
-  // BOTTOM NAVIGATION
-  // ===========================================================
-
-  Widget _buildBottomNavigation(
-      BuildContext context,
-      ) {
-    final localization =
-    AppLocalization.of(context);
-
-    return NavigationBar(
-      selectedIndex:
-      _currentNavIndex,
-      onDestinationSelected:
-      _handleNavigation,
-      destinations: [
-        NavigationDestination(
-          icon: const Icon(
-            Icons.home_outlined,
-          ),
-          selectedIcon: const Icon(
-            Icons.home_rounded,
-          ),
-          label:
-          localization.translate(
-            'nav_home',
-          ),
-        ),
-        NavigationDestination(
-          icon: const Icon(
-            Icons.map_outlined,
-          ),
-          selectedIcon: const Icon(
-            Icons.map_rounded,
-          ),
-          label:
-          localization.translate(
-            'nav_map',
-          ),
-        ),
-        NavigationDestination(
-          icon: const Icon(
-            Icons.favorite_border_rounded,
-          ),
-          selectedIcon: const Icon(
-            Icons.favorite_rounded,
-          ),
-          label:
-          localization.translate(
-            'nav_favorites',
-          ),
-        ),
-        NavigationDestination(
-          icon: const Icon(
-            Icons.person_outline_rounded,
-          ),
-          selectedIcon: const Icon(
-            Icons.person_rounded,
-          ),
-          label:
-          localization.translate(
-            'nav_profile',
-          ),
-        ),
-      ],
     );
   }
 }

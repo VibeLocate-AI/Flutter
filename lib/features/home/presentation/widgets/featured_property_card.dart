@@ -16,7 +16,9 @@ class FeaturedPropertyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final theme =
+    Theme.of(context);
+
     final localization =
     AppLocalization.of(context);
 
@@ -26,16 +28,28 @@ class FeaturedPropertyCard extends StatelessWidget {
     final location =
         property.location?.addressLine1 ?? '';
 
+    final propertyType =
+    _propertyTypeLabel(
+      context,
+      property.typeId,
+    );
+
     return SizedBox(
       width: 310,
       child: Card(
         elevation: 0,
-        color: theme.colorScheme.surface,
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(22),
+        color:
+        theme.colorScheme.surface,
+        clipBehavior:
+        Clip.antiAlias,
+        shape:
+        RoundedRectangleBorder(
+          borderRadius:
+          BorderRadius.circular(22),
           side: BorderSide(
-            color: theme.colorScheme.outlineVariant,
+            color: theme
+                .colorScheme
+                .outlineVariant,
           ),
         ),
         child: InkWell(
@@ -49,73 +63,86 @@ class FeaturedPropertyCard extends StatelessWidget {
                 child: Stack(
                   children: [
                     Positioned.fill(
-                      child: imageUrl.isEmpty
-                          ? _imageFallback(theme)
+                      child:
+                      imageUrl.isEmpty
+                          ? _imageFallback(
+                        theme,
+                      )
                           : Image.network(
                         imageUrl,
                         fit: BoxFit.cover,
                         errorBuilder:
-                            (_, _, _) {
+                            (
+                            _,
+                            _,
+                            _,
+                            ) {
                           return _imageFallback(
                             theme,
                           );
                         },
                       ),
                     ),
-
-                    Positioned(
+                    PositionedDirectional(
                       top: 12,
-                      left: 12,
+                      start: 12,
                       child: Container(
                         padding:
                         const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
+                          horizontal: 11,
+                          vertical: 7,
                         ),
-                        decoration: BoxDecoration(
+                        decoration:
+                        BoxDecoration(
                           color:
-                          theme.colorScheme.primary,
+                          theme
+                              .colorScheme
+                              .primary,
                           borderRadius:
-                          BorderRadius.circular(10),
+                          BorderRadius
+                              .circular(
+                            11,
+                          ),
                         ),
                         child: Text(
-                          localization.translate(
-                            _propertyTypeKey(
-                              property.typeId,
-                            ),
-                          ),
+                          propertyType,
                           style:
-                          AppTextStyles.labelSmall
+                          AppTextStyles
+                              .labelSmall
                               .copyWith(
-                            color: theme.colorScheme
+                            color:
+                            theme
+                                .colorScheme
                                 .onPrimary,
+                            fontWeight:
+                            FontWeight.w700,
                           ),
                         ),
                       ),
                     ),
-
-                    Positioned(
+                    PositionedDirectional(
                       top: 12,
-                      right: 12,
+                      end: 12,
                       child: Material(
-                        color: Colors.white
-                            .withValues(alpha: 0.92),
+                        color:
+                        Colors.white
+                            .withValues(
+                          alpha: 0.94,
+                        ),
                         shape:
                         const CircleBorder(),
                         child: InkWell(
                           customBorder:
                           const CircleBorder(),
-                          onTap: () {
-                            // Favorite functionality
-                            // will be connected later.
-                          },
-                          child: const SizedBox(
-                            width: 38,
-                            height: 38,
+                          onTap: () {},
+                          child:
+                          const SizedBox(
+                            width: 40,
+                            height: 40,
                             child: Icon(
                               Icons
                                   .favorite_border_rounded,
-                              size: 20,
+                              size: 21,
                             ),
                           ),
                         ),
@@ -124,12 +151,13 @@ class FeaturedPropertyCard extends StatelessWidget {
                   ],
                 ),
               ),
-
               Expanded(
                 flex: 4,
                 child: Padding(
                   padding:
-                  const EdgeInsets.all(14),
+                  const EdgeInsets.all(
+                    14,
+                  ),
                   child: Column(
                     crossAxisAlignment:
                     CrossAxisAlignment.start,
@@ -140,16 +168,17 @@ class FeaturedPropertyCard extends StatelessWidget {
                         overflow:
                         TextOverflow.ellipsis,
                         style:
-                        AppTextStyles.labelLarge
+                        AppTextStyles
+                            .labelLarge
                             .copyWith(
                           color: theme
                               .colorScheme
                               .onSurface,
+                          fontWeight:
+                          FontWeight.w700,
                         ),
                       ),
-
                       const SizedBox(height: 5),
-
                       Row(
                         children: [
                           Icon(
@@ -160,7 +189,9 @@ class FeaturedPropertyCard extends StatelessWidget {
                                 .colorScheme
                                 .onSurfaceVariant,
                           ),
-                          const SizedBox(width: 3),
+                          const SizedBox(
+                            width: 3,
+                          ),
                           Expanded(
                             child: Text(
                               location.isEmpty
@@ -171,8 +202,10 @@ class FeaturedPropertyCard extends StatelessWidget {
                                   : location,
                               maxLines: 1,
                               overflow:
-                              TextOverflow.ellipsis,
-                              style: AppTextStyles
+                              TextOverflow
+                                  .ellipsis,
+                              style:
+                              AppTextStyles
                                   .bodySmall
                                   .copyWith(
                                 color: theme
@@ -183,32 +216,25 @@ class FeaturedPropertyCard extends StatelessWidget {
                           ),
                         ],
                       ),
-
                       const Spacer(),
-
-                      Row(
-                        crossAxisAlignment:
-                        CrossAxisAlignment.end,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              _formatPrice(
-                                property,
-                                localization,
-                              ),
-                              maxLines: 1,
-                              overflow:
-                              TextOverflow.ellipsis,
-                              style: AppTextStyles
-                                  .headingSmall
-                                  .copyWith(
-                                color: theme
-                                    .colorScheme
-                                    .primary,
-                              ),
-                            ),
-                          ),
-                        ],
+                      Text(
+                        _formatPrice(
+                          property,
+                          localization,
+                        ),
+                        maxLines: 1,
+                        overflow:
+                        TextOverflow.ellipsis,
+                        style:
+                        AppTextStyles
+                            .headingSmall
+                            .copyWith(
+                          color: theme
+                              .colorScheme
+                              .primary,
+                          fontWeight:
+                          FontWeight.w800,
+                        ),
                       ),
                     ],
                   ),
@@ -221,18 +247,104 @@ class FeaturedPropertyCard extends StatelessWidget {
     );
   }
 
-  Widget _imageFallback(ThemeData theme) {
+  Widget _imageFallback(
+      ThemeData theme,
+      ) {
     return ColoredBox(
-      color:
-      theme.colorScheme.surfaceContainerHighest,
+      color: theme
+          .colorScheme
+          .surfaceContainerHighest,
       child: Center(
         child: Icon(
-          Icons.image_not_supported_outlined,
-          color:
-          theme.colorScheme.onSurfaceVariant,
+          Icons
+              .image_not_supported_outlined,
+          color: theme
+              .colorScheme
+              .onSurfaceVariant,
         ),
       ),
     );
+  }
+
+  String _propertyTypeLabel(
+      BuildContext context,
+      int typeId,
+      ) {
+    final isArabic =
+        Localizations.localeOf(context)
+            .languageCode ==
+            'ar';
+
+    switch (typeId) {
+      case 1:
+        return isArabic
+            ? 'شقة'
+            : 'Apartment';
+      case 2:
+        return isArabic
+            ? 'فيلا'
+            : 'Villa';
+      case 3:
+        return isArabic
+            ? 'بنتهاوس'
+            : 'Penthouse';
+      case 4:
+        return isArabic
+            ? 'تاون هاوس'
+            : 'Townhouse';
+      case 5:
+        return isArabic
+            ? 'منزل'
+            : 'House';
+      case 6:
+        return isArabic
+            ? 'مكتب'
+            : 'Office';
+      case 7:
+        return isArabic
+            ? 'مستودع'
+            : 'Warehouse';
+      case 8:
+        return isArabic
+            ? 'أرض'
+            : 'Land';
+      case 9:
+        return isArabic
+            ? 'مطعم'
+            : 'Restaurant';
+      case 10:
+        return isArabic
+            ? 'فندق'
+            : 'Hotel';
+      case 11:
+        return isArabic
+            ? 'مبنى'
+            : 'Building';
+      case 12:
+        return isArabic
+            ? 'محل تجاري'
+            : 'Commercial Shop';
+      case 13:
+        return isArabic
+            ? 'عيادة'
+            : 'Clinic';
+      case 14:
+        return isArabic
+            ? 'مدرسة'
+            : 'School';
+      case 15:
+        return isArabic
+            ? 'صالة عرض'
+            : 'Showroom';
+      case 16:
+        return isArabic
+            ? 'مقهى'
+            : 'Cafe';
+      default:
+        return isArabic
+            ? 'عقار'
+            : 'Property';
+    }
   }
 
   String _formatPrice(
@@ -256,19 +368,29 @@ class FeaturedPropertyCard extends StatelessWidget {
     return '$currency$formattedPrice$frequency';
   }
 
-  String _formatNumber(double value) {
+  String _formatNumber(
+      double value,
+      ) {
     final rounded = value.round();
-    final digits = rounded.toString();
 
-    final buffer = StringBuffer();
+    final digits =
+    rounded.toString();
 
-    for (int i = 0; i < digits.length; i++) {
+    final buffer =
+    StringBuffer();
+
+    for (int i = 0;
+    i < digits.length;
+    i++) {
       if (i > 0 &&
-          (digits.length - i) % 3 == 0) {
+          (digits.length - i) % 3 ==
+              0) {
         buffer.write(',');
       }
 
-      buffer.write(digits[i]);
+      buffer.write(
+        digits[i],
+      );
     }
 
     return buffer.toString();
@@ -292,50 +414,24 @@ class FeaturedPropertyCard extends StatelessWidget {
       case 'monthly':
         key = 'per_month';
         break;
-
       case 'year':
       case 'yearly':
       case 'annual':
       case 'annually':
         key = 'per_year';
         break;
-
       case 'week':
       case 'weekly':
         key = 'per_week';
         break;
-
       case 'day':
       case 'daily':
         key = 'per_day';
         break;
-
       default:
         return '';
     }
 
     return ' ${localization.translate(key)}';
-  }
-
-  String _propertyTypeKey(int typeId) {
-    switch (typeId) {
-      case 1:
-        return 'property_apartment';
-
-      case 2:
-        return 'property_villa';
-
-      case 3:
-        return 'property_penthouse';
-
-      case 4:
-        return 'property_house';
-
-      case 5:
-        return 'property_bungalow';
-
-      default:
-        return 'property_house';
-    }
   }
 }

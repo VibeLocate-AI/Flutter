@@ -172,8 +172,58 @@
   "preferred_language": "اللغة المفضلة",
   "currency": "العملة",
   "save_changes": "حفظ التغييرات",
-  "save_preferences": "حفظ التفضيلات"
+  "save_preferences": "حفظ التفضيلات",
 
+  "featured_properties": "العقارات المميزة",
+  "nearby_recommended": "العقارات القريبة والمقترحة",
+  "showing_properties": "عرض",
+  "showing_recommendations": "عرض",
+  "load_more_properties": "عرض المزيد من العقارات",
+  "load_more_recommendations": "عرض المزيد من التوصيات",
+  "ai_powered_platform": "منصة عقارية مدعومة بالذكاء الاصطناعي",
+  "hero_title": "اعثر على",
+  "hero_title_highlight": "عقار أحلامك في دبي",
+  "hero_description": "اكتشف عقارات مميزة في دبي مصممة لتناسب أسلوب حياتك واحتياجاتك مع توصيات ذكية مدعومة بالذكاء الاصطناعي.",
+  "demo_prompts": "أمثلة للبحث:",
+  "prompt_one": "منزل بغرفتي نوم في دبي",
+  "prompt_two": "فيلا حديثة أقل من 5 مليون درهم",
+  "prompt_three": "شقة هادئة بالقرب من المارينا",
+  "beds_short": "غرف",
+  "view_details": "عرض التفاصيل",
+  "why_vibelocate": "لماذا VibeLocate",
+  "benefit_verified": "عقارات موثوقة",
+  "benefit_verified_desc": "عقارات يتم التحقق منها لتجربة أكثر موثوقية.",
+  "benefit_agents": "وكلاء متخصصون",
+  "benefit_agents_desc": "تواصل مع خبراء متخصصين في مجال العقارات.",
+  "benefit_price": "أفضل الأسعار",
+  "benefit_price_desc": "استكشف أسعار عقارات تنافسية في السوق.",
+  "benefit_support": "دعم على مدار الساعة",
+  "benefit_support_desc": "فريقنا جاهز لمساعدتك في أي وقت.",
+  "list_property_title": "أضف عقارك",
+  "list_property_desc": "وصل إلى آلاف المشترين والمستأجرين المحتملين عبر VibeLocate AI.",
+  "list_property_button": "أضف عقارك",
+  "footer_description": "اكتشف العقارات من خلال توصيات مدعومة بالذكاء الاصطناعي وطريقة أذكى للعثور على منزلك القادم.",
+  "footer_quick_links": "روابط سريعة",
+  "footer_links": "الرئيسية\nالعقارات\nالخريطة\nالمفضلة\nالملف الشخصي\nمن نحن",
+  "footer_contact": "تواصل معنا",
+  "footer_contact_value": "دبي، الإمارات\nsupport@vibelocate.ai\n+1 (800) 456-7890",
+  "footer_copyright": "© 2026 VibeLocate AI. جميع الحقوق محفوظة.",
+
+
+
+  "property": "عقار",
+
+  "featured": "مميز",
+
+
+  "properties_found": "عقار",
+
+  "ai_results": "نتائج الذكاء الاصطناعي",
+  "ai_match": "تطابق ذكي",
+
+  "bedrooms": "غرف نوم",
+  "bathrooms": "حمامات",
+  "separator": " • "
 
 
 
