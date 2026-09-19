@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../storage/theme_storage.dart';
-
 class ThemeManager extends ChangeNotifier {
   ThemeManager._();
 
@@ -11,55 +9,16 @@ class ThemeManager extends ChangeNotifier {
 
   ThemeMode get themeMode => _themeMode;
 
-  Future<void> initialize() async {
-    final savedTheme = await ThemeStorage.getThemeMode();
+  bool get isSystem => _themeMode == ThemeMode.system;
+  bool get isLight => _themeMode == ThemeMode.light;
+  bool get isDark => _themeMode == ThemeMode.dark;
 
-    switch (savedTheme) {
-      case 'light':
-        _themeMode = ThemeMode.light;
-        break;
-      case 'dark':
-        _themeMode = ThemeMode.dark;
-        break;
-      case 'system':
-      default:
-        _themeMode = ThemeMode.system;
-        break;
+  void setThemeMode(ThemeMode mode) {
+    if (_themeMode == mode) {
+      return;
     }
 
-    notifyListeners();
-  }
-
-  Future<void> setThemeMode(ThemeMode mode) async {
     _themeMode = mode;
-
-    await ThemeStorage.saveThemeMode(
-      _themeModeToString(mode),
-    );
-
     notifyListeners();
-  }
-
-  Future<void> setSystemTheme() async {
-    await setThemeMode(ThemeMode.system);
-  }
-
-  Future<void> setLightTheme() async {
-    await setThemeMode(ThemeMode.light);
-  }
-
-  Future<void> setDarkTheme() async {
-    await setThemeMode(ThemeMode.dark);
-  }
-
-  String _themeModeToString(ThemeMode mode) {
-    switch (mode) {
-      case ThemeMode.light:
-        return 'light';
-      case ThemeMode.dark:
-        return 'dark';
-      case ThemeMode.system:
-        return 'system';
-    }
   }
 }

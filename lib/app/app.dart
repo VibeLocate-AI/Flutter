@@ -2,8 +2,8 @@ import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
-import '../core/localization/localization.dart';
 import '../core/localization/locale_manager.dart';
+import '../core/localization/localization.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/theme_manager.dart';
 import 'app_router.dart';
@@ -26,14 +26,18 @@ class VibeLocateApp extends StatelessWidget {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'VibeLocate AI',
+
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),
-          themeMode: ThemeMode.system,
+          themeMode: themeManager.themeMode,
+
           locale: localeManager.currentLocale,
+
           supportedLocales: const [
             Locale('en'),
             Locale('ar'),
           ],
+
           localizationsDelegates: const [
             AppLocalizationDelegate(),
             CountryLocalizations.delegate,
@@ -41,7 +45,9 @@ class VibeLocateApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
+
           onGenerateRoute: AppRouter.generateRoute,
+
           home: const StartupPage(),
         );
       },
