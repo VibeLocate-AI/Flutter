@@ -116,11 +116,10 @@
   "login_success": "Login successful.",
   "email_verified_success": "Email verified successfully.",
 
-  "complete_required_fields": "Please complete all required fields."
+  "complete_required_fields": "Please complete all required fields.",
 
 
 
-,
   "home_location": "Dubai Marina, UAE",
   "search_hint": "AI Contextual Search...",
   "recommended_property": "Recommended Property",
@@ -228,7 +227,7 @@
 
   "bedrooms": "bedrooms",
   "bathrooms": "bathrooms",
-  "separator": " • ",
+  "separator": " • "
 
 
 
