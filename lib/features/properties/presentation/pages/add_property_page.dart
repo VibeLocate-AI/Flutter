@@ -3787,100 +3787,75 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
     });
   }
 
-  Future<void> _loadNeighborhoods()
-  async {
+  Future<void> _loadNeighborhoods() async {
     if (!mounted) {
       return;
     }
 
     setState(() {
-      _loadingNeighborhoods =
-      true;
-      _neighborhoodLoadError =
-      null;
+      _loadingNeighborhoods = true;
+      _neighborhoodLoadError = null;
     });
 
     try {
-      final token =
-      await TokenStorage
-          .getAccessToken();
+      final token = await TokenStorage.getAccessToken();
 
-      final response =
-      await http.get(
+      final response = await http.get(
         Uri.parse(
           '${ApiEndpoints.baseUrl}${ApiEndpoints.properties}',
         ),
         headers: {
-          'Accept':
-          'application/json',
-          if (token !=
-              null &&
-              token.isNotEmpty)
-            'Authorization':
-            'Bearer $token',
+          'Accept': 'application/json',
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
         },
       ).timeout(
         const Duration(
-          seconds:
-          30,
+          seconds: 30,
         ),
       );
 
-      if (response.statusCode <
-          200 ||
-          response.statusCode >=
-              300) {
+      if (response.statusCode < 200 ||
+          response.statusCode >= 300) {
         throw Exception(
           'Unable to load locations',
         );
       }
 
-      final decoded =
-      jsonDecode(
+      final decoded = jsonDecode(
         response.body,
       );
 
-      final properties =
-      _extractProperties(
+      final properties = _extractProperties(
         decoded,
       );
 
-      final unique =
-      <int, String>{};
+      final unique = <int, String>{};
 
       for (final property in properties) {
         if (property is! Map) {
           continue;
         }
 
-        final directId =
-        _readInt(
-          property[
-          'neighborhood_id'],
+        final directId = _readInt(
+          property['neighborhood_id'],
         );
 
-        final location =
-        property[
-        'location'];
+        final location = property['location'];
 
-        final nestedId =
-        location is Map
+        final nestedId = location is Map
             ? _readInt(
-          location[
-          'neighborhood_id'],
+          location['neighborhood_id'],
         )
             : null;
 
-        final id =
-            directId ??
-                nestedId;
+        final id = directId ?? nestedId;
 
         if (id == null) {
           continue;
         }
 
-        final name =
-        _readNeighborhoodName(
+        final name = _readNeighborhoodName(
           property,
         );
 
@@ -3892,31 +3867,21 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         }
       }
 
-      final list =
-      unique.entries
+      final list = unique.entries
           .map(
-            (
-            entry,
-            ) =>
-            _NeighborhoodOption(
-              id:
-              entry.key,
-              name:
-              entry.value,
-            ),
+            (entry) => _NeighborhoodOption(
+          id: entry.key,
+          name: entry.value,
+        ),
       )
           .toList();
 
       list.sort(
-            (
-            a,
-            b,
-            ) =>
-            a.name
-                .toLowerCase()
-                .compareTo(
-              b.name.toLowerCase(),
-            ),
+            (a, b) => a.name
+            .toLowerCase()
+            .compareTo(
+          b.name.toLowerCase(),
+        ),
       );
 
       if (!mounted) {
@@ -3924,8 +3889,9 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
       }
 
       setState(() {
-        _neighborhoods =
-            list;
+        _neighborhoods = list;
+        _neighborhoodLoadError = null;
+        _loadingNeighborhoods = false;
       });
     } catch (error) {
       if (!mounted) {
@@ -3933,18 +3899,19 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
       }
 
       setState(() {
-        _neighborhoodLoadError =
-            error
-                .toString()
-                .replaceFirst(
-              'Exception: ',
-              '',
-            );
+        _neighborhoodLoadError = error
+            .toString()
+            .replaceFirst(
+          'Exception: ',
+          '',
+        );
+        _neighborhoods = [];
+        _loadingNeighborhoods = false;
       });
     } finally {
-      if (mounted) {
+      if (mounted && _loadingNeighborhoods) {
         setState(() {
-          _isSubmitting = false;
+          _loadingNeighborhoods = false;
         });
       }
     }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -50,32 +52,61 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _loadProfile() async {
+    if (!mounted) {
+      return;
+    }
+
     setState(() {
       _loading = true;
     });
 
     try {
-      final profile = await ProfileDependencies.getProfile();
+      final profile = await ProfileDependencies
+          .getProfile()
+          .timeout(
+        const Duration(seconds: 15),
+      );
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         _setProfile(profile);
+        _loading = false;
       });
-    } catch (error) {
-      if (!mounted) return;
-
-      _showError(
-        error.toString().replaceFirst('Exception: ', ''),
-      );
-    } finally {
-      if (!mounted){
+    } on TimeoutException {
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         _loading = false;
       });
+
+      _showError(
+        LocaleManager.instance.isArabic
+            ? 'تعذر تحميل الملف الشخصي. تأكدي من اتصال الإنترنت وحاولي مرة أخرى.'
+            : 'Unable to load your profile. Please check your internet connection and try again.',
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _loading = false;
+      });
+
+      _showError(
+        error
+            .toString()
+            .replaceFirst(
+          'Exception: ',
+          '',
+        ),
+      );
     }
-  }
   }
 
   void _setProfile(ProfileModel profile) {
@@ -114,7 +145,9 @@ class _ProfilePageState extends State<ProfilePage> {
         bio: _bioController.text.trim(),
       );
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         _setProfile(profile);
@@ -135,12 +168,14 @@ class _ProfilePageState extends State<ProfilePage> {
         _showError(error.toString());
       }
     } finally {
-      if (!mounted){
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         _saving = false;
       });
-    }}
+    }
   }
 
   Future<void> _pickAvatar() async {
@@ -152,7 +187,9 @@ class _ProfilePageState extends State<ProfilePage> {
       maxWidth: 1200,
     );
 
-    if (image == null) return;
+    if (image == null) {
+      return;
+    }
 
     setState(() {
       _saving = true;
@@ -163,7 +200,9 @@ class _ProfilePageState extends State<ProfilePage> {
         image.path,
       );
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         _setProfile(profile);
@@ -183,16 +222,19 @@ class _ProfilePageState extends State<ProfilePage> {
         _showError(error.toString());
       }
     } finally {
-      if (!mounted){
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         _saving = false;
       });
     }
-  }}
+  }
 
   Future<void> _changeLanguage(Locale locale) async {
-    final previousLocale = LocaleManager.instance.currentLocale;
+    final previousLocale =
+        LocaleManager.instance.currentLocale;
 
     LocaleManager.instance.setLocale(locale);
 
@@ -207,14 +249,17 @@ class _ProfilePageState extends State<ProfilePage> {
         _saving = true;
       });
 
-      final updated = await ProfileDependencies.completeProfile(
+      final updated =
+      await ProfileDependencies.completeProfile(
         preferredLanguage: locale.languageCode,
         currency: profile.currency.isEmpty
             ? 'AED'
             : profile.currency,
       );
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         _setProfile(updated);
@@ -227,11 +272,13 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     } finally {
       if (!mounted) {
+        return;
+      }
 
       setState(() {
         _saving = false;
       });
-    }}
+    }
   }
 
   void _changeTheme(ThemeMode mode) {
@@ -239,7 +286,8 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _confirmLogout() async {
-    final isArabic = LocaleManager.instance.isArabic;
+    final isArabic =
+        LocaleManager.instance.isArabic;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -278,11 +326,13 @@ class _ProfilePageState extends State<ProfilePage> {
                 ? 'هل أنت متأكد أنك تريد تسجيل الخروج من حسابك؟'
                 : 'Are you sure you want to log out of your account?',
             style: AppTextStyles.bodyMedium.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+              color:
+              theme.colorScheme.onSurfaceVariant,
             ),
             textAlign: TextAlign.center,
           ),
-          actionsPadding: const EdgeInsets.fromLTRB(
+          actionsPadding:
+          const EdgeInsets.fromLTRB(
             20,
             0,
             20,
@@ -294,7 +344,10 @@ class _ProfilePageState extends State<ProfilePage> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () {
-                      Navigator.pop(context, false);
+                      Navigator.pop(
+                        context,
+                        false,
+                      );
                     },
                     child: Text(
                       isArabic
@@ -307,11 +360,17 @@ class _ProfilePageState extends State<ProfilePage> {
                 Expanded(
                   child: FilledButton(
                     onPressed: () {
-                      Navigator.pop(context, true);
+                      Navigator.pop(
+                        context,
+                        true,
+                      );
                     },
-                    style: FilledButton.styleFrom(
-                      backgroundColor: theme.colorScheme.error,
-                      foregroundColor: theme.colorScheme.onError,
+                    style:
+                    FilledButton.styleFrom(
+                      backgroundColor:
+                      theme.colorScheme.error,
+                      foregroundColor:
+                      theme.colorScheme.onError,
                     ),
                     child: Text(
                       isArabic
@@ -339,7 +398,9 @@ class _ProfilePageState extends State<ProfilePage> {
       await AuthDependencies.logout();
     } catch (_) {}
 
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     Navigator.of(context).pushNamedAndRemoveUntil(
       '/login',
@@ -348,8 +409,10 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _showLanguagePicker() async {
-    final isArabic = LocaleManager.instance.isArabic;
-    final selected = LocaleManager.instance.currentLocale;
+    final isArabic =
+        LocaleManager.instance.isArabic;
+    final selected =
+        LocaleManager.instance.currentLocale;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -372,17 +435,24 @@ class _ProfilePageState extends State<ProfilePage> {
                   isArabic
                       ? 'اختيار اللغة'
                       : 'Choose language',
-                  style: theme.textTheme.titleLarge?.copyWith(
+                  style: theme
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 16),
                 _PreferenceOption(
-                  icon: Icons.language_rounded,
+                  icon:
+                  Icons.language_rounded,
                   title: 'English',
-                  selected: selected.languageCode == 'en',
+                  selected:
+                  selected.languageCode ==
+                      'en',
                   onTap: () async {
                     Navigator.pop(context);
+
                     await _changeLanguage(
                       const Locale('en'),
                     );
@@ -390,11 +460,15 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 const SizedBox(height: 8),
                 _PreferenceOption(
-                  icon: Icons.language_rounded,
+                  icon:
+                  Icons.language_rounded,
                   title: 'العربية',
-                  selected: selected.languageCode == 'ar',
+                  selected:
+                  selected.languageCode ==
+                      'ar',
                   onTap: () async {
                     Navigator.pop(context);
+
                     await _changeLanguage(
                       const Locale('ar'),
                     );
@@ -409,8 +483,10 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _showThemePicker() async {
-    final isArabic = LocaleManager.instance.isArabic;
-    final currentMode = ThemeManager.instance.themeMode;
+    final isArabic =
+        LocaleManager.instance.isArabic;
+    final currentMode =
+        ThemeManager.instance.themeMode;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -433,43 +509,61 @@ class _ProfilePageState extends State<ProfilePage> {
                   isArabic
                       ? 'مظهر التطبيق'
                       : 'App appearance',
-                  style: theme.textTheme.titleLarge?.copyWith(
+                  style: theme
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 16),
                 _PreferenceOption(
-                  icon: Icons.brightness_auto_rounded,
+                  icon:
+                  Icons.brightness_auto_rounded,
                   title: isArabic
                       ? 'النظام'
                       : 'System',
-                  selected: currentMode == ThemeMode.system,
+                  selected:
+                  currentMode ==
+                      ThemeMode.system,
                   onTap: () {
-                    _changeTheme(ThemeMode.system);
+                    _changeTheme(
+                      ThemeMode.system,
+                    );
                     Navigator.pop(context);
                   },
                 ),
                 const SizedBox(height: 8),
                 _PreferenceOption(
-                  icon: Icons.light_mode_rounded,
+                  icon:
+                  Icons.light_mode_rounded,
                   title: isArabic
                       ? 'الوضع الفاتح'
                       : 'Light',
-                  selected: currentMode == ThemeMode.light,
+                  selected:
+                  currentMode ==
+                      ThemeMode.light,
                   onTap: () {
-                    _changeTheme(ThemeMode.light);
+                    _changeTheme(
+                      ThemeMode.light,
+                    );
                     Navigator.pop(context);
                   },
                 ),
                 const SizedBox(height: 8),
                 _PreferenceOption(
-                  icon: Icons.dark_mode_rounded,
+                  icon:
+                  Icons.dark_mode_rounded,
                   title: isArabic
                       ? 'الوضع الداكن'
                       : 'Dark',
-                  selected: currentMode == ThemeMode.dark,
+                  selected:
+                  currentMode ==
+                      ThemeMode.dark,
                   onTap: () {
-                    _changeTheme(ThemeMode.dark);
+                    _changeTheme(
+                      ThemeMode.dark,
+                    );
                     Navigator.pop(context);
                   },
                 ),
@@ -483,9 +577,11 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final localization = AppLocalization.of(context);
+    final localization =
+    AppLocalization.of(context);
     final theme = Theme.of(context);
-    final isArabic = LocaleManager.instance.isArabic;
+    final isArabic =
+        LocaleManager.instance.isArabic;
     final profile = _profile;
 
     if (_loading) {
@@ -504,8 +600,12 @@ class _ProfilePageState extends State<ProfilePage> {
         actions: [
           IconButton(
             tooltip: _editing
-                ? (isArabic ? 'حفظ' : 'Save')
-                : (isArabic ? 'تعديل' : 'Edit'),
+                ? (isArabic
+                ? 'حفظ'
+                : 'Save')
+                : (isArabic
+                ? 'تعديل'
+                : 'Edit'),
             onPressed: _saving
                 ? null
                 : () {
@@ -528,7 +628,8 @@ class _ProfilePageState extends State<ProfilePage> {
       body: RefreshIndicator(
         onRefresh: _loadProfile,
         child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
+          physics:
+          const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(
             20,
             12,
@@ -538,7 +639,8 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(
+                constraints:
+                const BoxConstraints(
                   maxWidth: 620,
                 ),
                 child: Column(
@@ -549,22 +651,17 @@ class _ProfilePageState extends State<ProfilePage> {
                       isArabic,
                     ),
                     const SizedBox(height: 28),
-
                     _buildPersonalSection(
                       theme,
                       isArabic,
                       localization,
                     ),
-
                     const SizedBox(height: 20),
-
                     _buildPreferencesSection(
                       theme,
                       isArabic,
                     ),
-
                     const SizedBox(height: 20),
-
                     _buildLogoutButton(
                       theme,
                       isArabic,
@@ -584,7 +681,9 @@ class _ProfilePageState extends State<ProfilePage> {
       ProfileModel? profile,
       bool isArabic,
       ) {
-    final initials = profile?.fullName.trim().isNotEmpty == true
+    final initials =
+    profile?.fullName.trim().isNotEmpty ==
+        true
         ? profile!.fullName
         .trim()
         .substring(0, 1)
@@ -597,11 +696,14 @@ class _ProfilePageState extends State<ProfilePage> {
           clipBehavior: Clip.none,
           children: [
             Container(
-              padding: const EdgeInsets.all(4),
+              padding:
+              const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: theme.colorScheme.primary.withValues(
+                  color: theme.colorScheme
+                      .primary
+                      .withValues(
                     alpha: 0.18,
                   ),
                   width: 2,
@@ -609,16 +711,23 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               child: CircleAvatar(
                 radius: 54,
-                backgroundColor: AppColors.navyPrimary,
-                backgroundImage: profile?.avatarUrl != null
-                    ? NetworkImage(profile!.avatarUrl!)
+                backgroundColor:
+                AppColors.navyPrimary,
+                backgroundImage:
+                profile?.avatarUrl != null
+                    ? NetworkImage(
+                  profile!.avatarUrl!,
+                )
                     : null,
-                child: profile?.avatarUrl == null
+                child:
+                profile?.avatarUrl == null
                     ? Text(
                   initials,
-                  style: AppTextStyles.headingLarge
+                  style: AppTextStyles
+                      .headingLarge
                       .copyWith(
-                    color: Colors.white,
+                    color:
+                    Colors.white,
                     fontSize: 34,
                   ),
                 )
@@ -629,15 +738,22 @@ class _ProfilePageState extends State<ProfilePage> {
               bottom: 0,
               end: 0,
               child: Material(
-                color: theme.colorScheme.primary,
-                shape: const CircleBorder(),
+                color:
+                theme.colorScheme.primary,
+                shape:
+                const CircleBorder(),
                 child: InkWell(
-                  onTap: _saving ? null : _pickAvatar,
-                  customBorder: const CircleBorder(),
+                  onTap: _saving
+                      ? null
+                      : _pickAvatar,
+                  customBorder:
+                  const CircleBorder(),
                   child: const Padding(
-                    padding: EdgeInsets.all(10),
+                    padding:
+                    EdgeInsets.all(10),
                     child: Icon(
-                      Icons.camera_alt_rounded,
+                      Icons
+                          .camera_alt_rounded,
                       size: 18,
                       color: Colors.white,
                     ),
@@ -649,21 +765,32 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         const SizedBox(height: 14),
         Text(
-          profile?.fullName.isNotEmpty == true
+          profile?.fullName.isNotEmpty ==
+              true
               ? profile!.fullName
-              : (isArabic ? 'المستخدم' : 'User'),
-          style: AppTextStyles.headingMedium.copyWith(
-            color: theme.colorScheme.onSurface,
-            fontWeight: FontWeight.w800,
+              : (isArabic
+              ? 'المستخدم'
+              : 'User'),
+          style:
+          AppTextStyles.headingMedium
+              .copyWith(
+            color:
+            theme.colorScheme.onSurface,
+            fontWeight:
+            FontWeight.w800,
           ),
           textAlign: TextAlign.center,
         ),
-        if (profile?.email.isNotEmpty == true) ...[
+        if (profile?.email.isNotEmpty ==
+            true) ...[
           const SizedBox(height: 4),
           Text(
             profile!.email,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+            style:
+            AppTextStyles.bodyMedium
+                .copyWith(
+              color: theme.colorScheme
+                  .onSurfaceVariant,
             ),
             textAlign: TextAlign.center,
           ),
@@ -677,14 +804,16 @@ class _ProfilePageState extends State<ProfilePage> {
       bool isArabic,
       AppLocalization localization,
       ) {
-    final sectionTitle = localization.translate(
+    final sectionTitle =
+    localization.translate(
       'personal_information',
     );
 
     return _SectionCard(
       title: sectionTitle,
       child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
+        duration:
+        const Duration(milliseconds: 200),
         child: _editing
             ? _buildEditForm(
           theme,
@@ -708,51 +837,82 @@ class _ProfilePageState extends State<ProfilePage> {
       key: const ValueKey('read-only'),
       children: [
         _InfoRow(
-          icon: Icons.person_outline_rounded,
-          title: localization.translate('full_name'),
+          icon:
+          Icons.person_outline_rounded,
+          title:
+          localization.translate(
+            'full_name',
+          ),
           value: _valueOrFallback(
             _nameController.text,
-            isArabic ? 'غير مضاف' : 'Not added',
+            isArabic
+                ? 'غير مضاف'
+                : 'Not added',
           ),
         ),
         _InfoRow(
-          icon: Icons.email_outlined,
-          title: localization.translate('email'),
+          icon:
+          Icons.email_outlined,
+          title:
+          localization.translate(
+            'email',
+          ),
           value: _valueOrFallback(
             _emailController.text,
-            isArabic ? 'غير مضاف' : 'Not added',
+            isArabic
+                ? 'غير مضاف'
+                : 'Not added',
           ),
         ),
         _InfoRow(
-          icon: Icons.phone_outlined,
-          title: localization.translate('phone'),
+          icon:
+          Icons.phone_outlined,
+          title:
+          localization.translate(
+            'phone',
+          ),
           value: _valueOrFallback(
             _phoneController.text,
-            isArabic ? 'غير مضاف' : 'Not added',
+            isArabic
+                ? 'غير مضاف'
+                : 'Not added',
           ),
         ),
         _InfoRow(
-          icon: Icons.location_city_outlined,
-          title: isArabic ? 'المدينة' : 'City',
+          icon:
+          Icons.location_city_outlined,
+          title:
+          isArabic ? 'المدينة' : 'City',
           value: _valueOrFallback(
             _cityController.text,
-            isArabic ? 'غير مضاف' : 'Not added',
+            isArabic
+                ? 'غير مضاف'
+                : 'Not added',
           ),
         ),
         _InfoRow(
-          icon: Icons.public_outlined,
-          title: isArabic ? 'الدولة' : 'Country',
+          icon:
+          Icons.public_outlined,
+          title:
+          isArabic ? 'الدولة' : 'Country',
           value: _valueOrFallback(
             _countryController.text,
-            isArabic ? 'غير مضاف' : 'Not added',
+            isArabic
+                ? 'غير مضاف'
+                : 'Not added',
           ),
         ),
         _InfoRow(
           icon: Icons.notes_rounded,
-          title: localization.translate('bio'),
+          title:
+          localization.translate(
+            'bio',
+          ),
           value: _valueOrFallback(
             _bioController.text,
-            isArabic ? 'غير مضاف' : 'Not added',
+            isArabic
+                ? 'غير مضاف'
+                : 'Not added',
           ),
           isLast: true,
         ),
@@ -769,8 +929,11 @@ class _ProfilePageState extends State<ProfilePage> {
       children: [
         _buildField(
           controller: _nameController,
-          label: isArabic ? 'الاسم الكامل' : 'Full name',
-          icon: Icons.person_outline_rounded,
+          label: isArabic
+              ? 'الاسم الكامل'
+              : 'Full name',
+          icon:
+          Icons.person_outline_rounded,
         ),
         _buildField(
           controller: _emailController,
@@ -778,27 +941,35 @@ class _ProfilePageState extends State<ProfilePage> {
               ? 'البريد الإلكتروني'
               : 'Email',
           icon: Icons.email_outlined,
-          keyboardType: TextInputType.emailAddress,
+          keyboardType:
+          TextInputType.emailAddress,
         ),
         _buildField(
           controller: _phoneController,
-          label: isArabic ? 'رقم الهاتف' : 'Phone',
+          label: isArabic
+              ? 'رقم الهاتف'
+              : 'Phone',
           icon: Icons.phone_outlined,
-          keyboardType: TextInputType.phone,
+          keyboardType:
+          TextInputType.phone,
         ),
         _buildField(
           controller: _cityController,
-          label: isArabic ? 'المدينة' : 'City',
-          icon: Icons.location_city_outlined,
+          label:
+          isArabic ? 'المدينة' : 'City',
+          icon:
+          Icons.location_city_outlined,
         ),
         _buildField(
           controller: _countryController,
-          label: isArabic ? 'الدولة' : 'Country',
+          label:
+          isArabic ? 'الدولة' : 'Country',
           icon: Icons.public_outlined,
         ),
         _buildField(
           controller: _bioController,
-          label: isArabic ? 'نبذة عني' : 'Bio',
+          label:
+          isArabic ? 'نبذة عني' : 'Bio',
           icon: Icons.notes_rounded,
           maxLines: 4,
         ),
@@ -806,8 +977,10 @@ class _ProfilePageState extends State<ProfilePage> {
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
-            onPressed: _saving ? null : _saveProfile,
-            icon: const Icon(Icons.check_rounded),
+            onPressed:
+            _saving ? null : _saveProfile,
+            icon:
+            const Icon(Icons.check_rounded),
             label: Text(
               isArabic
                   ? 'حفظ التغييرات'
@@ -823,18 +996,24 @@ class _ProfilePageState extends State<ProfilePage> {
       ThemeData theme,
       bool isArabic,
       ) {
-    final themeManager = ThemeManager.instance;
+    final themeManager =
+        ThemeManager.instance;
 
     return _SectionCard(
-      title: isArabic ? 'التفضيلات' : 'Preferences',
+      title: isArabic
+          ? 'التفضيلات'
+          : 'Preferences',
       child: Column(
         children: [
           _PreferenceTile(
-            icon: Icons.language_rounded,
+            icon:
+            Icons.language_rounded,
             title: isArabic
                 ? 'اللغة'
                 : 'Language',
-            subtitle: LocaleManager.instance.isArabic
+            subtitle:
+            LocaleManager.instance
+                .isArabic
                 ? 'العربية'
                 : 'English',
             onTap: _saving
@@ -857,9 +1036,15 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           const Divider(height: 1),
           _PreferenceTile(
-            icon: Icons.payments_outlined,
-            title: isArabic ? 'العملة' : 'Currency',
-            subtitle: _profile?.currency.isNotEmpty == true
+            icon:
+            Icons.payments_outlined,
+            title: isArabic
+                ? 'العملة'
+                : 'Currency',
+            subtitle:
+            _profile?.currency
+                .isNotEmpty ==
+                true
                 ? _profile!.currency
                 : 'AED',
           ),
@@ -875,23 +1060,31 @@ class _ProfilePageState extends State<ProfilePage> {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
-        onPressed: _saving ? null : _confirmLogout,
-        icon: const Icon(Icons.logout_rounded),
+        onPressed:
+        _saving ? null : _confirmLogout,
+        icon:
+        const Icon(Icons.logout_rounded),
         label: Text(
           isArabic
               ? 'تسجيل الخروج'
               : 'Log out',
         ),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: theme.colorScheme.error,
+        style:
+        OutlinedButton.styleFrom(
+          foregroundColor:
+          theme.colorScheme.error,
           side: BorderSide(
-            color: theme.colorScheme.error.withValues(
+            color: theme.colorScheme.error
+                .withValues(
               alpha: 0.40,
             ),
           ),
-          minimumSize: const Size.fromHeight(54),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+          minimumSize:
+          const Size.fromHeight(54),
+          shape:
+          RoundedRectangleBorder(
+            borderRadius:
+            BorderRadius.circular(16),
           ),
         ),
       ),
@@ -899,21 +1092,27 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildField({
-    required TextEditingController controller,
+    required TextEditingController
+    controller,
     required String label,
     required IconData icon,
     TextInputType? keyboardType,
     int maxLines = 1,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding:
+      const EdgeInsets.only(
+        bottom: 12,
+      ),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
         maxLines: maxLines,
-        decoration: InputDecoration(
+        decoration:
+        InputDecoration(
           labelText: label,
-          prefixIcon: Icon(icon),
+          prefixIcon:
+          Icon(icon),
         ),
       ),
     );
@@ -923,7 +1122,8 @@ class _ProfilePageState extends State<ProfilePage> {
       String value,
       String fallback,
       ) {
-    final trimmed = value.trim();
+    final trimmed =
+    value.trim();
 
     if (trimmed.isEmpty) {
       return fallback;
@@ -938,33 +1138,53 @@ class _ProfilePageState extends State<ProfilePage> {
       ) {
     switch (mode) {
       case ThemeMode.light:
-        return isArabic ? 'فاتح' : 'Light';
+        return isArabic
+            ? 'فاتح'
+            : 'Light';
+
       case ThemeMode.dark:
-        return isArabic ? 'داكن' : 'Dark';
+        return isArabic
+            ? 'داكن'
+            : 'Dark';
+
       case ThemeMode.system:
-        return isArabic ? 'حسب النظام' : 'System';
+        return isArabic
+            ? 'حسب النظام'
+            : 'System';
     }
   }
 
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
+  void _showMessage(
+      String message,
+      ) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(
       SnackBar(
         content: Text(message),
       ),
     );
   }
 
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
+  void _showError(
+      String message,
+      ) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
+        backgroundColor:
+        Theme.of(context)
+            .colorScheme
+            .error,
       ),
     );
   }
 }
 
-class _SectionCard extends StatelessWidget {
+class _SectionCard
+    extends StatelessWidget {
   const _SectionCard({
     required this.title,
     required this.child,
@@ -974,28 +1194,48 @@ class _SectionCard extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  Widget build(
+      BuildContext context,
+      ) {
+    final theme =
+    Theme.of(context);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment:
+      CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: AppTextStyles.headingSmall.copyWith(
-            color: theme.colorScheme.onSurface,
-            fontWeight: FontWeight.w800,
+          style: AppTextStyles
+              .headingSmall
+              .copyWith(
+            color: theme
+                .colorScheme
+                .onSurface,
+            fontWeight:
+            FontWeight.w800,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(
+          height: 12,
+        ),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(20),
+          padding:
+          const EdgeInsets.all(16),
+          decoration:
+          BoxDecoration(
+            color: theme
+                .colorScheme
+                .surface,
+            borderRadius:
+            BorderRadius.circular(
+              20,
+            ),
             border: Border.all(
-              color: theme.colorScheme.outlineVariant,
+              color: theme
+                  .colorScheme
+                  .outlineVariant,
             ),
           ),
           child: child,
@@ -1005,7 +1245,8 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-class _InfoRow extends StatelessWidget {
+class _InfoRow
+    extends StatelessWidget {
   const _InfoRow({
     required this.icon,
     required this.title,
@@ -1019,54 +1260,79 @@ class _InfoRow extends StatelessWidget {
   final bool isLast;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  Widget build(
+      BuildContext context,
+      ) {
+    final theme =
+    Theme.of(context);
 
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(
+          padding:
+          const EdgeInsets.symmetric(
             vertical: 13,
           ),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment:
+            CrossAxisAlignment.start,
             children: [
               Container(
                 width: 42,
                 height: 42,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withValues(
+                decoration:
+                BoxDecoration(
+                  color: theme
+                      .colorScheme
+                      .primary
+                      .withValues(
                     alpha: 0.09,
                   ),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius:
+                  BorderRadius.circular(
+                    12,
+                  ),
                 ),
                 child: Icon(
                   icon,
-                  color: theme.colorScheme.primary,
+                  color: theme
+                      .colorScheme
+                      .primary,
                   size: 20,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(
+                width: 12,
+              ),
               Expanded(
                 child: Column(
                   crossAxisAlignment:
-                  CrossAxisAlignment.start,
+                  CrossAxisAlignment
+                      .start,
                   children: [
                     Text(
                       title,
-                      style: AppTextStyles.labelSmall.copyWith(
+                      style: AppTextStyles
+                          .labelSmall
+                          .copyWith(
                         color: theme
                             .colorScheme
                             .onSurfaceVariant,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(
+                      height: 4,
+                    ),
                     Text(
                       value,
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color:
-                        theme.colorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
+                      style: AppTextStyles
+                          .bodyMedium
+                          .copyWith(
+                        color: theme
+                            .colorScheme
+                            .onSurface,
+                        fontWeight:
+                        FontWeight.w600,
                       ),
                     ),
                   ],
@@ -1078,14 +1344,17 @@ class _InfoRow extends StatelessWidget {
         if (!isLast)
           Divider(
             height: 1,
-            color: theme.colorScheme.outlineVariant,
+            color: theme
+                .colorScheme
+                .outlineVariant,
           ),
       ],
     );
   }
 }
 
-class _PreferenceTile extends StatelessWidget {
+class _PreferenceTile
+    extends StatelessWidget {
   const _PreferenceTile({
     required this.icon,
     required this.title,
@@ -1099,49 +1368,68 @@ class _PreferenceTile extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  Widget build(
+      BuildContext context,
+      ) {
+    final theme =
+    Theme.of(context);
 
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(
+      contentPadding:
+      const EdgeInsets.symmetric(
         vertical: 5,
       ),
       leading: Container(
         width: 42,
         height: 42,
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primary.withValues(
+        decoration:
+        BoxDecoration(
+          color: theme
+              .colorScheme
+              .primary
+              .withValues(
             alpha: 0.09,
           ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius:
+          BorderRadius.circular(
+            12,
+          ),
         ),
         child: Icon(
           icon,
-          color: theme.colorScheme.primary,
+          color: theme
+              .colorScheme
+              .primary,
           size: 20,
         ),
       ),
       title: Text(
         title,
-        style: theme.textTheme.titleSmall?.copyWith(
-          fontWeight: FontWeight.w700,
+        style: theme.textTheme
+            .titleSmall
+            ?.copyWith(
+          fontWeight:
+          FontWeight.w700,
         ),
       ),
       subtitle: Text(
         subtitle,
-        style: theme.textTheme.bodySmall,
+        style: theme.textTheme
+            .bodySmall,
       ),
       trailing: onTap == null
           ? null
           : const Icon(
-        Icons.chevron_right_rounded,
+        Icons
+            .chevron_right_rounded,
       ),
       onTap: onTap,
     );
   }
 }
 
-class _PreferenceOption extends StatelessWidget {
+class _PreferenceOption
+    extends StatelessWidget {
   const _PreferenceOption({
     required this.icon,
     required this.title,
@@ -1155,51 +1443,82 @@ class _PreferenceOption extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  Widget build(
+      BuildContext context,
+      ) {
+    final theme =
+    Theme.of(context);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius:
+        BorderRadius.circular(
+          16,
+        ),
         child: Container(
-          padding: const EdgeInsets.symmetric(
+          padding:
+          const EdgeInsets.symmetric(
             horizontal: 14,
             vertical: 14,
           ),
-          decoration: BoxDecoration(
+          decoration:
+          BoxDecoration(
             color: selected
-                ? theme.colorScheme.primary.withValues(
+                ? theme
+                .colorScheme
+                .primary
+                .withValues(
               alpha: 0.09,
             )
-                : theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(16),
+                : theme
+                .colorScheme
+                .surface,
+            borderRadius:
+            BorderRadius.circular(
+              16,
+            ),
             border: Border.all(
               color: selected
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.outlineVariant,
+                  ? theme
+                  .colorScheme
+                  .primary
+                  : theme
+                  .colorScheme
+                  .outlineVariant,
             ),
           ),
           child: Row(
             children: [
               Icon(
                 icon,
-                color: theme.colorScheme.primary,
+                color: theme
+                    .colorScheme
+                    .primary,
               ),
-              const SizedBox(width: 12),
+              const SizedBox(
+                width: 12,
+              ),
               Expanded(
                 child: Text(
                   title,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
+                  style: theme
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(
+                    fontWeight:
+                    FontWeight.w700,
                   ),
                 ),
               ),
               if (selected)
                 Icon(
-                  Icons.check_circle_rounded,
-                  color: theme.colorScheme.primary,
+                  Icons
+                      .check_circle_rounded,
+                  color: theme
+                      .colorScheme
+                      .primary,
                 ),
             ],
           ),
