@@ -10,6 +10,8 @@ import '../../../../core/responsive/responsive.dart';
 import '../../../../core/state/location_manager.dart';
 import '../../../../core/widgets/currency_price.dart';
 import '../../data/models/map_location_model.dart';
+import '../../data/models/nearby_poi_model.dart';
+import '../../data/services/nearby_poi_service.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({
@@ -27,6 +29,7 @@ class _MapPageState extends State<MapPage> {
   final MapController _mapController = MapController();
   final TextEditingController _searchController = TextEditingController();
   MapLocationModel? _selected;
+  List<NearbyPoiModel> _nearbyPois = const [];
 
   MapControllerX get controller => Get.find<MapControllerX>();
 
@@ -45,6 +48,9 @@ class _MapPageState extends State<MapPage> {
         }
       }
       setState(() => _selected = initial);
+      if (initial != null) {
+        _loadNearbyPois(initial);
+      }
       final focus = initial ?? (locations.isNotEmpty ? locations.first : null);
       if (focus != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -92,11 +98,27 @@ class _MapPageState extends State<MapPage> {
   }
 
   void _selectLocation(MapLocationModel location) {
-    setState(() => _selected = location);
+    setState(() {
+      _selected = location;
+      _nearbyPois = const [];
+    });
+    _loadNearbyPois(location);
     _mapController.move(
       LatLng(location.latitude, location.longitude),
       14,
     );
+  }
+
+
+  Future<void> _loadNearbyPois(MapLocationModel property) async {
+    // POIs are loaded independently from the property API, so they never
+    // block the map or property cards from appearing.
+    final pois = await NearbyPoiService.instance.nearby(
+      property.latitude,
+      property.longitude,
+    );
+    if (!mounted || _selected?.id != property.id) return;
+    setState(() => _nearbyPois = pois);
   }
 
   Future<void> _goToCurrentLocation() async {
@@ -209,6 +231,40 @@ class _MapPageState extends State<MapPage> {
                   );
                 }),
               );
+
+              if (_selected != null && _nearbyPois.isNotEmpty) {
+                markers.addAll(
+                  _nearbyPois.map(
+                    (poi) => Marker(
+                      point: LatLng(poi.latitude, poi.longitude),
+                      width: 40,
+                      height: 40,
+                      child: Container(
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: theme.colorScheme.secondary,
+                            width: 2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: .16),
+                              blurRadius: 7,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          poi.icon,
+                          style: const TextStyle(fontSize: 18),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }
 
               if (currentLatitude != null && currentLongitude != null) {
                 markers.add(
@@ -349,6 +405,7 @@ class _MapPageState extends State<MapPage> {
                     userLongitude: manager.hasCurrentLocation
                         ? manager.longitude
                         : null,
+                    nearbyPois: _nearbyPois,
                   );
                 },
               ),
@@ -461,11 +518,13 @@ class _SelectedPropertyCard extends StatelessWidget {
     required this.location,
     this.userLatitude,
     this.userLongitude,
+    this.nearbyPois = const [],
   });
 
   final MapLocationModel location;
   final double? userLatitude;
   final double? userLongitude;
+  final List<NearbyPoiModel> nearbyPois;
 
   @override
   Widget build(BuildContext context) {
@@ -587,6 +646,55 @@ class _SelectedPropertyCard extends StatelessWidget {
                       const SizedBox(height: 7),
                       _TravelInfo(
                         distanceKm: _distanceKm(),
+                      ),
+                    ],
+                    if (nearbyPois.isNotEmpty) ...[
+                      const SizedBox(height: 9),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.near_me_rounded,
+                            size: 15,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            localization.translate('nearby_places'),
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: nearbyPois.take(4).map((poi) {
+                            return Padding(
+                              padding: const EdgeInsetsDirectional.only(end: 6),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.primary
+                                      .withValues(alpha: .07),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  '${poi.icon} ${poi.name}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(growable: false),
+                        ),
                       ),
                     ],
                   ],

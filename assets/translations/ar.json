@@ -369,5 +369,8 @@
   "phone_label": "رقم الهاتف",
   "city_label": "المدينة",
   "country_label": "الدولة",
-  "passwords_match": "كلمتا المرور متطابقتان"
+  "passwords_match": "كلمتا المرور متطابقتان",
+  "nearby_places": "الأماكن القريبة",
+  "terms_subtitle": "اقرأ الشروط التي تنظم استخدام VibeLocate.",
+  "privacy_subtitle": "تعرّف على كيفية جمع VibeLocate لبياناتك وحمايتها."
 }

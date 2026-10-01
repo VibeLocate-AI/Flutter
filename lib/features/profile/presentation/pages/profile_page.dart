@@ -1218,6 +1218,30 @@ class _ProfilePageState extends State<ProfilePage> {
                       AppRouter.helpCenter,
                     ),
           ),
+          const Divider(height: 1),
+          _PreferenceTile(
+            icon: Icons.description_outlined,
+            title: AppLocalization.of(context).translate('terms_title'),
+            subtitle: AppLocalization.of(context).translate('terms_subtitle'),
+            onTap: _saving
+                ? null
+                : () => Navigator.pushNamed(
+                      context,
+                      AppRouter.terms,
+                    ),
+          ),
+          const Divider(height: 1),
+          _PreferenceTile(
+            icon: Icons.privacy_tip_outlined,
+            title: AppLocalization.of(context).translate('privacy_title'),
+            subtitle: AppLocalization.of(context).translate('privacy_subtitle'),
+            onTap: _saving
+                ? null
+                : () => Navigator.pushNamed(
+                      context,
+                      AppRouter.privacy,
+                    ),
+          ),
         ],
       ),
     );

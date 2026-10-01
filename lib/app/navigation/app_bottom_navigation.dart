@@ -93,14 +93,14 @@ class _AppBottomNavigationState extends State<AppBottomNavigation> {
                       child: TweenAnimationBuilder<double>(
                         key: ValueKey('${widget.currentIndex}-$index'),
                         tween: Tween<double>(
-                          begin: selected && index != 0 ? -26 : 0,
-                          end: selected && index != 0 ? -8 : 0,
+                          begin: selected ? 0 : 0,
+                          end: selected ? -7 : 0,
                         ),
-                        duration: const Duration(milliseconds: 650),
+                        duration: const Duration(milliseconds: 560),
                         curve: Curves.elasticOut,
                         builder: (context, bounce, child) {
                           final scale = selected
-                              ? (1.0 + (((-bounce - 8) / 18).clamp(0.0, 1.0) * .10))
+                              ? (1.0 + (((-bounce - 2) / 5).clamp(0.0, 1.0) * .08))
                               : 1.0;
                           return Transform.translate(
                             offset: Offset(0, bounce),
@@ -116,8 +116,8 @@ class _AppBottomNavigationState extends State<AppBottomNavigation> {
                             AnimatedContainer(
                               duration: const Duration(milliseconds: 240),
                               curve: Curves.easeOutCubic,
-                              width: selected ? 48 : 34,
-                              height: selected ? 48 : 30,
+                              width: selected ? 46 : 34,
+                              height: selected ? 46 : 30,
                               decoration: BoxDecoration(
                                 color: selected
                                     ? AppColors.navyPrimary

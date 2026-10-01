@@ -38,11 +38,20 @@ class LegalPage extends StatelessWidget {
         localization.translate('help_center'),
     };
 
+    final isArabic = localization.locale.languageCode == 'ar';
     final content = switch (type) {
-      LegalPageType.terms => LegalContent.terms,
-      LegalPageType.privacy => LegalContent.privacy,
-      LegalPageType.safetySecurity => LegalContent.safetySecurity,
-      LegalPageType.helpCenter => LegalContent.helpCenter,
+      LegalPageType.terms => isArabic
+          ? LegalContent.termsAr
+          : LegalContent.terms,
+      LegalPageType.privacy => isArabic
+          ? LegalContent.privacyAr
+          : LegalContent.privacy,
+      LegalPageType.safetySecurity => isArabic
+          ? LegalContent.safetySecurityAr
+          : LegalContent.safetySecurity,
+      LegalPageType.helpCenter => isArabic
+          ? LegalContent.helpCenterAr
+          : LegalContent.helpCenter,
     };
 
     return Scaffold(

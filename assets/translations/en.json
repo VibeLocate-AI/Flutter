@@ -369,5 +369,8 @@
   "phone_label": "Phone",
   "city_label": "City",
   "country_label": "Country",
-  "passwords_match": "Passwords match"
+  "passwords_match": "Passwords match",
+  "nearby_places": "Nearby places",
+  "terms_subtitle": "Read the terms that govern use of VibeLocate.",
+  "privacy_subtitle": "Learn how VibeLocate collects and protects your data."
 }
