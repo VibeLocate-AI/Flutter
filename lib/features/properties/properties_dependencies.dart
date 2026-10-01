@@ -22,6 +22,9 @@ class PropertiesDependencies {
   getProperties =
   GetProperties(repository);
 
+  static final GetMyProperties getMyProperties =
+  GetMyProperties(repository);
+
   static final GetPropertyDetails
   getPropertyDetails =
   GetPropertyDetails(repository);
@@ -33,6 +36,10 @@ class PropertiesDependencies {
   static Future<List<PropertyModel>>
   loadProperties() {
     return getProperties();
+  }
+
+  static Future<List<PropertyModel>> loadMyProperties() {
+    return getMyProperties();
   }
 
   static Future<PropertyModel>

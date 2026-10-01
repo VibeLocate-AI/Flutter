@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 
 abstract final class AppColors {
   // Brand
-  static const Color navyPrimary = Color(0xFF0F2F79);
+  static const Color navyPrimary = Color(0xFF142B80);
   static const Color navyDark = Color(0xFF0F172A);
   static const Color navyDeep = Color(0xFF0B1329);
 
-  static const Color blueAccent = Color(0xFF2563EB);
-  static const Color blueHover = Color(0xFF1D4ED8);
+  static const Color secondary = Color(0xFF8AC8FA);
+  static const Color blueAccent = secondary;
+  static const Color blueHover = Color(0xFF73BDF3);
   static const Color indigoAccent = Color(0xFF6366F1);
-  static const Color cyanAccent = Color(0xFF06B6D4);
+  static const Color cyanAccent = Color(0xFF8AC8FA);
+  static const Color navigationLight = Color(0xFFEAF2F8);
+  static const Color navigationDark = Color(0xFF172A3D);
 
   static const Color white = Color(0xFFFFFFFF);
   static const Color black = Color(0xFF000000);
@@ -21,9 +24,9 @@ abstract final class AppColors {
 
   static const Color lightBorder = Color(0xFFCBD5E1);
   static const Color lightBorderLight = Color(0xFFE2E8F0);
-  static const Color lightBorderFocus = Color(0xFF2563EB);
+  static const Color lightBorderFocus = Color(0xFF8AC8FA);
 
-  static const Color lightTextPrimary = Color(0xFF0F2F79);
+  static const Color lightTextPrimary = Color(0xFF142B80);
   static const Color lightTextSecondary = Color(0xFF475569);
   static const Color lightTextMuted = Color(0xFF94A3B8);
 

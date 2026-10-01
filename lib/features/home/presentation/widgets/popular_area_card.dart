@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/localization/localization.dart';
+
 import '../../../../core/theme/app_text_styles.dart';
 import '../../data/models/popular_area_model.dart';
 
@@ -57,7 +59,10 @@ class PopularAreaCard extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             Image.network(
-              _imageForArea(area.name),
+              (area.imageUrl != null &&
+                      area.imageUrl!.trim().isNotEmpty)
+                  ? area.imageUrl!
+                  : _imageForArea(area.name),
               fit: BoxFit.cover,
               errorBuilder:
                   (_, _, _) {
@@ -127,16 +132,7 @@ class PopularAreaCard extends StatelessWidget {
     );
   }
 
-  String _propertiesLabel(
-      BuildContext context,
-      ) {
-    final isArabic =
-        Localizations.localeOf(context)
-            .languageCode ==
-            'ar';
-
-    return isArabic
-        ? 'عقار'
-        : 'properties';
+  String _propertiesLabel(BuildContext context) {
+    return AppLocalization.of(context).translate('properties');
   }
 }

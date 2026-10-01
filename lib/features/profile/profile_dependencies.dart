@@ -28,6 +28,10 @@ class ProfileDependencies {
   completeProfile =
   CompleteProfile(repository);
 
+  static final UpdateProfileLocation
+  updateProfileLocation =
+  UpdateProfileLocation(repository);
+
   static final UploadAvatar
   uploadAvatar =
   UploadAvatar(repository);

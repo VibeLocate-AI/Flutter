@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/localization/localization.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../data/models/top_agent_model.dart';
@@ -59,7 +61,7 @@ class TopAgentCard extends StatelessWidget {
                     Flexible(
                       child: Text(
                         agent.name.isEmpty
-                            ? 'Agent'
+                            ? AppLocalization.of(context).translate('real_estate_agent')
                             : agent.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../../../core/constants/api_endpoints.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/storage/token_storage.dart';
 
@@ -21,6 +22,11 @@ abstract class ProfileRemoteDataSource {
   Future<Map<String, dynamic>> uploadAvatar(
       String filePath,
       );
+
+  Future<Map<String, dynamic>> updateLocation({
+    required double latitude,
+    required double longitude,
+  });
 }
 
 class ProfileRemoteDataSourceImpl
@@ -29,15 +35,9 @@ class ProfileRemoteDataSourceImpl
 
   @override
   Future<Map<String, dynamic>> getProfile() {
-    return _request(
-          () async {
-        return http.get(
-          Uri.parse(
-            '${ApiEndpoints.baseUrl}${ApiEndpoints.profile}',
-          ),
-          headers: await _headers(),
-        );
-      },
+    return ApiClient.get(
+      ApiEndpoints.profile,
+      authenticated: true,
     );
   }
 
@@ -45,16 +45,10 @@ class ProfileRemoteDataSourceImpl
   Future<Map<String, dynamic>> updateProfile(
       Map<String, dynamic> body,
       ) {
-    return _request(
-          () async {
-        return http.put(
-          Uri.parse(
-            '${ApiEndpoints.baseUrl}${ApiEndpoints.profile}',
-          ),
-          headers: await _headers(),
-          body: jsonEncode(body),
-        );
-      },
+    return ApiClient.put(
+      ApiEndpoints.profile,
+      authenticated: true,
+      body: body,
     );
   }
 
@@ -62,15 +56,24 @@ class ProfileRemoteDataSourceImpl
   Future<Map<String, dynamic>> completeProfile(
       Map<String, dynamic> body,
       ) {
-    return _request(
-          () async {
-        return http.post(
-          Uri.parse(
-            '${ApiEndpoints.baseUrl}${ApiEndpoints.completeProfile}',
-          ),
-          headers: await _headers(),
-          body: jsonEncode(body),
-        );
+    return ApiClient.post(
+      ApiEndpoints.completeProfile,
+      authenticated: true,
+      body: body,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> updateLocation({
+    required double latitude,
+    required double longitude,
+  }) {
+    return ApiClient.put(
+      ApiEndpoints.profile,
+      authenticated: true,
+      body: {
+        'latitude': latitude,
+        'longitude': longitude,
       },
     );
   }
@@ -128,50 +131,6 @@ class ProfileRemoteDataSourceImpl
     } catch (error) {
       throw NetworkException(
         error.toString(),
-      );
-    }
-  }
-
-  Future<Map<String, String>> _headers() async {
-    final token =
-    await TokenStorage.getAccessToken();
-
-    return {
-      'Accept':
-      'application/json',
-      'Content-Type':
-      'application/json',
-      if (token != null &&
-          token.isNotEmpty)
-        'Authorization':
-        'Bearer $token',
-    };
-  }
-
-  Future<Map<String, dynamic>> _request(
-      Future<http.Response> Function()
-      action,
-      ) async {
-    try {
-      final response =
-      await action().timeout(
-        const Duration(
-          seconds: 45,
-        ),
-      );
-
-      return _decodeResponse(
-        response,
-      );
-    } on ApiException {
-      rethrow;
-    } on TimeoutException {
-      throw const NetworkException(
-        'Request timed out. Please try again.',
-      );
-    } on http.ClientException catch (error) {
-      throw NetworkException(
-        error.message,
       );
     }
   }

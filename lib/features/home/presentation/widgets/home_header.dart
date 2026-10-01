@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../../../core/localization/localization.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/state/location_manager.dart';
+import '../../../notifications/notifications_dependencies.dart';
 
 class HomeHeader extends StatelessWidget {
   const HomeHeader({
@@ -67,37 +70,39 @@ class HomeHeader extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                localization.translate(
-                                  'home_location',
+                        AnimatedBuilder(
+                          animation: LocationManager.instance,
+                          builder: (context, _) {
+                            final manager = LocationManager.instance;
+                            final current = manager.displayLocation;
+                            final displayText = manager.isUpdating
+                                ? localization.translate('location_detecting')
+                                : (current.isEmpty
+                                    ? localization.translate('location_unavailable')
+                                    : current);
+
+                            return Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    displayText,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.labelLarge.copyWith(
+                                      color: theme.colorScheme.onSurface,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                                 ),
-                                maxLines: 1,
-                                overflow:
-                                TextOverflow.ellipsis,
-                                style:
-                                AppTextStyles.labelLarge
-                                    .copyWith(
-                                  color: theme
-                                      .colorScheme
-                                      .onSurface,
-                                  fontWeight:
-                                  FontWeight.w700,
+                                const SizedBox(width: 2),
+                                Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  size: 18,
+                                  color: theme.colorScheme.onSurface,
                                 ),
-                              ),
-                            ),
-                            const SizedBox(width: 2),
-                            Icon(
-                              Icons
-                                  .keyboard_arrow_down_rounded,
-                              size: 18,
-                              color: theme
-                                  .colorScheme
-                                  .onSurface,
-                            ),
-                          ],
+                              ],
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -123,33 +128,72 @@ class HomeHeader extends StatelessWidget {
                   color: theme.colorScheme.outlineVariant,
                 ),
               ),
-              child: Stack(
-                children: [
-                  Center(
-                    child: Icon(
-                      Icons.notifications_none_rounded,
-                      size: 22,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                  ),
-                  PositionedDirectional(
-                    top: 8,
-                    end: 8,
-                    child: Container(
-                      width: 7,
-                      height: 7,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEF4444),
-                        shape: BoxShape.circle,
+              child: GetX<_UnreadNotificationsController>(
+                init: Get.isRegistered<_UnreadNotificationsController>()
+                    ? null
+                    : _UnreadNotificationsController(),
+                builder: (controller) {
+                  final count = controller.count.value;
+                  return Stack(
+                    children: [
+                      Center(
+                        child: Icon(
+                          Icons.notifications_none_rounded,
+                          size: 22,
+                          color: theme.colorScheme.onSurface,
+                        ),
                       ),
-                    ),
-                  ),
-                ],
+                      if (count > 0)
+                        PositionedDirectional(
+                          top: 5,
+                          end: 5,
+                          child: Container(
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.error,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              count > 99 ? '99+' : '$count',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 8,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
             ),
           ),
         ),
       ],
     );
+  }
+}
+
+class _UnreadNotificationsController extends GetxController {
+  final count = 0.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    refreshCount();
+  }
+
+  Future<void> refreshCount() async {
+    try {
+      count.value = await NotificationsDependencies.getUnreadCount();
+    } catch (_) {
+      // Notification availability must not block the Home screen.
+    }
   }
 }

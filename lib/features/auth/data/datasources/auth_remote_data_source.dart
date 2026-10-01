@@ -6,11 +6,18 @@ import '../models/login_request_model.dart';
 import '../models/login_response_model.dart';
 import '../models/register_request_model.dart';
 import '../models/register_response_model.dart';
+import '../models/user_model.dart';
 
 abstract class AuthRemoteDataSource {
   Future<RegisterResponseModel> register(
       RegisterRequestModel request,
       );
+
+  Future<RegisterResponseModel> registerAgent({
+    required RegisterRequestModel request,
+    required String agencyName,
+    required String licenseNumber,
+  });
 
   Future<AuthTokensModel> verifyEmailOtp({
     required String email,
@@ -52,6 +59,11 @@ abstract class AuthRemoteDataSource {
       String refreshToken,
       );
 
+  Future<void> rememberMe({
+    required bool remember,
+    required String refreshToken,
+  });
+
   Future<void> logout(
       String refreshToken,
       );
@@ -70,9 +82,28 @@ class AuthRemoteDataSourceImpl
       body: request.toJson(),
     );
 
+    await TokenStorage.saveRole(request.roleSlug);
     return RegisterResponseModel.fromJson(
       response,
     );
+  }
+
+  @override
+  Future<RegisterResponseModel> registerAgent({
+    required RegisterRequestModel request,
+    required String agencyName,
+    required String licenseNumber,
+  }) async {
+    final response = await ApiClient.post(
+      '/api/agent/register',
+      body: {
+        ...request.toJson(),
+        'agency_name': agencyName,
+        'license_number': licenseNumber,
+      },
+    );
+    await TokenStorage.saveRole('agent');
+    return RegisterResponseModel.fromJson(response);
   }
 
   @override
@@ -94,6 +125,19 @@ class AuthRemoteDataSourceImpl
 
     final tokens =
     AuthTokensModel.fromJson(response);
+
+    final rawUser = response['user'];
+    if (rawUser is Map) {
+      final user = UserModel.fromJson(
+        rawUser.map((key, value) => MapEntry(key.toString(), value)),
+      );
+      if (user.roleSlug != null && user.roleSlug!.trim().isNotEmpty) {
+        await TokenStorage.saveRole(user.roleSlug!.trim());
+      }
+      if (user.id != null) {
+        await TokenStorage.saveUserId(user.id!);
+      }
+    }
 
     await TokenStorage.saveTokens(
       accessToken: tokens.accessToken,
@@ -138,10 +182,18 @@ class AuthRemoteDataSourceImpl
       request.email,
     );
 
+    await TokenStorage.saveRememberMe(
+      request.rememberMe,
+    );
+
     if (result.user?.id != null) {
       await TokenStorage.saveUserId(
         result.user!.id!,
       );
+    }
+    if (result.user?.roleSlug != null &&
+        result.user!.roleSlug!.trim().isNotEmpty) {
+      await TokenStorage.saveRole(result.user!.roleSlug!.trim());
     }
 
     return result;
@@ -172,6 +224,8 @@ class AuthRemoteDataSourceImpl
 
     final user = result.user;
 
+    await TokenStorage.saveRememberMe(false);
+
     if (user?.email != null &&
         user!.email!.isNotEmpty) {
       await TokenStorage.saveEmail(
@@ -183,6 +237,9 @@ class AuthRemoteDataSourceImpl
       await TokenStorage.saveUserId(
         user!.id!,
       );
+    }
+    if (user?.roleSlug != null && user!.roleSlug!.trim().isNotEmpty) {
+      await TokenStorage.saveRole(user.roleSlug!.trim());
     }
 
     return result;
@@ -268,6 +325,29 @@ class AuthRemoteDataSourceImpl
     );
 
     return tokens;
+  }
+
+  @override
+  Future<void> rememberMe({
+    required bool remember,
+    required String refreshToken,
+  }) async {
+    final response = await ApiClient.post(
+      ApiEndpoints.rememberMe,
+      authenticated: true,
+      body: {
+        'remember_me': remember,
+        'refresh_token': refreshToken,
+      },
+    );
+
+    final tokens =
+    AuthTokensModel.fromJson(response);
+
+    await TokenStorage.saveTokens(
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    );
   }
 
   @override

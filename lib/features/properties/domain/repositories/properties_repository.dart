@@ -4,6 +4,8 @@ import '../../data/models/create_property_request.dart';
 abstract class PropertiesRepository {
   Future<List<PropertyModel>> getProperties();
 
+  Future<List<PropertyModel>> getMyProperties();
+
   Future<PropertyModel> getPropertyDetails(
       int id,
       );

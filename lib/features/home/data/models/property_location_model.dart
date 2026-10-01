@@ -9,6 +9,9 @@ class PropertyLocationModel {
     required this.longitude,
     required this.neighborhoodId,
     required this.streetId,
+    this.neighborhoodName,
+    this.neighborhoodEn,
+    this.neighborhoodAr,
   });
 
   final int id;
@@ -20,6 +23,9 @@ class PropertyLocationModel {
   final double? longitude;
   final int? neighborhoodId;
   final int? streetId;
+  final String? neighborhoodName;
+  final String? neighborhoodEn;
+  final String? neighborhoodAr;
 
   factory PropertyLocationModel.fromJson(Map<String, dynamic> json) {
     return PropertyLocationModel(
@@ -32,6 +38,9 @@ class PropertyLocationModel {
       longitude: _toDouble(json['longitude']),
       neighborhoodId: _toNullableInt(json['neighborhood_id']),
       streetId: _toNullableInt(json['street_id']),
+      neighborhoodName: json['neighborhood_name']?.toString(),
+      neighborhoodEn: json['neighborhood_en']?.toString(),
+      neighborhoodAr: json['neighborhood_ar']?.toString(),
     );
   }
 

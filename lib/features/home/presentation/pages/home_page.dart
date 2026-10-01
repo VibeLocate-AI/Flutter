@@ -1,10 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../../../../core/controllers/home_controller.dart';
 
 import '../../../../core/localization/localization.dart';
-import '../../data/models/ai_search_response_model.dart';
+import '../../../../core/localization/locale_manager.dart';
+import '../../../../app/app_router.dart';
+import '../../../../core/widgets/no_internet_view.dart';
+import '../../../../core/widgets/no_results_view.dart';
+import '../../../../core/responsive/responsive.dart';
+import '../../../../core/state/location_manager.dart';
+import '../../../../core/location/location_service.dart';
 import '../../data/models/home_model.dart';
+import '../../data/models/ai_search_response_model.dart';
 import '../../data/models/property_model.dart';
-import '../../home_dependencies.dart';
+import '../../../properties/presentation/pages/all_properties_page.dart';
+import '../../../notifications/presentation/pages/notifications_page.dart';
 import '../widgets/featured_property_card.dart';
 import '../widgets/home_error_view.dart';
 import '../widgets/home_header.dart';
@@ -15,11 +25,15 @@ import '../widgets/property_categories.dart';
 import '../widgets/property_filter_sheet.dart';
 import '../widgets/property_section_header.dart';
 import '../widgets/recommended_property_card.dart';
+import '../widgets/top_agent_card.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({
     super.key,
+    this.highlightPropertyId,
   });
+
+  final int? highlightPropertyId;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -40,8 +54,10 @@ class _HomePageState extends State<HomePage> {
   String _searchQuery = '';
 
   bool _isAiSearching = false;
+  String? _aiSearchError;
 
   AiSearchResponseModel? _aiSearchResponse;
+  PropertyModel? _highlightedProperty;
 
   PropertyFilterValues _filterValues =
   const PropertyFilterValues();
@@ -49,46 +65,53 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _loadHome();
+    LocaleManager.instance.addListener(_onLocaleChanged);
+    _loadHome(force: false);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final manager = LocationManager.instance;
+      if (!manager.isUpdating) {
+        // Always try to refresh the GPS position once when the Home tab
+        // is created. The IndexedStack keeps Home alive, so switching
+        // between tabs will not trigger a page refresh.
+        manager.updateCurrentLocation();
+      }
+    });
+  }
+
+  void _onLocaleChanged() {
+    if (!mounted) return;
+    _clearSearch();
+    _loadHome(force: true);
   }
 
   @override
   void dispose() {
+    LocaleManager.instance.removeListener(_onLocaleChanged);
     _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadHome() async {
-    if (mounted) {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
+  Future<void> _loadHome({bool force = true}) async {
+    final controller = Get.find<HomeController>();
+    if (force) {
+      await controller.load(
+        force: true,
+        highlightPropertyId: widget.highlightPropertyId,
+      );
+    } else {
+      await controller.initialize(
+        highlightPropertyId: widget.highlightPropertyId,
+      );
     }
-
-    try {
-      final result = await HomeDependencies.getHome();
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _home = result;
-        _isLoading = false;
-      });
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _isLoading = false;
-        _errorMessage = error
-            .toString()
-            .replaceFirst('Exception: ', '');
-      });
-    }
+    if (!mounted) return;
+    setState(() {
+      _home = controller.home;
+      _highlightedProperty = controller.highlightedProperty;
+      _errorMessage = controller.errorMessage;
+      _aiSearchResponse = controller.aiSearchResponse;
+      _aiSearchError = controller.aiSearchError;
+      _isAiSearching = controller.isAiSearching;
+    });
   }
 
   void _onCategorySelected(int? typeId) {
@@ -96,6 +119,7 @@ class _HomePageState extends State<HomePage> {
       _selectedTypeId = typeId;
       _searchQuery = '';
       _aiSearchResponse = null;
+      _aiSearchError = null;
       _searchController.clear();
       _isAiSearching = false;
     });
@@ -140,63 +164,37 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _performAiSearch() async {
     final query = _searchController.text.trim();
-
-    if (query.isEmpty) {
-      return;
-    }
+    if (query.isEmpty) return;
 
     FocusManager.instance.primaryFocus?.unfocus();
-
+    final controller = Get.find<HomeController>();
     setState(() {
       _searchQuery = query;
-      _isAiSearching = true;
-      _aiSearchResponse = null;
     });
-
-    try {
-      final response =
-      await HomeDependencies.aiContextualSearch(
-        query,
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _aiSearchResponse = response;
-        _isAiSearching = false;
-      });
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _isAiSearching = false;
-        _aiSearchResponse = null;
-      });
-
-      final localization =
-      AppLocalization.of(context);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            localization.translate(
-              'ai_search_error',
-            ),
-          ),
-        ),
-      );
-    }
+    await controller.searchAi(query);
+    if (!mounted) return;
+    setState(() {
+      _aiSearchResponse = controller.aiSearchResponse;
+      _aiSearchError = controller.aiSearchError;
+      _isAiSearching = controller.isAiSearching;
+    });
   }
+
+  void _openProperty(int propertyId) {
+    Navigator.pushNamed(
+      context,
+      AppRouter.propertyDetails,
+      arguments: propertyId,
+    );
+  }
+
 
   void _clearSearch() {
     setState(() {
       _searchController.clear();
       _searchQuery = '';
       _aiSearchResponse = null;
+      _aiSearchError = null;
       _isAiSearching = false;
     });
   }
@@ -220,6 +218,16 @@ class _HomePageState extends State<HomePage> {
       if (filter.categoryId != null &&
           property.categoryId != filter.categoryId) {
         return false;
+      }
+
+      if (filter.listingType != null) {
+        final matchesListing = switch (filter.listingType) {
+          'rent' => property.isForRent,
+          'sale' => property.isForSale,
+          'under_construction' => property.isUnderConstruction,
+          _ => true,
+        };
+        if (!matchesListing) return false;
       }
 
       if (filter.minPrice != null &&
@@ -252,9 +260,17 @@ class _HomePageState extends State<HomePage> {
         return false;
       }
 
-      if (filter.furnished != null &&
-          property.isFurnished != filter.furnished) {
-        return false;
+      if (filter.furnished != null) {
+        final wanted =
+            filter.furnished!.toLowerCase();
+        final actual =
+            property.isFurnished
+                ? 'furnished'
+                : 'unfurnished';
+
+        if (wanted != actual) {
+          return false;
+        }
       }
 
       if (filter.rentFrequency != null &&
@@ -274,11 +290,9 @@ class _HomePageState extends State<HomePage> {
 
       final query = _searchQuery.toLowerCase();
 
-      final title =
-      property.title.toLowerCase();
+      final title = property.displayTitle.toLowerCase();
 
-      final description =
-      property.description.toLowerCase();
+      final description = property.displayDescription.toLowerCase();
 
       final location =
           property.location?.addressLine1 ?? '';
@@ -299,17 +313,25 @@ class _HomePageState extends State<HomePage> {
   List<PropertyModel> _featuredProperties(
       HomeModel home,
       ) {
-    return _filterProperties(
-      home.featuredProperties,
-    );
+    final source = <PropertyModel>[
+      ...(_highlightedProperty == null
+          ? const <PropertyModel>[]
+          : <PropertyModel>[_highlightedProperty!]),
+      ...home.featuredProperties,
+    ];
+    return _filterProperties(_uniqueProperties(source));
   }
 
   List<PropertyModel> _recommendedProperties(
       HomeModel home,
       ) {
-    return _filterProperties(
-      home.recommendedProperties,
-    );
+    final source = <PropertyModel>[
+      ...(_highlightedProperty == null
+          ? const <PropertyModel>[]
+          : <PropertyModel>[_highlightedProperty!]),
+      ...home.recommendedProperties,
+    ];
+    return _filterProperties(_uniqueProperties(source));
   }
 
   List<PropertyModel> _nearbyProperties(
@@ -319,127 +341,175 @@ class _HomePageState extends State<HomePage> {
         ? home.properties
         : home.recommendedProperties;
 
-    return _filterProperties(source);
+    return _filterProperties(_uniqueProperties([
+      ...(_highlightedProperty == null
+          ? const <PropertyModel>[]
+          : <PropertyModel>[_highlightedProperty!]),
+      ...source,
+    ]));
   }
 
-  void _showNotifications() {
-    final localization =
-    AppLocalization.of(context);
-
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      backgroundColor:
-      Theme.of(context).colorScheme.surface,
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              20,
-              8,
-              20,
-              24,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.notifications_none_rounded,
-                  size: 42,
-                  color:
-                  Theme.of(context)
-                      .colorScheme
-                      .primary,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  localization.translate(
-                    'notifications',
-                  ),
-                  style:
-                  Theme.of(context)
-                      .textTheme
-                      .headlineSmall,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  localization.translate(
-                    'no_notifications',
-                  ),
-                  textAlign: TextAlign.center,
-                  style:
-                  Theme.of(context)
-                      .textTheme
-                      .bodyMedium,
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+  List<PropertyModel> _rentProperties(HomeModel home) {
+    return _filterProperties(
+      _uniqueProperties(home.properties.where((p) => p.isForRent).toList()),
+      applyTypeFilter: false,
     );
   }
 
-  void _showLocation() {
-    final localization =
-    AppLocalization.of(context);
+  List<PropertyModel> _saleProperties(HomeModel home) {
+    return _filterProperties(
+      _uniqueProperties(home.properties.where((p) => p.isForSale).toList()),
+      applyTypeFilter: false,
+    );
+  }
 
-    showModalBottomSheet<void>(
+  List<PropertyModel> _underConstructionProperties(HomeModel home) {
+    return _filterProperties(
+      _uniqueProperties(
+        home.properties.where((p) => p.isUnderConstruction).toList(),
+      ),
+      applyTypeFilter: false,
+    );
+  }
+
+  List<PropertyModel> _uniqueProperties(List<PropertyModel> properties) {
+    final seen = <int>{};
+    return properties.where((property) => seen.add(property.id)).toList();
+  }
+
+  Future<void> _showNotifications() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const NotificationsPage(),
+      ),
+    );
+  }
+
+  Future<void> _showLocation() async {
+    final localization = AppLocalization.of(context);
+
+    final result = await showModalBottomSheet<bool>(
       context: context,
       showDragHandle: true,
-      backgroundColor:
-      Theme.of(context).colorScheme.surface,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              20,
-              8,
-              20,
-              24,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.location_on_outlined,
-                  size: 42,
-                  color:
-                  Theme.of(context)
-                      .colorScheme
-                      .primary,
+        return AnimatedBuilder(
+          animation: LocationManager.instance,
+          builder: (context, _) {
+            final manager = LocationManager.instance;
+            final current = manager.displayLocation;
+
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.location_on_outlined,
+                      size: 42,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      localization.translate('current_location'),
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      current.isEmpty
+                          ? localization.translate('location_unavailable')
+                          : current,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    const SizedBox(height: 18),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: manager.isUpdating
+                            ? null
+                            : () async {
+                                final success =
+                                    await manager.updateCurrentLocation();
+                                if (context.mounted) {
+                                  Navigator.pop(context, success);
+                                }
+                              },
+                        icon: manager.isUpdating
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.my_location_rounded),
+                        label: Text(
+                          manager.isUpdating
+                              ? localization.translate('updating_location')
+                              : localization.translate('use_current_location'),
+                        ),
+                      ),
+                    ),
+                    if (current.isEmpty && !manager.isUpdating) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        localization.translate('location_permission_hint'),
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: LocationService.instance.openLocationSettings,
+                              icon: const Icon(Icons.location_on_outlined),
+                              label: Text(
+                                localization.translate('open_location_settings'),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: LocationService.instance.openAppSettings,
+                              icon: const Icon(Icons.settings_outlined),
+                              label: Text(
+                                localization.translate('open_app_settings'),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  localization.translate(
-                    'current_location',
-                  ),
-                  style:
-                  Theme.of(context)
-                      .textTheme
-                      .headlineSmall,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  localization.translate(
-                    'home_location',
-                  ),
-                  textAlign: TextAlign.center,
-                  style:
-                  Theme.of(context)
-                      .textTheme
-                      .bodyLarge,
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
+
+    if (result == true && mounted) {
+      await _loadHome(force: false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<HomeController>();
+    _home = controller.home ?? _home;
+    _highlightedProperty = controller.highlightedProperty ?? _highlightedProperty;
+    _errorMessage = controller.errorMessage;
+    _aiSearchResponse = controller.aiSearchResponse ?? _aiSearchResponse;
+    _aiSearchError = controller.aiSearchError;
+    _isAiSearching = controller.isAiSearching;
+    _isLoading = controller.isLoading && _home == null;
     return Scaffold(
       backgroundColor:
       Theme.of(context)
@@ -451,15 +521,36 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildBody(BuildContext context) {
+    final controller = Get.find<HomeController>();
+    if (_home == null && controller.home != null) {
+      _home = controller.home;
+      _highlightedProperty = controller.highlightedProperty;
+      _errorMessage = controller.errorMessage;
+    }
+    _isLoading = controller.isLoading && _home == null;
+    if (_home != null && controller.home != null &&
+        identical(_home, controller.home) == false) {
+      _home = controller.home;
+    }
+    _highlightedProperty ??= controller.highlightedProperty;
+
     if (_isLoading) {
       return const HomeLoadingView();
     }
 
     if (_errorMessage != null) {
-      return HomeErrorView(
-        message: _errorMessage!,
-        onRetry: _loadHome,
-      );
+      final networkError = _errorMessage!.toLowerCase().contains('timed out') ||
+          _errorMessage!.toLowerCase().contains('internet') ||
+          _errorMessage!.toLowerCase().contains('connection') ||
+          _errorMessage!.toLowerCase().contains('socket') ||
+          _errorMessage!.toLowerCase().contains('failed host lookup');
+
+      return networkError
+          ? NoInternetView(onRetry: _loadHome)
+          : HomeErrorView(
+              message: _errorMessage!,
+              onRetry: _loadHome,
+            );
     }
 
     if (_home == null) {
@@ -493,9 +584,23 @@ class _HomePageState extends State<HomePage> {
 
     final nearby =
     _nearbyProperties(home);
+    final allProperties = _filterProperties(
+      _uniqueProperties(home.properties),
+      applyTypeFilter: false,
+    );
+    final rentProperties = _rentProperties(home);
+    final saleProperties = _saleProperties(home);
+    final underConstructionProperties =
+        _underConstructionProperties(home);
 
     final isSearchMode =
         _searchQuery.isNotEmpty;
+    final screenWidth = Responsive.width(context);
+    final featuredHeight = screenWidth < 360
+        ? 340.0
+        : screenWidth < 420
+            ? 355.0
+            : 365.0;
 
     return RefreshIndicator(
       onRefresh: _loadHome,
@@ -542,18 +647,20 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(
-              20,
-              22,
-              0,
-              0,
+            padding: const EdgeInsets.fromLTRB(20, 26, 20, 0),
+            sliver: SliverToBoxAdapter(
+              child: PropertySectionHeader(
+                titleKey: 'filter_properties',
+                subtitleKey: 'filter_properties_subtitle',
+              ),
             ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.only(top: 12),
             sliver: SliverToBoxAdapter(
               child: PropertyCategories(
-                onCategorySelected:
-                _onCategorySelected,
-                onMoreFilters:
-                _showFilters,
+                onCategorySelected: _onCategorySelected,
+                onMoreFilters: _showFilters,
               ),
             ),
           ),
@@ -577,6 +684,7 @@ class _HomePageState extends State<HomePage> {
                   PropertySectionHeader(
                     titleKey:
                     'popular_areas',
+                    subtitleKey: 'popular_areas_subtitle',
                   ),
                 ),
               ),
@@ -634,10 +742,13 @@ class _HomePageState extends State<HomePage> {
                   PropertySectionHeader(
                     titleKey:
                     'featured_properties',
+                    subtitleKey: 'featured_subtitle',
                     onSeeAll: () {
                       _showAllProperties(
                         context,
                         featured,
+                        titleKey: 'featured_properties',
+                        subtitleKey: 'featured_subtitle',
                       );
                     },
                   ),
@@ -652,7 +763,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 sliver: SliverToBoxAdapter(
                   child: SizedBox(
-                    height: 365,
+                    height: featuredHeight,
                     child: ListView.separated(
                       padding:
                       const EdgeInsets
@@ -674,8 +785,8 @@ class _HomePageState extends State<HomePage> {
                       itemBuilder:
                           (context, index) {
                         return FeaturedPropertyCard(
-                          property:
-                          featured[index],
+                          property: featured[index],
+                          onTap: () => _openProperty(featured[index].id),
                         );
                       },
                     ),
@@ -696,10 +807,13 @@ class _HomePageState extends State<HomePage> {
                   PropertySectionHeader(
                     titleKey:
                     'recommended_property',
+                    subtitleKey: 'recommended_subtitle',
                     onSeeAll: () {
                       _showAllProperties(
                         context,
                         recommended,
+                        titleKey: 'recommended_property',
+                        subtitleKey: 'recommended_subtitle',
                       );
                     },
                   ),
@@ -728,8 +842,9 @@ class _HomePageState extends State<HomePage> {
                           ),
                           child:
                           RecommendedPropertyCard(
-                            property:
-                            property,
+                            property: property,
+                            variant: PropertyCardVariant.recommended,
+                            onTap: () => _openProperty(property.id),
                           ),
                         );
                       },
@@ -752,10 +867,13 @@ class _HomePageState extends State<HomePage> {
                   PropertySectionHeader(
                     titleKey:
                     'nearby_property',
+                    subtitleKey: 'nearby_subtitle',
                     onSeeAll: () {
                       _showAllProperties(
                         context,
                         nearby,
+                        titleKey: 'nearby_property',
+                        subtitleKey: 'nearby_subtitle',
                       );
                     },
                   ),
@@ -785,15 +903,173 @@ class _HomePageState extends State<HomePage> {
                   itemBuilder:
                       (context, index) {
                     return RecommendedPropertyCard(
-                      property:
-                      nearby[index],
+                      property: nearby[index],
+                      onTap: () => _openProperty(nearby[index].id),
+                    );
+                  },
+                ),
+              ),
+            if (allProperties.isNotEmpty) ...[
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+                sliver: SliverToBoxAdapter(
+                  child: PropertySectionHeader(
+                    titleKey: 'all_properties',
+                    subtitleKey: 'all_properties_subtitle',
+                    onSeeAll: () => _showAllProperties(
+                      context,
+                      allProperties,
+                      titleKey: 'all_properties',
+                      subtitleKey: 'all_properties_subtitle',
+                    ),
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                sliver: SliverList.separated(
+                  itemCount: allProperties.length > 6 ? 6 : allProperties.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) => RecommendedPropertyCard(
+                    property: allProperties[index],
+                    variant: PropertyCardVariant.nearby,
+                    onTap: () => _openProperty(allProperties[index].id),
+                  ),
+                ),
+              ),
+            ],
+            if (rentProperties.isNotEmpty) ...[
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 30, 20, 0),
+                sliver: SliverToBoxAdapter(
+                  child: PropertySectionHeader(
+                    titleKey: 'properties_for_rent',
+                    subtitleKey: 'properties_for_rent_subtitle',
+                    onSeeAll: () => _showAllProperties(
+                      context,
+                      rentProperties,
+                      titleKey: 'properties_for_rent',
+                      subtitleKey: 'properties_for_rent_subtitle',
+                    ),
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                sliver: SliverList.separated(
+                  itemCount: rentProperties.length > 6 ? 6 : rentProperties.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) => RecommendedPropertyCard(
+                    property: rentProperties[index],
+                    variant: PropertyCardVariant.nearby,
+                    onTap: () => _openProperty(rentProperties[index].id),
+                  ),
+                ),
+              ),
+            ],
+            if (saleProperties.isNotEmpty) ...[
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 30, 20, 0),
+                sliver: SliverToBoxAdapter(
+                  child: PropertySectionHeader(
+                    titleKey: 'properties_for_sale',
+                    subtitleKey: 'properties_for_sale_subtitle',
+                    onSeeAll: () => _showAllProperties(
+                      context,
+                      saleProperties,
+                      titleKey: 'properties_for_sale',
+                      subtitleKey: 'properties_for_sale_subtitle',
+                    ),
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                sliver: SliverList.separated(
+                  itemCount: saleProperties.length > 6 ? 6 : saleProperties.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) => RecommendedPropertyCard(
+                    property: saleProperties[index],
+                    variant: PropertyCardVariant.recommended,
+                    onTap: () => _openProperty(saleProperties[index].id),
+                  ),
+                ),
+              ),
+            ],
+            if (underConstructionProperties.isNotEmpty) ...[
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 30, 20, 0),
+                sliver: SliverToBoxAdapter(
+                  child: PropertySectionHeader(
+                    titleKey: 'under_construction_properties',
+                    subtitleKey: 'under_construction_properties_subtitle',
+                    onSeeAll: () => _showAllProperties(
+                      context,
+                      underConstructionProperties,
+                      titleKey: 'under_construction_properties',
+                      subtitleKey: 'under_construction_properties_subtitle',
+                    ),
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                sliver: SliverList.separated(
+                  itemCount: underConstructionProperties.length > 6
+                      ? 6
+                      : underConstructionProperties.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) => RecommendedPropertyCard(
+                    property: underConstructionProperties[index],
+                    variant: PropertyCardVariant.recommended,
+                    onTap: () => _openProperty(
+                      underConstructionProperties[index].id,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            if (home.topAgents.isNotEmpty)
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  20,
+                  20,
+                  20,
+                  0,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: PropertySectionHeader(
+                    titleKey: 'top_agents',
+                    subtitleKey: 'top_agents_subtitle',
+                  ),
+                ),
+              ),
+            if (home.topAgents.isNotEmpty)
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  20,
+                  14,
+                  20,
+                  30,
+                ),
+                sliver: SliverList.separated(
+                  itemCount: home.topAgents.length,
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    return TopAgentCard(
+                      agent: home.topAgents[index],
                     );
                   },
                 ),
               ),
             if (featured.isEmpty &&
                 recommended.isEmpty &&
-                nearby.isEmpty)
+                nearby.isEmpty &&
+                allProperties.isEmpty &&
+                rentProperties.isEmpty &&
+                saleProperties.isEmpty &&
+                underConstructionProperties.isEmpty)
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: Center(
@@ -816,6 +1092,9 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
+            const SliverToBoxAdapter(
+              child: SizedBox(height: 96),
+            ),
           ],
         ],
       ),
@@ -862,6 +1141,18 @@ class _HomePageState extends State<HomePage> {
         _aiSearchResponse;
 
     if (response == null) {
+      if (_aiSearchError != null) {
+        return [
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: NoResultsView(
+              title: localization.translate('ai_search_error'),
+              message: _aiSearchError,
+              onClear: _clearSearch,
+            ),
+          ),
+        ];
+      }
       return [
         const SliverToBoxAdapter(
           child: SizedBox(height: 20),
@@ -934,7 +1225,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${response.totalResults} properties found',
+                  '${response.totalResults} ${localization.translate('properties_found')}',
                   style:
                   Theme.of(context)
                       .textTheme
@@ -948,6 +1239,7 @@ class _HomePageState extends State<HomePage> {
                   Text(
                     _buildUnderstandingText(
                       response.understood,
+                      localization,
                     ),
                     style:
                     Theme.of(context)
@@ -963,22 +1255,8 @@ class _HomePageState extends State<HomePage> {
       if (response.properties.isEmpty)
         SliverFillRemaining(
           hasScrollBody: false,
-          child: Center(
-            child: Padding(
-              padding:
-              const EdgeInsets.all(24),
-              child: Text(
-                localization.translate(
-                  'no_search_results',
-                ),
-                textAlign:
-                TextAlign.center,
-                style:
-                Theme.of(context)
-                    .textTheme
-                    .bodyLarge,
-              ),
-            ),
+          child: NoResultsView(
+            onClear: _clearSearch,
           ),
         )
       else
@@ -1016,6 +1294,7 @@ class _HomePageState extends State<HomePage> {
 
   String _buildUnderstandingText(
       AiSearchUnderstandingModel understood,
+      AppLocalization localization,
       ) {
     final parts = <String>[];
 
@@ -1027,13 +1306,13 @@ class _HomePageState extends State<HomePage> {
 
     if (understood.bedrooms != null) {
       parts.add(
-        '${understood.bedrooms} bedrooms',
+        '${understood.bedrooms} ${localization.translate('bedrooms')}',
       );
     }
 
     if (understood.bathrooms != null) {
       parts.add(
-        '${understood.bathrooms} bathrooms',
+        '${understood.bathrooms} ${localization.translate('bathrooms')}',
       );
     }
 
@@ -1054,8 +1333,8 @@ class _HomePageState extends State<HomePage> {
       BuildContext context,
       AiSearchPropertyModel result,
       ) {
-    final theme =
-    Theme.of(context);
+    final theme = Theme.of(context);
+    final localization = AppLocalization.of(context);
 
     return Container(
       decoration: BoxDecoration(
@@ -1074,8 +1353,8 @@ class _HomePageState extends State<HomePage> {
             padding:
             const EdgeInsets.all(8),
             child: RecommendedPropertyCard(
-              property:
-              result.property,
+              property: result.property,
+              onTap: () => _openProperty(result.property.id),
             ),
           ),
           PositionedDirectional(
@@ -1095,7 +1374,7 @@ class _HomePageState extends State<HomePage> {
                 BorderRadius.circular(10),
               ),
               child: Text(
-                '${result.matchScore}% AI MATCH',
+                '${result.matchScore}% ${localization.translate('ai_match')}',
                 style: TextStyle(
                   color:
                   theme.colorScheme.onPrimary,
@@ -1114,82 +1393,15 @@ class _HomePageState extends State<HomePage> {
   void _showAllProperties(
       BuildContext context,
       List<PropertyModel> properties,
-      ) {
-    final localization =
-    AppLocalization.of(context);
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      backgroundColor:
-      Theme.of(context)
-          .colorScheme
-          .surface,
-      builder: (context) {
-        return SafeArea(
-          child: SizedBox(
-            height:
-            MediaQuery.sizeOf(context)
-                .height *
-                0.88,
-            child: Column(
-              children: [
-                Padding(
-                  padding:
-                  const EdgeInsets.fromLTRB(
-                    20,
-                    4,
-                    20,
-                    12,
-                  ),
-                  child: Align(
-                    alignment:
-                    AlignmentDirectional
-                        .centerStart,
-                    child: Text(
-                      localization.translate(
-                        'properties',
-                      ),
-                      style:
-                      Theme.of(context)
-                          .textTheme
-                          .headlineSmall,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child:
-                  ListView.separated(
-                    padding:
-                    const EdgeInsets.fromLTRB(
-                      20,
-                      0,
-                      20,
-                      24,
-                    ),
-                    itemCount:
-                    properties.length,
-                    separatorBuilder:
-                        (_, _) {
-                      return const SizedBox(
-                        height: 12,
-                      );
-                    },
-                    itemBuilder:
-                        (context, index) {
-                      return RecommendedPropertyCard(
-                        property:
-                        properties[index],
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+      {required String titleKey, String? subtitleKey}) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AllPropertiesPage(
+          properties: properties,
+          titleKey: titleKey,
+          subtitleKey: subtitleKey,
+        ),
+      ),
     );
   }
 }

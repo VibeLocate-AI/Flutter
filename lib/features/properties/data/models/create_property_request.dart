@@ -16,6 +16,9 @@ class CreatePropertyRequest {
     required this.bedrooms,
     required this.bathrooms,
     required this.propertyCondition,
+    this.actionType,
+    this.rentFrequency,
+    this.virtualTourUrl,
     this.featureIds = const [],
     this.coverImagePath,
     this.detailImagePaths = const {},
@@ -52,6 +55,10 @@ class CreatePropertyRequest {
   final int bathrooms;
 
   final String propertyCondition;
+
+  final String? actionType;
+  final String? rentFrequency;
+  final String? virtualTourUrl;
 
   final List<int> featureIds;
 

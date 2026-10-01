@@ -22,12 +22,19 @@ class AiSearchResponseModel {
   factory AiSearchResponseModel.fromJson(
       Map<String, dynamic> json,
       ) {
-    final understoodJson = json['understood'];
+    final understoodJson =
+        json['understood'] ?? json['ai_understanding'];
 
-    final propertiesJson = json['properties'];
+    final propertiesJson =
+        json['properties'] ??
+        json['results'] ??
+        json['items'] ??
+        (json['data'] is Map<String, dynamic>
+            ? (json['data'] as Map<String, dynamic>)['properties']
+            : null);
 
     return AiSearchResponseModel(
-      success: json['success'] == true,
+      success: json['success'] == true || (propertiesJson is List && propertiesJson.isNotEmpty),
       query: json['query']?.toString() ?? '',
       searchMode: json['search_mode']?.toString() ?? '',
       understood: understoodJson is Map<String, dynamic>
@@ -35,8 +42,10 @@ class AiSearchResponseModel {
         understoodJson,
       )
           : const AiSearchUnderstandingModel(),
-      exactMatches: _toInt(json['exact_matches']),
-      totalResults: _toInt(json['total_results']),
+      exactMatches: _toInt(
+        json['exact_matches'] ?? json['exact_matches_count'],
+      ),
+      totalResults: _toInt(json['total_results'] ?? (propertiesJson is List ? propertiesJson.length : 0)),
       properties: propertiesJson is List
           ? propertiesJson
           .whereType<Map<String, dynamic>>()
@@ -145,13 +154,16 @@ class AiSearchPropertyModel {
   factory AiSearchPropertyModel.fromJson(
       Map<String, dynamic> json,
       ) {
+    final rawProperty = json['property'];
+    final propertyJson = rawProperty is Map<String, dynamic>
+        ? rawProperty
+        : json;
+
     return AiSearchPropertyModel(
-      property: PropertyModel.fromJson(json),
-      matchScore:
-      int.tryParse(
-        json['match_score']?.toString() ?? '',
-      ) ??
-          0,
+      property: PropertyModel.fromJson(propertyJson),
+      matchScore: int.tryParse(
+        (json['match_score'] ?? json['score'] ?? 0).toString(),
+      ) ?? 0,
       matched: json['matched'] is List
           ? (json['matched'] as List)
           .map((value) => value.toString())

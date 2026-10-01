@@ -5,6 +5,7 @@ import '../../../../core/localization/localization.dart';
 class PropertyFilterValues {
   const PropertyFilterValues({
     this.categoryId,
+    this.listingType,
     this.minPrice,
     this.maxPrice,
     this.minBedrooms,
@@ -17,148 +18,70 @@ class PropertyFilterValues {
   });
 
   final int? categoryId;
-
+  final String? listingType;
   final double? minPrice;
   final double? maxPrice;
-
   final int? minBedrooms;
   final int? minBathrooms;
-
   final double? minArea;
   final double? maxArea;
-
   final String? furnished;
   final String? rentFrequency;
-
   final bool featuredOnly;
 
-  bool get hasAnyFilter {
-    return categoryId != null ||
-        minPrice != null ||
-        maxPrice != null ||
-        minBedrooms != null ||
-        minBathrooms != null ||
-        minArea != null ||
-        maxArea != null ||
-        furnished != null ||
-        rentFrequency != null ||
-        featuredOnly;
-  }
+  bool get hasAnyFilter =>
+      categoryId != null ||
+      listingType != null ||
+      minPrice != null ||
+      maxPrice != null ||
+      minBedrooms != null ||
+      minBathrooms != null ||
+      minArea != null ||
+      maxArea != null ||
+      furnished != null ||
+      rentFrequency != null ||
+      featuredOnly;
 }
 
-class PropertyFilterSheet
-    extends StatefulWidget {
+class PropertyFilterSheet extends StatefulWidget {
   const PropertyFilterSheet({
     super.key,
     required this.initialValues,
     required this.onApply,
   });
 
-  final PropertyFilterValues
-  initialValues;
-
-  final ValueChanged<
-      PropertyFilterValues>
-  onApply;
+  final PropertyFilterValues initialValues;
+  final ValueChanged<PropertyFilterValues> onApply;
 
   @override
-  State<PropertyFilterSheet>
-  createState() =>
-      _PropertyFilterSheetState();
+  State<PropertyFilterSheet> createState() => _PropertyFilterSheetState();
 }
 
-class _PropertyFilterSheetState
-    extends State<PropertyFilterSheet> {
-  late int? _categoryId;
+class _PropertyFilterSheetState extends State<PropertyFilterSheet> {
+  late int? _categoryId = widget.initialValues.categoryId;
+  late String? _listingType = widget.initialValues.listingType;
+  late double? _minPrice = widget.initialValues.minPrice;
+  late double? _maxPrice = widget.initialValues.maxPrice;
+  late int? _minBedrooms = widget.initialValues.minBedrooms;
+  late int? _minBathrooms = widget.initialValues.minBathrooms;
+  late double? _minArea = widget.initialValues.minArea;
+  late double? _maxArea = widget.initialValues.maxArea;
+  late String? _furnished = widget.initialValues.furnished;
+  late String? _rentFrequency = widget.initialValues.rentFrequency;
+  late bool _featuredOnly = widget.initialValues.featuredOnly;
 
-  late double? _minPrice;
-  late double? _maxPrice;
-
-  late int? _minBedrooms;
-  late int? _minBathrooms;
-
-  late double? _minArea;
-  late double? _maxArea;
-
-  late String? _furnished;
-  late String? _rentFrequency;
-
-  late bool _featuredOnly;
-
-  late final TextEditingController
-  _minPriceController;
-
-  late final TextEditingController
-  _maxPriceController;
-
-  late final TextEditingController
-  _minAreaController;
-
-  late final TextEditingController
-  _maxAreaController;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _categoryId =
-        widget.initialValues.categoryId;
-
-    _minPrice =
-        widget.initialValues.minPrice;
-
-    _maxPrice =
-        widget.initialValues.maxPrice;
-
-    _minBedrooms =
-        widget.initialValues.minBedrooms;
-
-    _minBathrooms =
-        widget.initialValues.minBathrooms;
-
-    _minArea =
-        widget.initialValues.minArea;
-
-    _maxArea =
-        widget.initialValues.maxArea;
-
-    _furnished =
-        widget.initialValues.furnished;
-
-    _rentFrequency =
-        widget.initialValues.rentFrequency;
-
-    _featuredOnly =
-        widget.initialValues.featuredOnly;
-
-    _minPriceController =
-        TextEditingController(
-          text:
-          _minPrice?.toStringAsFixed(0) ??
-              '',
-        );
-
-    _maxPriceController =
-        TextEditingController(
-          text:
-          _maxPrice?.toStringAsFixed(0) ??
-              '',
-        );
-
-    _minAreaController =
-        TextEditingController(
-          text:
-          _minArea?.toStringAsFixed(0) ??
-              '',
-        );
-
-    _maxAreaController =
-        TextEditingController(
-          text:
-          _maxArea?.toStringAsFixed(0) ??
-              '',
-        );
-  }
+  late final TextEditingController _minPriceController = TextEditingController(
+    text: _minPrice?.toStringAsFixed(0) ?? '',
+  );
+  late final TextEditingController _maxPriceController = TextEditingController(
+    text: _maxPrice?.toStringAsFixed(0) ?? '',
+  );
+  late final TextEditingController _minAreaController = TextEditingController(
+    text: _minArea?.toStringAsFixed(0) ?? '',
+  );
+  late final TextEditingController _maxAreaController = TextEditingController(
+    text: _maxArea?.toStringAsFixed(0) ?? '',
+  );
 
   @override
   void dispose() {
@@ -166,334 +89,147 @@ class _PropertyFilterSheetState
     _maxPriceController.dispose();
     _minAreaController.dispose();
     _maxAreaController.dispose();
-
     super.dispose();
   }
 
   @override
-  Widget build(
-      BuildContext context,
-      ) {
-    final localization =
-    AppLocalization.of(
-      context,
-    );
-
-    final theme =
-    Theme.of(context);
-
-    final isArabic =
-        Localizations.localeOf(
-          context,
-        ).languageCode ==
-            'ar';
+  Widget build(BuildContext context) {
+    final localization = AppLocalization.of(context);
+    final theme = Theme.of(context);
 
     return SafeArea(
       child: Padding(
-        padding:
-        const EdgeInsets.fromLTRB(
-          20,
-          8,
-          20,
-          20,
-        ),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
         child: Column(
           children: [
             Row(
               children: [
                 Expanded(
                   child: Text(
-                    _translate(
-                      localization,
-                      'more_filters',
-                      'Filters',
-                    ),
-                    style: theme
-                        .textTheme
-                        .headlineSmall
-                        ?.copyWith(
-                      fontWeight:
-                      FontWeight.w800,
+                    localization.translate('filters_title'),
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
                 TextButton(
-                  onPressed:
-                  _clearAll,
-                  child: Text(
-                    _translate(
-                      localization,
-                      'clear',
-                      'Clear',
-                    ),
-                  ),
+                  onPressed: _clearAll,
+                  child: Text(localization.translate('clear')),
                 ),
               ],
             ),
             const SizedBox(height: 4),
             Expanded(
               child: ListView(
-                padding:
-                const EdgeInsets.only(
-                  bottom: 20,
-                ),
+                padding: const EdgeInsets.only(bottom: 20),
                 children: [
-                  _sectionTitle(
-                    context,
-                    isArabic
-                        ? 'الفئة'
-                        : 'Category',
+                  _sectionTitle(context, localization.translate('filter_category')),
+                  _categorySelector(context, localization),
+                  const SizedBox(height: 22),
+                  _sectionTitle(context, localization.translate('filter_listing_type')),
+                  _singleChoice(
+                    values: const ['rent', 'sale', 'under_construction'],
+                    selectedValue: _listingType,
+                    labels: {
+                      'rent': localization.translate('for_rent'),
+                      'sale': localization.translate('for_sale'),
+                      'under_construction': localization.translate('under_construction'),
+                    },
+                    anyLabel: localization.translate('any'),
+                    onSelected: (value) => setState(() => _listingType = value),
                   ),
-                  _categorySelector(
-                    context,
-                    isArabic,
-                  ),
-                  const SizedBox(
-                    height: 22,
-                  ),
-                  _sectionTitle(
-                    context,
-                    isArabic
-                        ? 'السعر'
-                        : 'Price',
-                  ),
+                  const SizedBox(height: 22),
+                  _sectionTitle(context, localization.translate('filter_price')),
                   Row(
                     children: [
                       Expanded(
-                        child:
-                        _numberField(
-                          controller:
-                          _minPriceController,
-                          label:
-                          isArabic
-                              ? 'من'
-                              : 'Min',
+                        child: _numberField(
+                          controller: _minPriceController,
+                          label: localization.translate('minimum'),
                         ),
                       ),
-                      const SizedBox(
-                        width: 12,
-                      ),
+                      const SizedBox(width: 12),
                       Expanded(
-                        child:
-                        _numberField(
-                          controller:
-                          _maxPriceController,
-                          label:
-                          isArabic
-                              ? 'إلى'
-                              : 'Max',
+                        child: _numberField(
+                          controller: _maxPriceController,
+                          label: localization.translate('maximum'),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(
-                    height: 22,
-                  ),
-                  _sectionTitle(
-                    context,
-                    isArabic
-                        ? 'المساحة'
-                        : 'Area sqft',
-                  ),
+                  const SizedBox(height: 22),
+                  _sectionTitle(context, localization.translate('filter_area')),
                   Row(
                     children: [
                       Expanded(
-                        child:
-                        _numberField(
-                          controller:
-                          _minAreaController,
-                          label:
-                          isArabic
-                              ? 'من'
-                              : 'Min',
+                        child: _numberField(
+                          controller: _minAreaController,
+                          label: localization.translate('minimum'),
                         ),
                       ),
-                      const SizedBox(
-                        width: 12,
-                      ),
+                      const SizedBox(width: 12),
                       Expanded(
-                        child:
-                        _numberField(
-                          controller:
-                          _maxAreaController,
-                          label:
-                          isArabic
-                              ? 'إلى'
-                              : 'Max',
+                        child: _numberField(
+                          controller: _maxAreaController,
+                          label: localization.translate('maximum'),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(
-                    height: 22,
-                  ),
-                  _sectionTitle(
-                    context,
-                    isArabic
-                        ? 'غرف النوم'
-                        : 'Bedrooms',
-                  ),
+                  const SizedBox(height: 22),
+                  _sectionTitle(context, localization.translate('bedrooms')),
                   _choiceRow(
-                    values: const [
-                      1,
-                      2,
-                      3,
-                      4,
-                      5,
-                    ],
-                    selectedValue:
-                    _minBedrooms,
+                    values: const [1, 2, 3, 4, 5],
+                    selectedValue: _minBedrooms,
                     suffix: '+',
-                    onSelected:
-                        (value) {
-                      setState(() {
-                        _minBedrooms =
-                            value;
-                      });
-                    },
+                    anyLabel: localization.translate('any'),
+                    onSelected: (value) => setState(() => _minBedrooms = value),
                   ),
-                  const SizedBox(
-                    height: 22,
-                  ),
-                  _sectionTitle(
-                    context,
-                    isArabic
-                        ? 'الحمامات'
-                        : 'Bathrooms',
-                  ),
+                  const SizedBox(height: 22),
+                  _sectionTitle(context, localization.translate('bathrooms')),
                   _choiceRow(
-                    values: const [
-                      1,
-                      2,
-                      3,
-                      4,
-                      5,
-                    ],
-                    selectedValue:
-                    _minBathrooms,
+                    values: const [1, 2, 3, 4, 5],
+                    selectedValue: _minBathrooms,
                     suffix: '+',
-                    onSelected:
-                        (value) {
-                      setState(() {
-                        _minBathrooms =
-                            value;
-                      });
-                    },
+                    anyLabel: localization.translate('any'),
+                    onSelected: (value) => setState(() => _minBathrooms = value),
                   ),
-                  const SizedBox(
-                    height: 22,
-                  ),
-                  _sectionTitle(
-                    context,
-                    isArabic
-                        ? 'التأثيث'
-                        : 'Furnishing',
-                  ),
+                  const SizedBox(height: 22),
+                  _sectionTitle(context, localization.translate('furnishing')),
                   _singleChoice(
-                    values: const [
-                      'unfurnished',
-                      'semi-furnished',
-                      'furnished',
-                    ],
-                    selectedValue:
-                    _furnished,
-                    labels: isArabic
-                        ? const {
-                      'unfurnished':
-                      'غير مفروش',
-                      'semi-furnished':
-                      'نصف مفروش',
-                      'furnished':
-                      'مفروش',
-                    }
-                        : const {
-                      'unfurnished':
-                      'Unfurnished',
-                      'semi-furnished':
-                      'Semi-furnished',
-                      'furnished':
-                      'Furnished',
+                    values: const ['unfurnished', 'semi-furnished', 'furnished'],
+                    selectedValue: _furnished,
+                    labels: {
+                      'unfurnished': localization.translate('unfurnished'),
+                      'semi-furnished': localization.translate('semi_furnished'),
+                      'furnished': localization.translate('furnished'),
                     },
-                    onSelected:
-                        (value) {
-                      setState(() {
-                        _furnished =
-                            value;
-                      });
-                    },
+                    anyLabel: localization.translate('any'),
+                    onSelected: (value) => setState(() => _furnished = value),
                   ),
-                  const SizedBox(
-                    height: 22,
-                  ),
-                  _sectionTitle(
-                    context,
-                    isArabic
-                        ? 'تكرار الإيجار'
-                        : 'Rent Frequency',
-                  ),
+                  const SizedBox(height: 22),
+                  _sectionTitle(context, localization.translate('rent_frequency')),
                   _singleChoice(
-                    values: const [
-                      'yearly',
-                      'monthly',
-                      'weekly',
-                      'daily',
-                    ],
-                    selectedValue:
-                    _rentFrequency,
-                    labels: isArabic
-                        ? const {
-                      'yearly':
-                      'سنوي',
-                      'monthly':
-                      'شهري',
-                      'weekly':
-                      'أسبوعي',
-                      'daily':
-                      'يومي',
-                    }
-                        : const {
-                      'yearly':
-                      'Yearly',
-                      'monthly':
-                      'Monthly',
-                      'weekly':
-                      'Weekly',
-                      'daily':
-                      'Daily',
+                    values: const ['yearly', 'monthly', 'weekly', 'daily'],
+                    selectedValue: _rentFrequency,
+                    labels: {
+                      'yearly': localization.translate('yearly'),
+                      'monthly': localization.translate('monthly'),
+                      'weekly': localization.translate('weekly'),
+                      'daily': localization.translate('daily'),
                     },
-                    onSelected:
-                        (value) {
-                      setState(() {
-                        _rentFrequency =
-                            value;
-                      });
-                    },
+                    anyLabel: localization.translate('any'),
+                    onSelected: (value) => setState(() => _rentFrequency = value),
                   ),
-                  const SizedBox(
-                    height: 14,
-                  ),
+                  const SizedBox(height: 10),
                   SwitchListTile.adaptive(
-                    contentPadding:
-                    EdgeInsets.zero,
+                    contentPadding: EdgeInsets.zero,
                     title: Text(
-                      isArabic
-                          ? 'العقارات المميزة فقط'
-                          : 'Featured only',
-                      style:
-                      const TextStyle(
-                        fontWeight:
-                        FontWeight.w600,
-                      ),
+                      localization.translate('featured_only'),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                    value:
-                    _featuredOnly,
-                    onChanged:
-                        (value) {
-                      setState(() {
-                        _featuredOnly =
-                            value;
-                      });
-                    },
+                    value: _featuredOnly,
+                    onChanged: (value) => setState(() => _featuredOnly = value),
                   ),
                 ],
               ),
@@ -502,25 +238,13 @@ class _PropertyFilterSheetState
               width: double.infinity,
               child: FilledButton(
                 onPressed: _apply,
-                style:
-                FilledButton.styleFrom(
-                  minimumSize:
-                  const Size.fromHeight(
-                    52,
-                  ),
-                  shape:
-                  RoundedRectangleBorder(
-                    borderRadius:
-                    BorderRadius.circular(
-                      16,
-                    ),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                child: Text(
-                  isArabic
-                      ? 'تطبيق الفلاتر'
-                      : 'Apply Filters',
-                ),
+                child: Text(localization.translate('apply_filters')),
               ),
             ),
           ],
@@ -529,60 +253,25 @@ class _PropertyFilterSheetState
     );
   }
 
-  Widget _sectionTitle(
-      BuildContext context,
-      String title,
-      ) {
+  Widget _sectionTitle(BuildContext context, String title) {
     return Padding(
-      padding:
-      const EdgeInsets.only(
-        bottom: 10,
-      ),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Text(
         title,
-        style: Theme.of(
-          context,
-        )
-            .textTheme
-            .titleMedium
-            ?.copyWith(
-          fontWeight:
-          FontWeight.w800,
-        ),
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
       ),
     );
   }
 
-  Widget _categorySelector(
-      BuildContext context,
-      bool isArabic,
-      ) {
-    const categories = [
-      _CategoryOption(
-        1,
-        'Residential Long Term',
-        'سكني طويل الأجل',
-      ),
-      _CategoryOption(
-        2,
-        'Short Term',
-        'قصير الأجل',
-      ),
-      _CategoryOption(
-        3,
-        'Luxury',
-        'فاخر',
-      ),
-      _CategoryOption(
-        4,
-        'For Sale',
-        'للبيع',
-      ),
-      _CategoryOption(
-        5,
-        'For Rent',
-        'للإيجار',
-      ),
+  Widget _categorySelector(BuildContext context, AppLocalization localization) {
+    const categories = <(int, String)>[
+      (1, 'residential_long_term'),
+      (2, 'short_term'),
+      (3, 'luxury'),
+      (4, 'for_sale'),
+      (5, 'for_rent'),
     ];
 
     return Wrap(
@@ -590,72 +279,35 @@ class _PropertyFilterSheetState
       runSpacing: 8,
       children: [
         ChoiceChip(
-          selected:
-          _categoryId == null,
-          label: Text(
-            isArabic
-                ? 'الكل'
-                : 'Any',
-          ),
-          onSelected: (_) {
-            setState(() {
-              _categoryId =
-              null;
-            });
-          },
+          selected: _categoryId == null,
+          label: Text(localization.translate('any')),
+          onSelected: (_) => setState(() => _categoryId = null),
         ),
-        ...categories.map(
-              (category) {
-            final selected =
-                _categoryId ==
-                    category.id;
-
-            return ChoiceChip(
-              selected:
-              selected,
-              label: Text(
-                isArabic
-                    ? category.ar
-                    : category.en,
-              ),
-              onSelected: (_) {
-                setState(() {
-                  _categoryId =
-                  selected
-                      ? null
-                      : category.id;
-                });
-              },
-            );
-          },
-        ),
+        ...categories.map((category) {
+          final selected = _categoryId == category.$1;
+          return ChoiceChip(
+            selected: selected,
+            label: Text(localization.translate(category.$2)),
+            onSelected: (_) => setState(
+              () => _categoryId = selected ? null : category.$1,
+            ),
+          );
+        }),
       ],
     );
   }
 
   Widget _numberField({
-    required
-    TextEditingController
-    controller,
+    required TextEditingController controller,
     required String label,
   }) {
     return TextField(
-      controller:
-      controller,
-      keyboardType:
-      const TextInputType.numberWithOptions(
-        decimal: true,
-      ),
-      decoration:
-      InputDecoration(
-        labelText:
-        label,
-        border:
-        OutlineInputBorder(
-          borderRadius:
-          BorderRadius.circular(
-            14,
-          ),
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
         ),
       ),
     );
@@ -665,101 +317,54 @@ class _PropertyFilterSheetState
     required List<int> values,
     required int? selectedValue,
     required String suffix,
-    required ValueChanged<int?>
-    onSelected,
+    required String anyLabel,
+    required ValueChanged<int?> onSelected,
   }) {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
         ChoiceChip(
-          selected:
-          selectedValue == null,
-          label:
-          const Text('Any'),
-          onSelected: (_) {
-            onSelected(
-              null,
-            );
-          },
+          selected: selectedValue == null,
+          label: Text(anyLabel),
+          onSelected: (_) => onSelected(null),
         ),
-        ...values.map(
-              (value) {
-            final selected =
-                selectedValue ==
-                    value;
-
-            return ChoiceChip(
-              selected:
-              selected,
-              label: Text(
-                '$value$suffix',
-              ),
-              onSelected:
-                  (_) {
-                onSelected(
-                  selected
-                      ? null
-                      : value,
-                );
-              },
-            );
-          },
-        ),
+        ...values.map((value) {
+          final selected = selectedValue == value;
+          return ChoiceChip(
+            selected: selected,
+            label: Text('$value$suffix'),
+            onSelected: (_) => onSelected(selected ? null : value),
+          );
+        }),
       ],
     );
   }
 
-  Widget _singleChoice(
-      {
-        required List<String>
-        values,
-        required String?
-        selectedValue,
-        required Map<String, String>
-        labels,
-        required ValueChanged<String?>
-        onSelected,
-      }) {
+  Widget _singleChoice({
+    required List<String> values,
+    required String? selectedValue,
+    required Map<String, String> labels,
+    required String anyLabel,
+    required ValueChanged<String?> onSelected,
+  }) {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
         ChoiceChip(
-          selected:
-          selectedValue == null,
-          label:
-          const Text('Any'),
-          onSelected: (_) {
-            onSelected(
-              null,
-            );
-          },
+          selected: selectedValue == null,
+          label: Text(anyLabel),
+          onSelected: (_) => onSelected(null),
         ),
-        ...values.map(
-              (value) {
-            final selected =
-                selectedValue ==
-                    value;
-
-            return ChoiceChip(
-              selected:
-              selected,
-              label: Text(
-                labels[value] ??
-                    value,
-              ),
-              onSelected:
-                  (_) {
-                onSelected(
-                  selected
-                      ? null
-                      : value,
-                );
-              },
-            );
-          },
-        ),
+        ...values.map((value) {
+          final selected = selectedValue == value;
+          return ChoiceChip(
+            selected: selected,
+            label: Text(labels[value] ?? value),
+            onSelected: (_) => onSelected(selected ? null : value),
+          );
+        }),
       ],
     );
   }
@@ -767,6 +372,7 @@ class _PropertyFilterSheetState
   void _clearAll() {
     setState(() {
       _categoryId = null;
+      _listingType = null;
       _minPrice = null;
       _maxPrice = null;
       _minBedrooms = null;
@@ -776,7 +382,6 @@ class _PropertyFilterSheetState
       _furnished = null;
       _rentFrequency = null;
       _featuredOnly = false;
-
       _minPriceController.clear();
       _maxPriceController.clear();
       _minAreaController.clear();
@@ -785,75 +390,21 @@ class _PropertyFilterSheetState
   }
 
   void _apply() {
-    final values =
-    PropertyFilterValues(
-      categoryId:
-      _categoryId,
-      minPrice:
-      double.tryParse(
-        _minPriceController.text
-            .trim(),
-      ),
-      maxPrice:
-      double.tryParse(
-        _maxPriceController.text
-            .trim(),
-      ),
-      minBedrooms:
-      _minBedrooms,
-      minBathrooms:
-      _minBathrooms,
-      minArea:
-      double.tryParse(
-        _minAreaController.text
-            .trim(),
-      ),
-      maxArea:
-      double.tryParse(
-        _maxAreaController.text
-            .trim(),
-      ),
-      furnished:
-      _furnished,
-      rentFrequency:
-      _rentFrequency,
-      featuredOnly:
-      _featuredOnly,
-    );
-
     widget.onApply(
-      values,
+      PropertyFilterValues(
+        categoryId: _categoryId,
+        listingType: _listingType,
+        minPrice: double.tryParse(_minPriceController.text.trim()),
+        maxPrice: double.tryParse(_maxPriceController.text.trim()),
+        minBedrooms: _minBedrooms,
+        minBathrooms: _minBathrooms,
+        minArea: double.tryParse(_minAreaController.text.trim()),
+        maxArea: double.tryParse(_maxAreaController.text.trim()),
+        furnished: _furnished,
+        rentFrequency: _rentFrequency,
+        featuredOnly: _featuredOnly,
+      ),
     );
-
-    Navigator.of(
-      context,
-    ).pop();
+    Navigator.of(context).pop();
   }
-
-  String _translate(
-      AppLocalization localization,
-      String key,
-      String fallback,
-      ) {
-    final value =
-    localization.translate(
-      key,
-    );
-
-    return value == key
-        ? fallback
-        : value;
-  }
-}
-
-class _CategoryOption {
-  const _CategoryOption(
-      this.id,
-      this.en,
-      this.ar,
-      );
-
-  final int id;
-  final String en;
-  final String ar;
 }

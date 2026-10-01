@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../../core/localization/localization.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -29,12 +31,6 @@ class _LocationPickerPageState
   MapController();
 
   LatLng? _selectedLocation;
-
-  bool get _isArabic =>
-      Localizations.localeOf(
-        context,
-      ).languageCode ==
-          'ar';
 
   LatLng get _initialCenter {
     final latitude =
@@ -104,9 +100,7 @@ class _LocationPickerPageState
       ).showSnackBar(
         SnackBar(
           content: Text(
-            _isArabic
-                ? 'اضغطي على الخريطة لتحديد موقع العقار أولًا.'
-                : 'Tap on the map to select the property location first.',
+            AppLocalization.of(context).translate('tap_map_select_location'),
           ),
         ),
       );
@@ -133,9 +127,7 @@ class _LocationPickerPageState
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _isArabic
-              ? 'تحديد موقع العقار'
-              : 'Select Property Location',
+          AppLocalization.of(context).translate('select_property_location'),
         ),
       ),
       body: Stack(
@@ -284,9 +276,7 @@ class _LocationPickerPageState
                   ),
                   Expanded(
                     child: Text(
-                      _isArabic
-                          ? 'اضغطي على المكان الذي تريدين وضع العقار فيه'
-                          : 'Tap anywhere on the map to place your property',
+                      AppLocalization.of(context).translate('tap_map_place_property'),
                       style: theme
                           .textTheme
                           .bodyMedium
@@ -383,9 +373,7 @@ class _LocationPickerPageState
                                   .start,
                               children: [
                                 Text(
-                                  _isArabic
-                                      ? 'الموقع المحدد'
-                                      : 'Selected location',
+                                  AppLocalization.of(context).translate('selected_location'),
                                   style: theme
                                       .textTheme
                                       .titleSmall
@@ -425,9 +413,7 @@ class _LocationPickerPageState
                           ),
                           label:
                           Text(
-                            _isArabic
-                                ? 'استخدام هذا الموقع'
-                                : 'Use this location',
+                            AppLocalization.of(context).translate('use_this_location'),
                           ),
                           style:
                           FilledButton

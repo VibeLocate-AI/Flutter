@@ -3,13 +3,17 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+
+import '../../../../core/localization/localization.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../../core/constants/api_endpoints.dart';
+import '../../../../core/state/currency_manager.dart';
 import '../../../../core/storage/token_storage.dart';
+import '../../../../core/storage/my_properties_storage.dart';
 import 'location_picker_page.dart';
 
 class AddPropertyPage extends StatefulWidget {
@@ -23,6 +27,8 @@ class AddPropertyPage extends StatefulWidget {
 }
 
 class _AddPropertyPageState extends State<AddPropertyPage> {
+  String _tr(String key) => AppLocalization.of(context).translate(key);
+
   final GlobalKey<FormState> _formKey =
   GlobalKey<FormState>();
 
@@ -116,190 +122,49 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
   String _propertyCondition = 'ready';
   String _selectedCurrency = 'AED';
 
-  final Map<int, Map<String, String>> _propertyTypes =
-  const <int, Map<String, String>>{
-    1: {
-      'en': 'Apartment',
-      'ar': 'شقة',
-    },
-    2: {
-      'en': 'Villa',
-      'ar': 'فيلا',
-    },
-    3: {
-      'en': 'Penthouse',
-      'ar': 'بنتهاوس',
-    },
-    4: {
-      'en': 'Townhouse',
-      'ar': 'تاون هاوس',
-    },
-    5: {
-      'en': 'House',
-      'ar': 'منزل',
-    },
-    6: {
-      'en': 'Office',
-      'ar': 'مكتب',
-    },
-    7: {
-      'en': 'Warehouse',
-      'ar': 'مستودع',
-    },
-    8: {
-      'en': 'Land',
-      'ar': 'أرض',
-    },
-    9: {
-      'en': 'Restaurant',
-      'ar': 'مطعم',
-    },
-    10: {
-      'en': 'Hotel',
-      'ar': 'فندق',
-    },
-    11: {
-      'en': 'Building',
-      'ar': 'مبنى',
-    },
-    12: {
-      'en': 'Commercial Shop',
-      'ar': 'محل تجاري',
-    },
-    13: {
-      'en': 'Clinic',
-      'ar': 'عيادة',
-    },
-    14: {
-      'en': 'School',
-      'ar': 'مدرسة',
-    },
-    15: {
-      'en': 'Showroom',
-      'ar': 'صالة عرض',
-    },
-    16: {
-      'en': 'Cafe',
-      'ar': 'مقهى',
-    },
+  static const Map<int, String> _propertyTypes = <int, String>{
+    1: 'property_type_apartment',
+    2: 'property_type_villa',
+    3: 'property_type_penthouse',
+    4: 'property_type_townhouse',
+    5: 'property_type_house',
+    6: 'property_type_office',
+    7: 'property_type_warehouse',
+    8: 'property_type_land',
+    9: 'property_type_restaurant',
+    10: 'property_type_hotel',
+    11: 'property_type_building',
+    12: 'property_type_commercial_shop',
+    13: 'property_type_clinic',
+    14: 'property_type_school',
+    15: 'property_type_showroom',
+    16: 'property_type_cafe',
   };
 
-  final List<_FeatureOption> _features =
-  const <_FeatureOption>[
-    _FeatureOption(
-      key: 'covered_parking',
-      id: 7,
-      en: 'Covered Parking',
-      ar: 'موقف سيارات مغطى',
-      icon: Icons.directions_car_filled_rounded,
-    ),
-    _FeatureOption(
-      key: 'swimming_pool',
-      id: 5,
-      en: 'Swimming Pool',
-      ar: 'مسبح',
-      icon: Icons.pool_rounded,
-    ),
-    _FeatureOption(
-      key: 'fitness_gym',
-      id: 6,
-      en: 'Fitness Gym',
-      ar: 'صالة رياضية',
-      icon: Icons.fitness_center_rounded,
-    ),
-    _FeatureOption(
-      key: 'security',
-      id: 8,
-      en: '24/7 Security',
-      ar: 'أمان 24/7',
-      icon: Icons.security_rounded,
-    ),
-    _FeatureOption(
-      key: 'balcony',
-      id: 9,
-      en: 'Balcony / Terrace',
-      ar: 'شرفة / تراس',
-      icon: Icons.balcony_rounded,
-    ),
-    _FeatureOption(
-      key: 'pet_friendly',
-      id: null,
-      en: 'Pet-Friendly',
-      ar: 'مناسب للحيوانات',
-      icon: Icons.pets_rounded,
-    ),
-    _FeatureOption(
-      key: 'central_ac',
-      id: 10,
-      en: 'Central AC',
-      ar: 'تكييف مركزي',
-      icon: Icons.ac_unit_rounded,
-    ),
-    _FeatureOption(
-      key: 'sea_view',
-      id: 15,
-      en: 'Sea / Marina View',
-      ar: 'إطلالة بحرية / مارينا',
-      icon: Icons.waves_rounded,
-    ),
-    _FeatureOption(
-      key: 'smart_home',
-      id: null,
-      en: 'Smart Home',
-      ar: 'منزل ذكي',
-      icon: Icons.home_rounded,
-    ),
-    _FeatureOption(
-      key: 'concierge',
-      id: null,
-      en: 'Concierge',
-      ar: 'كونسيرج',
-      icon: Icons.room_service_outlined,
-    ),
-    _FeatureOption(
-      key: 'maid_room',
-      id: null,
-      en: 'Maid Room',
-      ar: 'غرفة خادمة',
-      icon: Icons.cleaning_services_rounded,
-    ),
-    _FeatureOption(
-      key: 'jacuzzi',
-      id: 17,
-      en: 'Jacuzzi & Spa',
-      ar: 'جاكوزي وسبا',
-      icon: Icons.hot_tub_rounded,
-    ),
+  static const List<_FeatureOption> _features = <_FeatureOption>[
+    _FeatureOption(key: 'covered_parking', id: 7, icon: Icons.directions_car_filled_rounded),
+    _FeatureOption(key: 'swimming_pool', id: 5, icon: Icons.pool_rounded),
+    _FeatureOption(key: 'fitness_gym', id: 6, icon: Icons.fitness_center_rounded),
+    _FeatureOption(key: 'security', id: 8, icon: Icons.security_rounded),
+    _FeatureOption(key: 'balcony', id: 9, icon: Icons.balcony_rounded),
+    _FeatureOption(key: 'pet_friendly', id: null, icon: Icons.pets_rounded),
+    _FeatureOption(key: 'central_ac', id: 10, icon: Icons.ac_unit_rounded),
+    _FeatureOption(key: 'sea_view', id: 15, icon: Icons.waves_rounded),
+    _FeatureOption(key: 'smart_home', id: null, icon: Icons.home_rounded),
+    _FeatureOption(key: 'concierge', id: null, icon: Icons.room_service_outlined),
+    _FeatureOption(key: 'maid_room', id: null, icon: Icons.cleaning_services_rounded),
+    _FeatureOption(key: 'jacuzzi', id: 17, icon: Icons.hot_tub_rounded),
   ];
 
-  final List<_CurrencyOption> _currencies =
-  const <_CurrencyOption>[
-    _CurrencyOption(
-      code: 'AED',
-      en: 'AED',
-      ar: 'درهم إماراتي',
-    ),
-    _CurrencyOption(
-      code: 'USD',
-      en: 'USD',
-      ar: 'دولار أمريكي',
-    ),
-    _CurrencyOption(
-      code: 'EUR',
-      en: 'EUR',
-      ar: 'يورو',
-    ),
-    _CurrencyOption(
-      code: 'GBP',
-      en: 'GBP',
-      ar: 'جنيه إسترليني',
-    ),
+  static const List<_CurrencyOption> _currencies = <_CurrencyOption>[
+    _CurrencyOption(code: 'AED'),
+    _CurrencyOption(code: 'USD'),
+    _CurrencyOption(code: 'EUR'),
+    _CurrencyOption(code: 'GBP'),
+    _CurrencyOption(code: 'SAR'),
+    _CurrencyOption(code: 'JOD'),
+    _CurrencyOption(code: 'ILS'),
   ];
-
-  bool get _isArabic {
-    return Localizations.localeOf(context).languageCode ==
-        'ar';
-  }
 
   bool get _hasCoordinates {
     final latitude = double.tryParse(
@@ -326,6 +191,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
   @override
   void initState() {
     super.initState();
+    _selectedCurrency = CurrencyManager.instance.currency;
     _loadNeighborhoods();
   }
 
@@ -358,7 +224,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _isArabic ? 'إضافة عقار' : 'Add Property',
+          AppLocalization.of(context).translate('add_property_title'),
         ),
         leading: IconButton(
           onPressed: _handleBack,
@@ -422,32 +288,18 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
       ) {
     const count = 4;
 
-    final titles = _isArabic
-        ? const [
-      'أساسي',
-      'المواصفات',
-      'الصور',
-      'النشر',
-    ]
-        : const [
-      'Basic',
-      'Specs',
-      'Media',
-      'Publish',
+    final titles = [
+      _tr('add_basic_short'),
+      _tr('add_specs_short'),
+      _tr('add_media_short'),
+      _tr('add_publish_short'),
     ];
 
-    final subtitles = _isArabic
-        ? const [
-      'الخطوة 1',
-      'الخطوة 2',
-      'الخطوة 3',
-      'الخطوة 4',
-    ]
-        : const [
-      'Step 1',
-      'Step 2',
-      'Step 3',
-      'Step 4',
+    final subtitles = [
+      _tr('add_step_1'),
+      _tr('add_step_2'),
+      _tr('add_step_3'),
+      _tr('add_step_4'),
     ];
 
     return Container(
@@ -654,39 +506,23 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
 
     switch (_currentStep) {
       case 0:
-        title = _isArabic
-            ? 'بيانات العقار الأساسية'
-            : 'Basic Property Information';
-        subtitle = _isArabic
-            ? 'أدخلي المعلومات الأساسية للعقار.'
-            : 'Enter the basic property information.';
+        title = _tr('add_basic_property_information');
+        subtitle = _tr('add_enter_the_basic_property_information');
         break;
 
       case 1:
-        title = _isArabic
-            ? 'المواصفات والموقع'
-            : 'Specifications & Location';
-        subtitle = _isArabic
-            ? 'حددي السعر والمواصفات وموقع العقار.'
-            : 'Add pricing, specifications, and location.';
+        title = _tr('add_specifications_location');
+        subtitle = _tr('add_add_pricing_specifications_and_location');
         break;
 
       case 2:
-        title = _isArabic
-            ? 'صور العقار'
-            : 'Property Photos';
-        subtitle = _isArabic
-            ? 'صورة غلاف وخمس صور إضافية.'
-            : 'One cover photo and five additional photos.';
+        title = _tr('add_property_photos');
+        subtitle = _tr('add_one_cover_photo_and_five_additional_photos');
         break;
 
       default:
-        title = _isArabic
-            ? 'النشر والتواصل'
-            : 'Publish & Contact';
-        subtitle = _isArabic
-            ? 'أدخلي بيانات التواصل وراجعي العقار.'
-            : 'Add contact information and review the listing.';
+        title = _tr('add_publish_contact');
+        subtitle = _tr('add_add_contact_information_and_review_the_listing');
     }
 
     return Column(
@@ -741,9 +577,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
       children: [
         _buildSection(
           title:
-          _isArabic
-              ? 'نوع العرض'
-              : 'Listing Type',
+          _tr('add_listing_type'),
           icon:
           Icons.sell_outlined,
           child:
@@ -755,9 +589,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         ),
         _buildSection(
           title:
-          _isArabic
-              ? 'معلومات العقار'
-              : 'Property Information',
+          _tr('add_property_information'),
           icon:
           Icons.home_work_outlined,
           child:
@@ -767,13 +599,9 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                 controller:
                 _titleController,
                 label:
-                _isArabic
-                    ? 'عنوان العقار'
-                    : 'Property Title',
+                _tr('add_property_title'),
                 hint:
-                _isArabic
-                    ? 'مثال: شقة فاخرة في دبي مارينا'
-                    : 'Example: Luxury apartment in Dubai Marina',
+                _tr('add_example_luxury_apartment_in_dubai_marina'),
                 field:
                 'title',
                 icon:
@@ -801,13 +629,9 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                 controller:
                 _descriptionController,
                 label:
-                _isArabic
-                    ? 'الوصف'
-                    : 'Description',
+                _tr('add_description'),
                 hint:
-                _isArabic
-                    ? 'اكتبي وصفًا تفصيليًا للعقار'
-                    : 'Write a detailed property description',
+                _tr('add_write_a_detailed_property_description'),
                 field:
                 'description',
                 icon:
@@ -844,13 +668,9 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                 value:
                 'sale',
                 title:
-                _isArabic
-                    ? 'للبيع'
-                    : 'For Sale',
+                _tr('add_for_sale'),
                 subtitle:
-                _isArabic
-                    ? 'شراء العقار'
-                    : 'Buy Property',
+                _tr('add_buy_property'),
                 icon:
                 Icons.sell_outlined,
                 selected:
@@ -866,13 +686,9 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                 value:
                 'rent',
                 title:
-                _isArabic
-                    ? 'للإيجار'
-                    : 'For Rent',
+                _tr('add_for_rent'),
                 subtitle:
-                _isArabic
-                    ? 'استئجار العقار'
-                    : 'Lease Property',
+                _tr('add_lease_property'),
                 icon:
                 Icons.key_outlined,
                 selected:
@@ -892,13 +708,9 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                 value:
                 'sale',
                 title:
-                _isArabic
-                    ? 'للبيع'
-                    : 'For Sale',
+                _tr('add_for_sale'),
                 subtitle:
-                _isArabic
-                    ? 'شراء العقار'
-                    : 'Buy Property',
+                _tr('add_buy_property'),
                 icon:
                 Icons.sell_outlined,
                 selected:
@@ -917,13 +729,9 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                 value:
                 'rent',
                 title:
-                _isArabic
-                    ? 'للإيجار'
-                    : 'For Rent',
+                _tr('add_for_rent'),
                 subtitle:
-                _isArabic
-                    ? 'استئجار العقار'
-                    : 'Lease Property',
+                _tr('add_lease_property'),
                 icon:
                 Icons.key_outlined,
                 selected:
@@ -1080,6 +888,45 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
     );
   }
 
+  String _propertyTypeLabel(int typeId) {
+    const keys = <int, String>{
+      1: 'property_type_apartment',
+      2: 'property_type_villa',
+      3: 'property_type_penthouse',
+      4: 'property_type_townhouse',
+      5: 'property_type_house',
+      6: 'property_type_office',
+      7: 'property_type_warehouse',
+      8: 'property_type_land',
+      9: 'property_type_restaurant',
+      10: 'property_type_hotel',
+      11: 'property_type_building',
+      12: 'property_type_commercial_shop',
+      13: 'property_type_clinic',
+      14: 'property_type_school',
+      15: 'property_type_showroom',
+      16: 'property_type_cafe',
+    };
+    return _tr(keys[typeId] ?? 'property');
+  }
+
+  String _currencyLabel(String code) {
+    const keys = <String, String>{
+      'AED': 'currency_aed',
+      'USD': 'currency_usd',
+      'EUR': 'currency_eur',
+      'GBP': 'currency_gbp',
+      'SAR': 'currency_sar',
+      'JOD': 'currency_jod',
+      'ILS': 'currency_ils',
+    };
+    return _tr(keys[code] ?? code);
+  }
+
+  String _featureLabel(_FeatureOption feature) {
+    return _tr('add_feature_${feature.key}');
+  }
+
   Widget _buildPropertyTypeDropdown() {
     return DropdownButtonFormField<int>(
       initialValue:
@@ -1093,9 +940,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
       decoration:
       InputDecoration(
         labelText:
-        _isArabic
-            ? 'نوع العقار'
-            : 'Property Type',
+        _tr('add_property_type'),
         prefixIcon:
         const Icon(
           Icons.home_work_outlined,
@@ -1112,10 +957,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
               entry.key,
               child:
               Text(
-                entry.value[
-                _isArabic
-                    ? 'ar'
-                    : 'en']!,
+                _propertyTypeLabel(entry.key),
                 maxLines:
                 1,
                 overflow:
@@ -1147,9 +989,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
       decoration:
       InputDecoration(
         labelText:
-        _isArabic
-            ? 'حالة العقار'
-            : 'Property Condition',
+        _tr('add_property_condition'),
         prefixIcon:
         const Icon(
           Icons.verified_outlined,
@@ -1161,9 +1001,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
           'ready',
           child:
           Text(
-            _isArabic
-                ? 'جاهز'
-                : 'Ready',
+            _tr('add_ready'),
           ),
         ),
         DropdownMenuItem<String>(
@@ -1171,9 +1009,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
           'under_construction',
           child:
           Text(
-            _isArabic
-                ? 'قيد الإنشاء'
-                : 'Under Construction',
+            _tr('add_under_construction'),
           ),
         ),
         DropdownMenuItem<String>(
@@ -1181,9 +1017,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
           'off_plan',
           child:
           Text(
-            _isArabic
-                ? 'على المخطط'
-                : 'Off Plan',
+            _tr('add_off_plan'),
           ),
         ),
       ],
@@ -1209,9 +1043,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
       children: [
         _buildSection(
           title:
-          _isArabic
-              ? 'السعر'
-              : 'Price',
+          _tr('add_price'),
           icon:
           Icons.payments_outlined,
           child:
@@ -1286,9 +1118,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         ),
         _buildSection(
           title:
-          _isArabic
-              ? 'المواصفات'
-              : 'Specifications',
+          _tr('add_specifications'),
           icon:
           Icons.straighten_rounded,
           child:
@@ -1298,9 +1128,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                 controller:
                 _areaController,
                 label:
-                _isArabic
-                    ? 'المساحة (قدم²)'
-                    : 'Area (sqft)',
+                _tr('add_area_sqft'),
                 icon:
                 Icons.square_foot_rounded,
                 field:
@@ -1322,9 +1150,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                       controller:
                       _bedroomsController,
                       label:
-                      _isArabic
-                          ? 'غرف النوم'
-                          : 'Bedrooms',
+                      _tr('add_bedrooms'),
                       icon:
                       Icons.bed_outlined,
                       field:
@@ -1343,9 +1169,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                       controller:
                       _bathroomsController,
                       label:
-                      _isArabic
-                          ? 'الحمامات'
-                          : 'Bathrooms',
+                      _tr('add_bathrooms'),
                       icon:
                       Icons.bathtub_outlined,
                       field:
@@ -1365,9 +1189,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         ),
         _buildSection(
           title:
-          _isArabic
-              ? 'المميزات والخدمات'
-              : 'Amenities & Features',
+          _tr('add_amenities_features'),
           icon:
           Icons.auto_awesome_rounded,
           child:
@@ -1381,9 +1203,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         ),
         _buildSection(
           title:
-          _isArabic
-              ? 'الموقع'
-              : 'Location',
+          _tr('add_location'),
           icon:
           Icons.location_on_outlined,
           child:
@@ -1400,9 +1220,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
       controller:
       _priceController,
       label:
-      _isArabic
-          ? 'السعر'
-          : 'Price',
+      _tr('add_price'),
       icon:
       Icons.payments_outlined,
       field:
@@ -1438,9 +1256,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
       decoration:
       InputDecoration(
         labelText:
-        _isArabic
-            ? 'العملة'
-            : 'Currency',
+        _tr('add_currency'),
         prefixIcon:
         const Icon(
           Icons.currency_exchange_rounded,
@@ -1457,9 +1273,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
               currency.code,
               child:
               Text(
-                _isArabic
-                    ? currency.ar
-                    : currency.en,
+                _currencyLabel(currency.code),
                 maxLines:
                 1,
                 overflow:
@@ -1535,9 +1349,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
             Expanded(
               child:
               Text(
-                _isArabic
-                    ? 'جاري تحويل السعر إلى الدرهم...'
-                    : 'Converting price to AED...',
+                _tr('add_converting_price_to_aed'),
               ),
             ),
           ],
@@ -1591,9 +1403,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
               CrossAxisAlignment.start,
               children: [
                 Text(
-                  _isArabic
-                      ? 'السعر بالدرهم'
-                      : 'Price in AED',
+                  _tr('add_price_in_aed'),
                   style:
                   theme.textTheme.bodySmall,
                 ),
@@ -1770,9 +1580,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
             Expanded(
               child:
               Text(
-                _isArabic
-                    ? 'اختاري المميزات الموجودة في العقار.'
-                    : 'Select the available property features.',
+                _tr('add_select_the_available_property_features'),
                 style:
                 theme.textTheme.bodySmall,
               ),
@@ -1800,9 +1608,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
               ),
               child:
               Text(
-                _isArabic
-                    ? '${_selectedFeatures.length} محددة'
-                    : '${_selectedFeatures.length} selected',
+                _tr('add_selectedfeatures_length_selected'),
                 style:
                 theme.textTheme.labelSmall?.copyWith(
                   color:
@@ -1956,9 +1762,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                         Expanded(
                           child:
                           Text(
-                            _isArabic
-                                ? feature.ar
-                                : feature.en,
+                            _featureLabel(feature),
                             maxLines:
                             1,
                             overflow:
@@ -2015,13 +1819,9 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
           controller:
           _addressController,
           label:
-          _isArabic
-              ? 'العنوان'
-              : 'Address',
+          _tr('add_address'),
           hint:
-          _isArabic
-              ? 'أدخلي العنوان'
-              : 'Enter property address',
+          _tr('add_enter_property_address'),
           field:
           'address_line_1',
           icon:
@@ -2037,13 +1837,9 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
           controller:
           _additionalAddressController,
           label:
-          _isArabic
-              ? 'عنوان إضافي'
-              : 'Additional Address',
+          _tr('add_additional_address'),
           hint:
-          _isArabic
-              ? 'تفاصيل إضافية'
-              : 'Additional details',
+          _tr('add_additional_details'),
           field:
           'address_line_2',
           icon:
@@ -2057,13 +1853,9 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
           controller:
           _buildingController,
           label:
-          _isArabic
-              ? 'اسم المبنى'
-              : 'Building Name',
+          _tr('add_building_name'),
           hint:
-          _isArabic
-              ? 'اسم المبنى'
-              : 'Building name',
+          _tr('add_building_name_2a0f3b'),
           field:
           'building_name',
           icon:
@@ -2088,9 +1880,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
             ),
             label:
             Text(
-              _isArabic
-                  ? 'تحديد الموقع على الخريطة'
-                  : 'Select Location on Map',
+              _tr('add_select_location_on_map'),
             ),
             style:
             OutlinedButton.styleFrom(
@@ -2156,9 +1946,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
               .centerStart,
           child:
           Text(
-            _isArabic
-                ? 'الإحداثيات يتم تحديدها من الخريطة فقط.'
-                : 'Coordinates are selected from the map.',
+            _tr('add_coordinates_are_selected_from_the_map'),
             style:
             theme.textTheme.bodySmall?.copyWith(
               color:
@@ -2183,9 +1971,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         decoration:
         InputDecoration(
           labelText:
-          _isArabic
-              ? 'المنطقة'
-              : 'Neighborhood / Area',
+          _tr('add_neighborhood_area'),
           prefixIcon:
           const Icon(
             Icons.map_outlined,
@@ -2245,9 +2031,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
               child:
               Text(
                 _neighborhoodLoadError ??
-                    (_isArabic
-                        ? 'لا توجد مناطق متاحة.'
-                        : 'No neighborhoods available.'),
+                    (_tr('add_no_neighborhoods_available')),
               ),
             ),
             IconButton(
@@ -2274,9 +2058,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
           (_) {
         if (_selectedNeighborhoodId ==
             null) {
-          return _isArabic
-              ? 'اختاري المنطقة'
-              : 'Select a neighborhood';
+          return _tr('add_select_a_neighborhood');
         }
 
         return _serverError(
@@ -2286,17 +2068,13 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
       decoration:
       InputDecoration(
         labelText:
-        _isArabic
-            ? 'المنطقة'
-            : 'Neighborhood / Area',
+        _tr('add_neighborhood_area'),
         prefixIcon:
         const Icon(
           Icons.map_outlined,
         ),
         helperText:
-        _isArabic
-            ? 'اختاري المنطقة من البيانات المتاحة'
-            : 'Choose a location from the available data',
+        _tr('add_choose_a_location_from_the_available_data'),
       ),
       items:
       _neighborhoods
@@ -2349,9 +2127,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         validator:
             (_) {
           if (!_hasCoordinates) {
-            return _isArabic
-                ? 'اختاري الموقع من الخريطة'
-                : 'Select the location from the map';
+            return _tr('add_select_the_location_from_the_map');
           }
 
           return _serverError(
@@ -2415,9 +2191,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
 
           if (required &&
               text.isEmpty) {
-            return _isArabic
-                ? 'هذا الحقل مطلوب'
-                : 'This field is required';
+            return _tr('add_this_field_is_required');
           }
 
           if (minLength !=
@@ -2425,9 +2199,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
               text.isNotEmpty &&
               text.length <
                   minLength) {
-            return _isArabic
-                ? 'أدخلي تفاصيل أكثر'
-                : 'Please enter more details';
+            return _tr('add_please_enter_more_details');
           }
 
           return _serverError(
@@ -2501,9 +2273,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
 
           if (required &&
               text.isEmpty) {
-            return _isArabic
-                ? 'هذا الحقل مطلوب'
-                : 'This field is required';
+            return _tr('add_this_field_is_required');
           }
 
           if (text.isEmpty) {
@@ -2523,16 +2293,12 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
 
           if (number ==
               null) {
-            return _isArabic
-                ? 'أدخلي رقمًا صحيحًا'
-                : 'Enter a valid number';
+            return _tr('add_enter_a_valid_number');
           }
 
           if (number <=
               0) {
-            return _isArabic
-                ? 'يجب أن تكون القيمة أكبر من صفر'
-                : 'Value must be greater than zero';
+            return _tr('add_value_must_be_greater_than_zero');
           }
 
           return _serverError(
@@ -2557,9 +2323,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
       ) {
     return _buildSection(
       title:
-      _isArabic
-          ? 'صور العقار'
-          : 'Property Photos',
+      _tr('add_property_photos'),
       icon:
       Icons.photo_library_outlined,
       child:
@@ -2598,9 +2362,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                   CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _isArabic
-                          ? 'صورة الغلاف + 5 صور'
-                          : '1 Cover + 5 Photos',
+                      _tr('add_1_cover_5_photos'),
                       style:
                       theme.textTheme.titleSmall?.copyWith(
                         fontWeight:
@@ -2612,9 +2374,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                       4,
                     ),
                     Text(
-                      _isArabic
-                          ? 'الصور الإضافية غير مرتبطة بنوع معين.'
-                          : 'Additional photos are not tied to a specific type.',
+                      _tr('add_additional_photos_are_not_tied_to_a_specific_type'),
                       style:
                       theme.textTheme.bodySmall,
                     ),
@@ -2667,9 +2427,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
             18,
           ),
           Text(
-            _isArabic
-                ? 'الصور الإضافية'
-                : 'Additional Photos',
+            _tr('add_additional_photos'),
             style:
             theme.textTheme.titleSmall?.copyWith(
               fontWeight:
@@ -2714,9 +2472,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
             10,
           ),
           Text(
-            _isArabic
-                ? 'أضيفي أي 5 صور مناسبة للعقار.'
-                : 'Add any 5 photos suitable for the property.',
+            _tr('add_add_any_5_photos_suitable_for_the_property'),
             style:
             theme.textTheme.bodySmall?.copyWith(
               color:
@@ -2787,9 +2543,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                 10,
               ),
               Text(
-                _isArabic
-                    ? 'إضافة صورة الغلاف'
-                    : 'Upload Cover Photo',
+                _tr('add_upload_cover_photo'),
                 style:
                 theme.textTheme.titleSmall?.copyWith(
                   fontWeight:
@@ -2801,9 +2555,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                 4,
               ),
               Text(
-                _isArabic
-                    ? 'الصورة الرئيسية للعقار'
-                    : 'Main property photo',
+                _tr('add_main_property_photo'),
                 style:
                 theme.textTheme.bodySmall,
               ),
@@ -2858,9 +2610,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
             ),
             child:
             Text(
-              _isArabic
-                  ? 'الغلاف'
-                  : 'Cover',
+              _tr('add_cover'),
               style:
               TextStyle(
                 color:
@@ -2973,9 +2723,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                 8,
               ),
               Text(
-                _isArabic
-                    ? 'صورة $index'
-                    : 'Photo $index',
+                _tr('add_photo_index'),
                 style:
                 theme.textTheme.titleSmall?.copyWith(
                   fontWeight:
@@ -2983,9 +2731,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                 ),
               ),
               Text(
-                _isArabic
-                    ? 'إضافة'
-                    : 'Add',
+                _tr('add_add'),
                 style:
                 theme.textTheme.bodySmall,
               ),
@@ -3041,9 +2787,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
             ),
             child:
             Text(
-              _isArabic
-                  ? 'صورة $index'
-                  : 'Photo $index',
+              _tr('add_photo_index'),
               style:
               const TextStyle(
                 color:
@@ -3160,9 +2904,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
       children: [
         _buildSection(
           title:
-          _isArabic
-              ? 'معلومات التواصل'
-              : 'Contact Information',
+          _tr('add_contact_information'),
           icon:
           Icons.contact_phone_outlined,
           child:
@@ -3176,9 +2918,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         ),
         _buildSection(
           title:
-          _isArabic
-              ? 'مراجعة العقار'
-              : 'Property Review',
+          _tr('add_property_review'),
           icon:
           Icons.fact_check_outlined,
           child:
@@ -3196,9 +2936,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
     return Column(
       children: [
         Text(
-          _isArabic
-              ? 'أضيفي رقم الجوال أو WhatsApp للتواصل مع المهتمين بالعقار.'
-              : 'Add a phone number or WhatsApp for property inquiries.',
+          _tr('add_add_a_phone_number_or_whatsapp_for_property_inquiries'),
           style:
           theme.textTheme.bodyMedium,
         ),
@@ -3210,9 +2948,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
           controller:
           _phoneController,
           label:
-          _isArabic
-              ? 'رقم الجوال'
-              : 'Phone Number',
+          _tr('add_phone_number'),
           hint:
           '+971 50 123 4567',
           field:
@@ -3230,9 +2966,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
           controller:
           _whatsappController,
           label:
-          _isArabic
-              ? 'رقم WhatsApp'
-              : 'WhatsApp Number',
+          _tr('add_whatsapp_number'),
           hint:
           '+971 50 123 4567',
           field:
@@ -3252,9 +2986,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
               .centerStart,
           child:
           Text(
-            _isArabic
-                ? 'طرق التواصل'
-                : 'Contact Methods',
+            _tr('add_contact_methods'),
             style:
             theme.textTheme.titleSmall?.copyWith(
               fontWeight:
@@ -3271,9 +3003,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
           method:
           'phone',
           title:
-          _isArabic
-              ? 'اتصال هاتفي'
-              : 'Phone Call',
+          _tr('add_phone_call'),
           icon:
           Icons.phone_rounded,
         ),
@@ -3337,9 +3067,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                   CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _isArabic
-                          ? 'محادثة داخل التطبيق'
-                          : 'In-app Chat',
+                      _tr('add_in_app_chat'),
                       style:
                       theme.textTheme.bodyMedium?.copyWith(
                         fontWeight:
@@ -3347,9 +3075,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                       ),
                     ),
                     Text(
-                      _isArabic
-                          ? 'قريبًا'
-                          : 'Coming Soon',
+                      _tr('add_coming_soon'),
                       style:
                       theme.textTheme.bodySmall,
                     ),
@@ -3476,11 +3202,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
   Widget _buildPropertySummary(
       ThemeData theme,
       ) {
-    final propertyType =
-    _propertyTypes[_typeId]?[
-    _isArabic
-        ? 'ar'
-        : 'en'];
+    final propertyType = _propertyTypeLabel(_typeId);
 
     final price =
     _aedPrice != null
@@ -3491,9 +3213,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
       children: [
         _summaryRow(
           theme,
-          _isArabic
-              ? 'العنوان'
-              : 'Title',
+          _tr('add_title'),
           _titleController.text
               .trim()
               .isEmpty
@@ -3503,51 +3223,36 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         ),
         _summaryRow(
           theme,
-          _isArabic
-              ? 'نوع العرض'
-              : 'Listing Type',
+          _tr('add_listing_type'),
           _listingType ==
               'sale'
-              ? (_isArabic
-              ? 'للبيع'
-              : 'For Sale')
-              : (_isArabic
-              ? 'للإيجار'
-              : 'For Rent'),
+              ? (_tr('add_for_sale'))
+              : (_tr('add_for_rent')),
         ),
         _summaryRow(
           theme,
-          _isArabic
-              ? 'نوع العقار'
-              : 'Property Type',
-          propertyType ??
-              '-',
+          _tr('add_property_type'),
+          propertyType,
         ),
         _summaryRow(
           theme,
-          _isArabic
-              ? 'السعر'
-              : 'Price',
+          _tr('add_price'),
           price.isEmpty
               ? '-'
               : price,
         ),
         _summaryRow(
           theme,
-          _isArabic
-              ? 'المساحة'
-              : 'Area',
+          _tr('add_area'),
           _areaController.text
               .trim()
               .isEmpty
               ? '-'
-              : '${_areaController.text.trim()} sqft',
+              : '${_areaController.text.trim()} ${_tr('area_unit')}',
         ),
         _summaryRow(
           theme,
-          _isArabic
-              ? 'غرف النوم'
-              : 'Bedrooms',
+          _tr('add_bedrooms'),
           _bedroomsController
               .text
               .trim()
@@ -3559,9 +3264,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         ),
         _summaryRow(
           theme,
-          _isArabic
-              ? 'الحمامات'
-              : 'Bathrooms',
+          _tr('add_bathrooms'),
           _bathroomsController
               .text
               .trim()
@@ -3573,16 +3276,12 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         ),
         _summaryRow(
           theme,
-          _isArabic
-              ? 'الصور'
-              : 'Photos',
+          _tr('add_photos'),
           '${(_coverImagePath != null ? 1 : 0) + _detailImages.length}',
         ),
         _summaryRow(
           theme,
-          _isArabic
-              ? 'التواصل'
-              : 'Contact',
+          _tr('add_contact'),
           _hasContact
               ? _selectedContactMethods
               .map(
@@ -4164,9 +3863,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         price <=
             0) {
       _showError(
-        _isArabic
-            ? 'أدخلي سعرًا صحيحًا.'
-            : 'Enter a valid price.',
+        _tr('add_enter_a_valid_price'),
       );
 
       _scrollToField(
@@ -4180,9 +3877,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         area <=
             0) {
       _showError(
-        _isArabic
-            ? 'أدخلي مساحة صحيحة.'
-            : 'Enter a valid area.',
+        _tr('add_enter_a_valid_area'),
       );
 
       _scrollToField(
@@ -4196,9 +3891,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         bedrooms <
             0) {
       _showError(
-        _isArabic
-            ? 'أدخلي عدد غرف صحيح.'
-            : 'Enter a valid bedrooms value.',
+        _tr('add_enter_a_valid_bedrooms_value'),
       );
 
       _scrollToField(
@@ -4212,9 +3905,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         bathrooms <
             0) {
       _showError(
-        _isArabic
-            ? 'أدخلي عدد حمامات صحيح.'
-            : 'Enter a valid bathrooms value.',
+        _tr('add_enter_a_valid_bathrooms_value'),
       );
 
       _scrollToField(
@@ -4227,9 +3918,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
     if (_selectedNeighborhoodId ==
         null) {
       _showError(
-        _isArabic
-            ? 'اختاري المنطقة.'
-            : 'Select a neighborhood.',
+        _tr('add_select_a_neighborhood_c6779b'),
       );
 
       _scrollToField(
@@ -4243,9 +3932,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         .trim()
         .isEmpty) {
       _showError(
-        _isArabic
-            ? 'أدخلي العنوان.'
-            : 'Enter the address.',
+        _tr('add_enter_the_address'),
       );
 
       _scrollToField(
@@ -4257,9 +3944,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
 
     if (!_hasCoordinates) {
       _showError(
-        _isArabic
-            ? 'حددي الموقع من الخريطة.'
-            : 'Select the location from the map.',
+        _tr('add_select_the_location_from_the_map_382ec8'),
       );
 
       _scrollToField(
@@ -4276,9 +3961,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
     if (_coverImagePath ==
         null) {
       _showError(
-        _isArabic
-            ? 'أضيفي صورة الغلاف.'
-            : 'Add the cover photo.',
+        _tr('add_add_the_cover_photo'),
       );
 
       _scrollToField(
@@ -4291,9 +3974,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
     if (_detailImages.length <
         5) {
       _showError(
-        _isArabic
-            ? 'أضيفي 5 صور إضافية.'
-            : 'Add 5 additional photos.',
+        _tr('add_add_5_additional_photos'),
       );
 
       _scrollToField(
@@ -4309,9 +3990,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
   bool _validatePublishStep() {
     if (!_hasContact) {
       _showError(
-        _isArabic
-            ? 'أضيفي رقم الجوال أو WhatsApp.'
-            : 'Add a phone number or WhatsApp.',
+        _tr('add_add_a_phone_number_or_whatsapp'),
       );
 
       _scrollToField(
@@ -4329,9 +4008,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         ).length <
             7) {
       _showError(
-        _isArabic
-            ? 'رقم الجوال غير صحيح.'
-            : 'Phone number is invalid.',
+        _tr('add_phone_number_is_invalid'),
       );
 
       _scrollToField(
@@ -4349,9 +4026,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         ).length <
             7) {
       _showError(
-        _isArabic
-            ? 'رقم WhatsApp غير صحيح.'
-            : 'WhatsApp number is invalid.',
+        _tr('add_whatsapp_number_is_invalid'),
       );
 
       _scrollToField(
@@ -4573,9 +4248,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         _detailImages.length <
             5) {
       _showError(
-        _isArabic
-            ? 'تحققي من بيانات العقار.'
-            : 'Please check the property data.',
+        _tr('add_please_check_the_property_data'),
       );
 
       return;
@@ -4589,9 +4262,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
       if (!mounted ||
           _aedPrice == null) {
         _showError(
-          _isArabic
-              ? 'تعذر تحويل السعر إلى الدرهم.'
-              : 'Unable to convert price to AED.',
+          _tr('add_unable_to_convert_price_to_aed'),
         );
 
         return;
@@ -4612,9 +4283,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
           null ||
           token.isEmpty) {
         throw Exception(
-          _isArabic
-              ? 'يجب تسجيل الدخول أولًا.'
-              : 'Please login first.',
+          _tr('add_please_login_first'),
         );
       }
 
@@ -4738,24 +4407,16 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                 .trim();
       }
 
-      for (final feature
-      in _features) {
-        if (!_selectedFeatures
-            .contains(
-          feature.key,
-        )) {
-          continue;
-        }
+      final selectedFeatureIds = _features
+          .where((feature) => _selectedFeatures.contains(feature.key))
+          .map((feature) => feature.id)
+          .whereType<int>()
+          .toList();
 
-        if (feature.id ==
-            null) {
-          continue;
-        }
-
-        request.fields[
-        'features[]'] =
-            feature.id
-                .toString();
+      for (var index = 0; index < selectedFeatureIds.length; index++) {
+        // PHP/Laravel turns features[0], features[1], ... into an array.
+        request.fields['features[$index]'] =
+            selectedFeatureIds[index].toString();
       }
 
       request.files.add(
@@ -4811,20 +4472,28 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         }
 
         setState(() {
-          _isSubmitting =
-          false;
+          _isSubmitting = false;
         });
 
-        await _showSuccessDialog();
+        // Return immediately with the created property id. The parent can
+        // fetch the new property and show it without waiting for another
+        // home request.
+        final rawData = data['data'];
+        final dataMap = rawData is Map<String, dynamic> ? rawData : null;
+        final propertyValue = data['property_id'] ??
+            data['propertyId'] ??
+            dataMap?['property_id'] ??
+            dataMap?['id'] ??
+            (dataMap?['property'] is Map<String, dynamic>
+                ? (dataMap?['property'] as Map<String, dynamic>)['id']
+                : null);
+        final propertyId = int.tryParse(propertyValue?.toString() ?? '');
 
-        if (!mounted) {
-          return;
+        if (propertyId != null) {
+          await MyPropertiesStorage.remember(propertyId);
         }
-
-        Navigator.of(
-          context,
-        ).pop(true);
-
+        if (!mounted) return;
+        Navigator.of(context).pop(propertyId ?? true);
         return;
       }
 
@@ -4842,9 +4511,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         }
 
         _showError(
-          _isArabic
-              ? 'تحققي من الحقول المحددة.'
-              : 'Please check the highlighted fields.',
+          _tr('add_please_check_the_highlighted_fields'),
         );
 
         return;
@@ -4853,9 +4520,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
       if (response.statusCode ==
           401) {
         throw Exception(
-          _isArabic
-              ? 'انتهت جلسة تسجيل الدخول.'
-              : 'Your login session has expired.',
+          _tr('add_your_login_session_has_expired'),
         );
       }
 
@@ -4864,9 +4529,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
             ?.toString() ??
             data['error']
                 ?.toString() ??
-            (_isArabic
-                ? 'حدث خطأ أثناء إضافة العقار.'
-                : 'Failed to add property.'),
+            (_tr('add_failed_to_add_property')),
       );
     } catch (error) {
       if (!mounted) {
@@ -4991,71 +4654,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
     }
   }
 
-  Future<void>
-  _showSuccessDialog() async {
-    final theme =
-    Theme.of(context);
 
-    await showDialog<void>(
-      context:
-      context,
-      barrierDismissible:
-      false,
-      builder:
-          (dialogContext) {
-        return AlertDialog(
-          icon:
-          Icon(
-            Icons
-                .check_circle_rounded,
-            color:
-            theme
-                .colorScheme
-                .primary,
-            size:
-            55,
-          ),
-          title:
-          Text(
-            _isArabic
-                ? 'تمت إضافة العقار'
-                : 'Property Added',
-            textAlign:
-            TextAlign.center,
-          ),
-          content:
-          Text(
-            _isArabic
-                ? 'تم حفظ بيانات العقار بنجاح.'
-                : 'The property was added successfully.',
-            textAlign:
-            TextAlign.center,
-          ),
-          actions: [
-            SizedBox(
-              width:
-              double.infinity,
-              child:
-              FilledButton(
-                onPressed:
-                    () {
-                  Navigator.of(
-                    dialogContext,
-                  ).pop();
-                },
-                child:
-                Text(
-                  _isArabic
-                      ? 'تم'
-                      : 'Done',
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   Widget _buildBottomBar(
       ThemeData theme,
@@ -5127,9 +4726,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                   ),
                   label:
                   Text(
-                    _isArabic
-                        ? 'السابق'
-                        : 'Back',
+                    _tr('add_back'),
                   ),
                   style:
                   OutlinedButton.styleFrom(
@@ -5185,12 +4782,8 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                 label:
                 Text(
                   isLast
-                      ? (_isArabic
-                      ? 'نشر العقار'
-                      : 'Publish Property')
-                      : (_isArabic
-                      ? 'التالي'
-                      : 'Continue'),
+                      ? (_tr('add_publish_property'))
+                      : (_tr('add_continue')),
                 ),
                 style:
                 FilledButton.styleFrom(
@@ -5271,26 +4864,16 @@ class _FeatureOption {
   const _FeatureOption({
     required this.key,
     required this.id,
-    required this.en,
-    required this.ar,
     required this.icon,
   });
 
   final String key;
   final int? id;
-  final String en;
-  final String ar;
   final IconData icon;
 }
 
 class _CurrencyOption {
-  const _CurrencyOption({
-    required this.code,
-    required this.en,
-    required this.ar,
-  });
+  const _CurrencyOption({required this.code});
 
   final String code;
-  final String en;
-  final String ar;
 }

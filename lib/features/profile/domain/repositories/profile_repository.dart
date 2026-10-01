@@ -20,4 +20,9 @@ abstract class ProfileRepository {
   Future<ProfileModel> uploadAvatar(
       String filePath,
       );
+
+  Future<ProfileModel> updateLocation({
+    required double latitude,
+    required double longitude,
+  });
 }

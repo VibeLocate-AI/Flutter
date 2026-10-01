@@ -3,12 +3,14 @@ import 'package:flutter/foundation.dart';
 import '../../core/utils/device_identity.dart';
 import 'data/datasources/auth_remote_data_source.dart';
 import 'data/datasources/google_auth_data_source.dart';
+import 'data/models/register_request_model.dart';
 import 'data/repositories/auth_repository_impl.dart';
 import 'domain/usecases/forgot_password.dart';
 import 'domain/usecases/login.dart';
 import 'domain/usecases/logout.dart';
 import 'domain/usecases/refresh_token.dart';
 import 'domain/usecases/register.dart';
+import 'domain/usecases/remember_me.dart';
 import 'domain/usecases/resend_verification.dart';
 import 'domain/usecases/reset_password.dart';
 import 'domain/usecases/verify_email.dart';
@@ -38,6 +40,29 @@ class AuthDependencies {
 
   static final Register register =
   Register(repository);
+  static Future<void> registerAgent({
+    required String firstName,
+    required String lastName,
+    required String city,
+    required String country,
+    required String email,
+    required String phone,
+    required String password,
+    required String passwordConfirmation,
+    required String agencyName,
+    required String licenseNumber,
+  }) async {
+    await remoteDataSource.registerAgent(
+      request: RegisterRequestModel(
+        firstName: firstName, lastName: lastName, city: city, country: country,
+        email: email, phone: phone, password: password,
+        passwordConfirmation: passwordConfirmation, roleSlug: 'agent',
+      ),
+      agencyName: agencyName,
+      licenseNumber: licenseNumber,
+    );
+  }
+
 
   static final VerifyEmail verifyEmail =
   VerifyEmail(repository);
@@ -56,6 +81,9 @@ class AuthDependencies {
 
   static final Logout logout =
   Logout(repository);
+
+  static final RememberMe rememberMe =
+  RememberMe(repository);
 
   static Future<void> loginWithGoogle() async {
     final idToken =

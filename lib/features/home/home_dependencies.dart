@@ -8,10 +8,6 @@ import 'domain/usecases/get_home.dart';
 class HomeDependencies {
   HomeDependencies._();
 
-  // =========================================================
-  // HOME
-  // =========================================================
-
   static final HomeRemoteDataSource remoteDataSource =
   HomeRemoteDataSourceImpl();
 
@@ -23,24 +19,14 @@ class HomeDependencies {
   static final GetHome getHome =
   GetHome(repository);
 
-  // =========================================================
-  // AI SEARCH
-  // =========================================================
-
-  static final AiSearchRemoteDataSource
-  aiSearchRemoteDataSource =
+  static final AiSearchRemoteDataSource aiSearchRemoteDataSource =
   AiSearchRemoteDataSourceImpl();
 
-  static final AiSearchRepositoryImpl
-  aiSearchRepository =
+  static final AiSearchRepositoryImpl aiSearchRepository =
   AiSearchRepositoryImpl(
-    remoteDataSource:
-    aiSearchRemoteDataSource,
+    remoteDataSource: aiSearchRemoteDataSource,
   );
 
-  static final AiContextualSearch
-  aiContextualSearch =
-  AiContextualSearch(
-    aiSearchRepository,
-  );
+  static final AiContextualSearch aiContextualSearch =
+  AiContextualSearch(aiSearchRepository);
 }

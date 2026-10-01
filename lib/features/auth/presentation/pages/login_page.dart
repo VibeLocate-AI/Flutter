@@ -5,6 +5,7 @@ import '../../../../app/app_router.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/localization/localization.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/storage/token_storage.dart';
 import '../../../../core/utils/device_identity.dart';
 import '../../auth_dependencies.dart';
 import '../widgets/auth_header.dart';
@@ -31,6 +32,7 @@ class _LoginPageState extends State<LoginPage> {
   TextEditingController();
 
   bool _obscurePassword = true;
+  bool _rememberMe = false;
   bool _isLoading = false;
 
   @override
@@ -110,6 +112,13 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _routeAfterLogin() async {
+    final role = (await TokenStorage.getRole() ?? '').trim().toLowerCase();
+    if (!mounted) return;
+    final target = role == 'agent' ? AppRouter.agent : AppRouter.home;
+    Navigator.pushNamedAndRemoveUntil(context, target, (route) => false);
+  }
+
   Future<void> _login() async {
     FocusScope.of(context).unfocus();
 
@@ -138,20 +147,29 @@ class _LoginPageState extends State<LoginPage> {
         _emailController.text.trim(),
         password:
         _passwordController.text,
-        rememberMe: false,
+        rememberMe: _rememberMe,
         deviceUuid: deviceUuid,
         deviceType: deviceType,
       );
+
+      if (_rememberMe) {
+        final refreshToken =
+        await TokenStorage.getRefreshToken();
+
+        if (refreshToken != null &&
+            refreshToken.isNotEmpty) {
+          await AuthDependencies.rememberMe(
+            remember: true,
+            refreshToken: refreshToken,
+          );
+        }
+      }
 
       if (!mounted) {
         return;
       }
 
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        AppRouter.home,
-            (route) => false,
-      );
+      await _routeAfterLogin();
     } on ApiException catch (e) {
       if (!mounted) {
         return;
@@ -234,11 +252,7 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        AppRouter.home,
-            (route) => false,
-      );
+      await _routeAfterLogin();
     } on ApiException catch (e) {
       debugPrint(
         'GOOGLE LOGIN API ERROR: ${e.message}',
@@ -441,7 +455,60 @@ class _LoginPageState extends State<LoginPage> {
                     ),
 
                     const SizedBox(
-                      height: 12,
+                      height: 10,
+                    ),
+
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: Checkbox(
+                            value: _rememberMe,
+                            activeColor:
+                            Theme.of(context).colorScheme.primary,
+                            checkColor:
+                            Theme.of(context).colorScheme.onPrimary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                              BorderRadius.circular(5),
+                            ),
+                            onChanged: _isLoading
+                                ? null
+                                : (value) {
+                              setState(() {
+                                _rememberMe =
+                                    value ?? false;
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: _isLoading
+                              ? null
+                              : () {
+                            setState(() {
+                              _rememberMe =
+                              !_rememberMe;
+                            });
+                          },
+                          child: Text(
+                            localization.translate(
+                              'remember_me',
+                            ),
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(
+                      height: 8,
                     ),
 
                     Align(

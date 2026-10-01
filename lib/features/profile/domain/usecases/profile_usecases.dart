@@ -58,6 +58,24 @@ class CompleteProfile {
   }
 }
 
+class UpdateProfileLocation {
+  const UpdateProfileLocation(
+      this.repository,
+      );
+
+  final ProfileRepository repository;
+
+  Future<ProfileModel> call({
+    required double latitude,
+    required double longitude,
+  }) {
+    return repository.updateLocation(
+      latitude: latitude,
+      longitude: longitude,
+    );
+  }
+}
+
 class UploadAvatar {
   const UploadAvatar(
       this.repository,

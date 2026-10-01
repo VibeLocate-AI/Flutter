@@ -11,14 +11,15 @@ class AiSearchRepositoryImpl
   final AiSearchRemoteDataSource remoteDataSource;
 
   @override
-  Future<AiSearchResponseModel> search(
-      String query,
-      ) async {
-    final response =
-    await remoteDataSource.search(query);
+  Future<AiSearchResponseModel> search(String query) async {
+    final response = await remoteDataSource.search(query);
 
-    return AiSearchResponseModel.fromJson(
-      response,
-    );
+    // The Laravel endpoint returns the AI understanding and properties at
+    // the top level. This also accepts a future {data: {...}} envelope.
+    final data = response['data'] is Map<String, dynamic>
+        ? response['data'] as Map<String, dynamic>
+        : response;
+
+    return AiSearchResponseModel.fromJson(data);
   }
 }

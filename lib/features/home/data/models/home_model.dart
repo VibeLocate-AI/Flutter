@@ -10,7 +10,7 @@ class HomeModel {
     required this.recommendationMode,
     required this.userLocation,
     required this.recommendedProperties,
-    required this.topAgent,
+    required this.topAgents,
     required this.properties,
   });
 
@@ -26,33 +26,43 @@ class HomeModel {
 
   final List<PropertyModel> recommendedProperties;
 
-  final TopAgentModel? topAgent;
+  final List<TopAgentModel> topAgents;
 
   final List<PropertyModel> properties;
 
-  factory HomeModel.fromJson(Map<String, dynamic> json) {
+  factory HomeModel.fromJson(
+      Map<String, dynamic> json,
+      ) {
     return HomeModel(
-      total: int.tryParse(json['total']?.toString() ?? '') ?? 0,
+      total: _toInt(json['total']),
+
       popularAreas: _parseList(
         json['popular_areas'],
         PopularAreaModel.fromJson,
       ),
+
       featuredProperties: _parseList(
         json['featured_properties'],
         PropertyModel.fromJson,
       ),
+
       recommendationMode:
-      json['recommendation_mode']?.toString() ?? 'recommended',
-      userLocation: json['user_location'],
+      json['recommendation_mode']?.toString() ??
+          'recommended',
+
+      userLocation:
+      json['user_location'],
+
       recommendedProperties: _parseList(
         json['recommended_properties'],
         PropertyModel.fromJson,
       ),
-      topAgent: json['top_agent'] is Map<String, dynamic>
-          ? TopAgentModel.fromJson(
-        json['top_agent'] as Map<String, dynamic>,
-      )
-          : null,
+
+      topAgents: _parseList(
+        json['top_agents'],
+        TopAgentModel.fromJson,
+      ),
+
       properties: _parseList(
         json['properties'],
         PropertyModel.fromJson,
@@ -60,11 +70,24 @@ class HomeModel {
     );
   }
 
+  static int _toInt(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+
+    return int.tryParse(
+      value?.toString() ?? '',
+    ) ??
+        0;
+  }
+
   static List<T> _parseList<T>(
       dynamic value,
       T Function(Map<String, dynamic>) parser,
       ) {
-    if (value is! List) return const [];
+    if (value is! List) {
+      return const [];
+    }
 
     return value
         .whereType<Map<String, dynamic>>()

@@ -441,6 +441,15 @@ class _RegisterPageState extends State<RegisterPage> {
                 _passwordController.text;
 
     return Scaffold(
+      appBar: AppBar(
+        actions: [
+          TextButton.icon(
+            onPressed: () => Navigator.pushReplacementNamed(context, AppRouter.agentRegister),
+            icon: const Icon(Icons.business_center_outlined, size: 18),
+            label: Text('Agent'),
+          ),
+        ],
+      ),
       backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(

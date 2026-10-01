@@ -67,6 +67,22 @@ class ProfileRepositoryImpl
   }
 
   @override
+  Future<ProfileModel> updateLocation({
+    required double latitude,
+    required double longitude,
+  }) async {
+    final response =
+        await remoteDataSource.updateLocation(
+      latitude: latitude,
+      longitude: longitude,
+    );
+
+    return ProfileModel.fromJson(
+      _extractData(response),
+    );
+  }
+
+  @override
   Future<ProfileModel> uploadAvatar(
       String filePath,
       ) async {

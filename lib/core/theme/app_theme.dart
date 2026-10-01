@@ -16,7 +16,7 @@ abstract final class AppTheme {
       colorScheme: const ColorScheme.light(
         primary: AppColors.navyPrimary,
         onPrimary: AppColors.white,
-        secondary: AppColors.blueAccent,
+        secondary: AppColors.secondary,
         onSecondary: AppColors.white,
         surface: AppColors.lightSurface,
         onSurface: AppColors.lightTextPrimary,
@@ -31,9 +31,12 @@ abstract final class AppTheme {
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.lightSurface,
         foregroundColor: AppColors.lightTextPrimary,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
+        toolbarHeight: 64,
       ),
 
       cardTheme: CardThemeData(
@@ -166,7 +169,7 @@ abstract final class AppTheme {
 
       bottomNavigationBarTheme:
       const BottomNavigationBarThemeData(
-        backgroundColor: AppColors.lightSurface,
+        backgroundColor: AppColors.navigationLight,
         selectedItemColor: AppColors.navyPrimary,
         unselectedItemColor: AppColors.lightTextMuted,
         type: BottomNavigationBarType.fixed,
@@ -222,9 +225,9 @@ abstract final class AppTheme {
       canvasColor: AppColors.darkBackground,
 
       colorScheme: const ColorScheme.dark(
-        primary: AppColors.blueAccent,
+        primary: AppColors.navyPrimary,
         onPrimary: AppColors.white,
-        secondary: AppColors.cyanAccent,
+        secondary: AppColors.secondary,
         onSecondary: AppColors.white,
         surface: AppColors.darkSurface,
         onSurface: AppColors.darkTextPrimary,
@@ -239,9 +242,12 @@ abstract final class AppTheme {
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.darkBackground,
         foregroundColor: AppColors.darkTextPrimary,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
+        toolbarHeight: 64,
       ),
 
       cardTheme: CardThemeData(
@@ -312,7 +318,7 @@ abstract final class AppTheme {
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.blueAccent,
+          backgroundColor: AppColors.navyPrimary,
           foregroundColor: AppColors.white,
           elevation: 0,
           minimumSize: const Size(
@@ -347,14 +353,14 @@ abstract final class AppTheme {
 
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.blueAccent,
+          foregroundColor: AppColors.navyPrimary,
           textStyle: AppTextStyles.labelMedium,
         ),
       ),
 
       floatingActionButtonTheme:
       const FloatingActionButtonThemeData(
-        backgroundColor: AppColors.blueAccent,
+        backgroundColor: AppColors.navyPrimary,
         foregroundColor: AppColors.white,
       ),
 
@@ -374,15 +380,15 @@ abstract final class AppTheme {
 
       bottomNavigationBarTheme:
       const BottomNavigationBarThemeData(
-        backgroundColor: AppColors.darkSurface,
-        selectedItemColor: AppColors.blueAccent,
+        backgroundColor: AppColors.navigationDark,
+        selectedItemColor: AppColors.navyPrimary,
         unselectedItemColor: AppColors.darkTextMuted,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
       ),
 
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AppColors.darkSurface,
+        backgroundColor: AppColors.navigationDark,
         indicatorColor: AppColors.blueAccent.withValues(
           alpha: 0.18,
         ),

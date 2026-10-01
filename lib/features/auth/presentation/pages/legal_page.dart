@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/localization/localization.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import 'legal_content.dart';
 
 enum LegalPageType {
   terms,
   privacy,
+  safetySecurity,
+  helpCenter,
 }
 
 class LegalPage extends StatelessWidget {
@@ -24,24 +27,23 @@ class LegalPage extends StatelessWidget {
     final colorScheme =
         Theme.of(context).colorScheme;
 
-    final isTerms =
-        type == LegalPageType.terms;
+    final title = switch (type) {
+      LegalPageType.terms =>
+        localization.translate('terms_title'),
+      LegalPageType.privacy =>
+        localization.translate('privacy_title'),
+      LegalPageType.safetySecurity =>
+        localization.translate('safety_security'),
+      LegalPageType.helpCenter =>
+        localization.translate('help_center'),
+    };
 
-    final title = isTerms
-        ? localization.translate(
-      'terms_title',
-    )
-        : localization.translate(
-      'privacy_title',
-    );
-
-    final content = isTerms
-        ? localization.translate(
-      'terms_content',
-    )
-        : localization.translate(
-      'privacy_content',
-    );
+    final content = switch (type) {
+      LegalPageType.terms => LegalContent.terms,
+      LegalPageType.privacy => LegalContent.privacy,
+      LegalPageType.safetySecurity => LegalContent.safetySecurity,
+      LegalPageType.helpCenter => LegalContent.helpCenter,
+    };
 
     return Scaffold(
       backgroundColor:

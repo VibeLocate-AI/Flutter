@@ -21,6 +21,11 @@ class TokenStorage {
   static const String _emailKey =
       'email';
 
+  static const String _roleKey = 'role_slug';
+
+  static const String _rememberMeKey =
+      'remember_me';
+
   static Future<void> saveTokens({
     required String accessToken,
     required String refreshToken,
@@ -89,6 +94,30 @@ class TokenStorage {
     );
   }
 
+
+  static Future<void> saveRole(String role) async {
+    await _storage.write(key: _roleKey, value: role);
+  }
+
+  static Future<String?> getRole() => _storage.read(key: _roleKey);
+
+  static Future<void> saveRememberMe(
+      bool value,
+      ) async {
+    await _storage.write(
+      key: _rememberMeKey,
+      value: value.toString(),
+    );
+  }
+
+  static Future<bool> getRememberMe() async {
+    final value = await _storage.read(
+      key: _rememberMeKey,
+    );
+
+    return value == 'true';
+  }
+
   static Future<void> saveDeviceUuid(
       String uuid,
       ) async {
@@ -112,6 +141,9 @@ class TokenStorage {
     await _storage.delete(
       key: _refreshTokenKey,
     );
+
+    await _storage.delete(key: _rememberMeKey);
+    await _storage.delete(key: _roleKey);
   }
 
   static Future<void> clearAll() {

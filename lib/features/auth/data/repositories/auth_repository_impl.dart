@@ -150,6 +150,17 @@ class AuthRepositoryImpl
   }
 
   @override
+  Future<void> rememberMe({
+    required bool remember,
+    required String refreshToken,
+  }) {
+    return remoteDataSource.rememberMe(
+      remember: remember,
+      refreshToken: refreshToken,
+    );
+  }
+
+  @override
   Future<void> logout() async {
     final refreshToken =
     await TokenStorage.getRefreshToken();

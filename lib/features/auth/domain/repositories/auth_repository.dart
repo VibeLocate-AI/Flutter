@@ -58,5 +58,10 @@ abstract class AuthRepository {
     required String refreshToken,
   });
 
+  Future<void> rememberMe({
+    required bool remember,
+    required String refreshToken,
+  });
+
   Future<void> logout();
 }

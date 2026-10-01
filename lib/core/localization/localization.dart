@@ -8,6 +8,16 @@ class AppLocalization {
 
   final Locale locale;
 
+  static AppLocalization? _current;
+
+  static String t(String key) {
+    final value = _current?._localizedStrings[key];
+    if (value != null && value.trim().isNotEmpty) return value;
+    final normalized = key.trim().replaceAll(RegExp(r'[_-]+'), ' ');
+    if (normalized.isEmpty) return key;
+    return normalized[0].toUpperCase() + normalized.substring(1);
+  }
+
   Map<String, String> _localizedStrings = {};
 
   Future<void> load() async {
@@ -23,10 +33,18 @@ class AppLocalization {
         value.toString(),
       ),
     );
+    _current = this;
   }
 
   String translate(String key) {
-    return _localizedStrings[key] ?? key;
+    final value = _localizedStrings[key];
+    if (value != null && value.trim().isNotEmpty) return value;
+
+    // Backend values occasionally arrive as snake_case identifiers.
+    // Never render the raw identifier (e.g. `under_construction`) in the UI.
+    final normalized = key.trim().replaceAll(RegExp(r'[_-]+'), ' ');
+    if (normalized.isEmpty) return key;
+    return normalized[0].toUpperCase() + normalized.substring(1);
   }
 
   static AppLocalization of(BuildContext context) {

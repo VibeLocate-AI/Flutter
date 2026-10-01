@@ -4,8 +4,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../../../core/constants/api_endpoints.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/storage/token_storage.dart';
+import '../../../../core/localization/locale_manager.dart';
 import '../models/create_property_request.dart';
 
 abstract class PropertiesRemoteDataSource {
@@ -14,6 +16,8 @@ abstract class PropertiesRemoteDataSource {
   Future<Map<String, dynamic>> getPropertyDetails(
       int id,
       );
+
+  Future<Map<String, dynamic>> getMyProperties();
 
   Future<Map<String, dynamic>> createProperty(
       CreatePropertyRequest request,
@@ -25,10 +29,139 @@ class PropertiesRemoteDataSourceImpl
   const PropertiesRemoteDataSourceImpl();
 
   @override
-  Future<Map<String, dynamic>> getProperties() {
-    return _get(
-      ApiEndpoints.properties,
-    );
+  Future<Map<String, dynamic>> getProperties() async {
+    final language = LocaleManager.instance.languageCode;
+    final collected = <Map<String, dynamic>>[];
+    final seenIds = <int>{};
+
+    Future<Map<String, dynamic>> fetch(String endpoint, {int? page}) {
+      final queryParameters = <String, dynamic>{
+        'lang': language,
+        'per_page': 100,
+      };
+      if (page != null) {
+        queryParameters['page'] = page;
+      }
+
+      return _get(
+        endpoint,
+        queryParameters: queryParameters,
+      );
+    }
+
+    Map<String, dynamic> response;
+    try {
+      response = await fetch(ApiEndpoints.propertiesPage(1), page: 1);
+    } catch (_) {
+      response = await fetch(ApiEndpoints.properties, page: 1);
+    }
+    _appendProperties(response, collected, seenIds);
+
+    final pagination = _pagination(response);
+    var lastPage = _toInt(pagination?['last_page']);
+    if (lastPage <= 0) {
+      lastPage = _toInt(pagination?['total_pages']);
+    }
+
+    if (lastPage <= 1 && collected.length >= 100) {
+      lastPage = 50;
+    }
+
+    if (lastPage > 1) {
+      for (var page = 2; page <= lastPage; page++) {
+        try {
+          response = await fetch(
+            ApiEndpoints.propertiesPage(page),
+            page: page,
+          );
+        } catch (_) {
+          // Some deployments expose only the first collection route.
+          // Keep the properties already collected instead of failing the
+          // whole screen when a later page is unavailable.
+          break;
+        }
+
+        final before = collected.length;
+        _appendProperties(response, collected, seenIds);
+        if (collected.length == before) break;
+
+        // When pagination metadata is missing, stop once a page contains
+        // fewer records than requested.
+        final pageItems = _countProperties(response);
+        if (pagination == null && pageItems < 100) break;
+      }
+    }
+
+    if (collected.isNotEmpty) {
+      return {
+        'success': true,
+        'data': collected,
+        'properties': collected,
+      };
+    }
+
+    return response;
+  }
+
+  void _appendProperties(
+    Map<String, dynamic> response,
+    List<Map<String, dynamic>> target,
+    Set<int> seenIds,
+  ) {
+    dynamic value = response['data'];
+    if (value is Map<String, dynamic>) {
+      value = value['properties'] ?? value['data'];
+    }
+    value ??= response['properties'];
+    if (value is! List) return;
+
+    for (final item in value.whereType<Map<String, dynamic>>()) {
+      final id = _toInt(item['id']);
+      if (id == 0 || seenIds.add(id)) target.add(item);
+    }
+  }
+
+
+  int _countProperties(Map<String, dynamic> response) {
+    dynamic value = response['data'];
+    if (value is Map<String, dynamic>) {
+      value = value['properties'] ?? value['data'];
+    }
+    value ??= response['properties'];
+    return value is List ? value.length : 0;
+  }
+
+  Map<String, dynamic>? _pagination(Map<String, dynamic> response) {
+    final value = response['pagination'];
+    if (value is Map<String, dynamic>) return value;
+    final data = response['data'];
+    if (data is Map<String, dynamic> && data['pagination'] is Map<String, dynamic>) {
+      return data['pagination'] as Map<String, dynamic>;
+    }
+    return null;
+  }
+
+  int _toInt(dynamic value) => int.tryParse(value?.toString() ?? '') ?? 0;
+
+  @override
+  Future<Map<String, dynamic>> getMyProperties() async {
+    final language = LocaleManager.instance.languageCode;
+    try {
+      return await _get(
+        ApiEndpoints.myProperties,
+        queryParameters: {
+          'lang': language,
+          'per_page': 24,
+          'page': 1,
+        },
+      );
+    } catch (_) {
+      return {
+        'success': true,
+        'data': const [],
+        'properties': const [],
+      };
+    }
   }
 
   @override
@@ -37,6 +170,9 @@ class PropertiesRemoteDataSourceImpl
       ) {
     return _get(
       ApiEndpoints.propertyDetails(id),
+      queryParameters: {
+        'lang': LocaleManager.instance.languageCode,
+      },
     );
   }
 
@@ -110,6 +246,24 @@ class PropertiesRemoteDataSourceImpl
 
       multipartRequest.fields['property_condition'] =
           request.propertyCondition;
+
+      if (request.actionType != null &&
+          request.actionType!.trim().isNotEmpty) {
+        multipartRequest.fields['action_type'] =
+            request.actionType!.trim();
+      }
+
+      if (request.rentFrequency != null &&
+          request.rentFrequency!.trim().isNotEmpty) {
+        multipartRequest.fields['rent_frequency'] =
+            request.rentFrequency!.trim();
+      }
+
+      if (request.virtualTourUrl != null &&
+          request.virtualTourUrl!.trim().isNotEmpty) {
+        multipartRequest.fields['virtual_tour_url'] =
+            request.virtualTourUrl!.trim();
+      }
 
       if (request.addressLine2 != null &&
           request.addressLine2!
@@ -192,50 +346,14 @@ class PropertiesRemoteDataSourceImpl
   }
 
   Future<Map<String, dynamic>> _get(
-      String endpoint,
-      ) async {
-    try {
-      final token =
-      await TokenStorage.getAccessToken();
-
-      final headers =
-      <String, String>{
-        'Accept': 'application/json',
-        if (token != null &&
-            token.isNotEmpty)
-          'Authorization':
-          'Bearer $token',
-      };
-
-      final response = await http
-          .get(
-        Uri.parse(
-          '${ApiEndpoints.baseUrl}'
-              '$endpoint',
-        ),
-        headers: headers,
-      )
-          .timeout(
-        const Duration(
-          seconds: 45,
-        ),
-      );
-
-      return _decodeResponse(
-        response,
-      );
-    } on ApiException {
-      rethrow;
-    } on TimeoutException {
-      throw const NetworkException(
-        'Request timed out. Please try again.',
-      );
-    } on http.ClientException catch (
-    error) {
-      throw NetworkException(
-        error.message,
-      );
-    }
+      String endpoint, {
+      Map<String, dynamic>? queryParameters,
+      }) {
+    return ApiClient.get(
+      endpoint,
+      queryParameters: queryParameters,
+      authenticated: true,
+    );
   }
 
   Map<String, dynamic> _decodeResponse(

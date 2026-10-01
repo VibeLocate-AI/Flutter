@@ -1,3 +1,4 @@
+import '../../../../core/localization/locale_manager.dart';
 class PropertyFeatureModel {
   const PropertyFeatureModel({
     required this.propertyId,
@@ -5,6 +6,8 @@ class PropertyFeatureModel {
     required this.name,
     required this.category,
     required this.featureValue,
+    this.nameEn,
+    this.nameAr,
   });
 
   final int propertyId;
@@ -12,6 +15,18 @@ class PropertyFeatureModel {
   final String name;
   final String category;
   final String featureValue;
+  final String? nameEn;
+  final String? nameAr;
+
+  String get displayName {
+    if (LocaleManager.instance.isArabic && nameAr?.trim().isNotEmpty == true) {
+      return nameAr!.trim();
+    }
+    if (!LocaleManager.instance.isArabic && nameEn?.trim().isNotEmpty == true) {
+      return nameEn!.trim();
+    }
+    return name;
+  }
 
   factory PropertyFeatureModel.fromJson(Map<String, dynamic> json) {
     return PropertyFeatureModel(
@@ -20,6 +35,8 @@ class PropertyFeatureModel {
       name: json['name']?.toString() ?? '',
       category: json['category']?.toString() ?? '',
       featureValue: json['feature_value']?.toString() ?? '',
+      nameEn: json['name_en']?.toString(),
+      nameAr: json['name_ar']?.toString(),
     );
   }
 

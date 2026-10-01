@@ -4,12 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/errors/exceptions.dart';
+import '../../../../app/app_router.dart';
 import '../../../../core/localization/locale_manager.dart';
 import '../../../../core/localization/localization.dart';
+import '../../../../core/state/location_manager.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/state/currency_manager.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/theme_manager.dart';
 import '../../../auth/auth_dependencies.dart';
+import '../../../security/presentation/pages/change_password_page.dart';
+import '../../../security/presentation/pages/sessions_page.dart';
+import '../../../security/presentation/pages/two_factor_page.dart';
 import '../../data/models/profile_model.dart';
 import '../../profile_dependencies.dart';
 
@@ -85,9 +91,7 @@ class _ProfilePageState extends State<ProfilePage> {
       });
 
       _showError(
-        LocaleManager.instance.isArabic
-            ? 'تعذر تحميل الملف الشخصي. تأكدي من اتصال الإنترنت وحاولي مرة أخرى.'
-            : 'Unable to load your profile. Please check your internet connection and try again.',
+        AppLocalization.of(context).translate('profile_load_error'),
       );
     } catch (error) {
       if (!mounted) {
@@ -112,6 +116,11 @@ class _ProfilePageState extends State<ProfilePage> {
   void _setProfile(ProfileModel profile) {
     _profile = profile;
 
+    final currency = profile.currency.trim().toUpperCase();
+    if (CurrencyManager.supportedCurrencies.contains(currency)) {
+      CurrencyManager.instance.setCurrency(currency);
+    }
+
     _nameController.text = profile.fullName;
     _emailController.text = profile.email;
     _phoneController.text = profile.phone;
@@ -128,6 +137,7 @@ class _ProfilePageState extends State<ProfilePage> {
       _showError(
         localization.translate('complete_required_fields'),
       );
+
       return;
     }
 
@@ -155,9 +165,7 @@ class _ProfilePageState extends State<ProfilePage> {
       });
 
       _showMessage(
-        LocaleManager.instance.isArabic
-            ? 'تم تحديث الملف الشخصي بنجاح'
-            : 'Profile updated successfully.',
+        AppLocalization.of(context).translate('profile_updated_successfully'),
       );
     } on ApiException catch (error) {
       if (mounted) {
@@ -168,13 +176,11 @@ class _ProfilePageState extends State<ProfilePage> {
         _showError(error.toString());
       }
     } finally {
-      if (!mounted) {
-        return;
+      if (mounted) {
+        setState(() {
+          _saving = false;
+        });
       }
-
-      setState(() {
-        _saving = false;
-      });
     }
   }
 
@@ -209,9 +215,7 @@ class _ProfilePageState extends State<ProfilePage> {
       });
 
       _showMessage(
-        LocaleManager.instance.isArabic
-            ? 'تم تحديث الصورة الشخصية'
-            : 'Profile photo updated.',
+        AppLocalization.of(context).translate('profile_photo_updated'),
       );
     } on ApiException catch (error) {
       if (mounted) {
@@ -222,13 +226,46 @@ class _ProfilePageState extends State<ProfilePage> {
         _showError(error.toString());
       }
     } finally {
-      if (!mounted) {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _updateCurrentLocation() async {
+    setState(() {
+      _saving = true;
+    });
+
+    try {
+      final success = await LocationManager.instance.updateCurrentLocation();
+
+      if (!mounted) return;
+
+      if (!success) {
+        _showError(
+          AppLocalization.of(context).translate('location_update_failed'),
+        );
         return;
       }
 
-      setState(() {
-        _saving = false;
-      });
+      _showMessage(
+        AppLocalization.of(context).translate('location_updated_successfully'),
+      );
+    } catch (error) {
+      if (mounted) {
+        _showError(
+          error.toString().replaceFirst('Exception: ', ''),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+        });
+      }
     }
   }
 
@@ -249,21 +286,16 @@ class _ProfilePageState extends State<ProfilePage> {
         _saving = true;
       });
 
-      final updated =
+      // complete-profile returns only {success, message} in the current
+      // Laravel backend. Do not replace the loaded ProfileModel with that
+      // acknowledgement or it would reset currency/profile fields.
       await ProfileDependencies.completeProfile(
         preferredLanguage: locale.languageCode,
-        currency: profile.currency.isEmpty
-            ? 'AED'
-            : profile.currency,
+        currency: profile.currency.isEmpty ? 'AED' : profile.currency,
       );
 
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _setProfile(updated);
-      });
+      if (!mounted) return;
+      setState(() {});
     } catch (error) {
       LocaleManager.instance.setLocale(previousLocale);
 
@@ -271,14 +303,117 @@ class _ProfilePageState extends State<ProfilePage> {
         _showError(error.toString());
       }
     } finally {
-      if (!mounted) {
-        return;
+      if (mounted) {
+        setState(() {
+          _saving = false;
+        });
       }
-
-      setState(() {
-        _saving = false;
-      });
     }
+  }
+
+  Future<void> _showCurrencyPicker() async {
+    final current = CurrencyManager.instance.currency;
+    final isArabic = LocaleManager.instance.isArabic;
+
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (context) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 8,
+                ),
+                child: Text(
+                  AppLocalization.of(context).translate('currency_picker_title'),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              RadioGroup<String>(
+                groupValue: current,
+                onChanged: (value) {
+                  if (value != null) {
+                    Navigator.pop(context, value);
+                  }
+                },
+                child: Column(
+                  children: CurrencyManager.supportedCurrencies.map(
+                    (currency) => RadioListTile<String>(
+                      value: currency,
+                      title: Text(currency),
+                      subtitle: Text(
+                        _currencyName(currency, isArabic),
+                      ),
+                    ),
+                  ).toList(),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (selected == null || selected == current || !mounted) return;
+
+    final profile = _profile;
+    if (profile == null) return;
+
+    setState(() => _saving = true);
+
+    try {
+      await CurrencyManager.instance.setCurrency(selected);
+
+      // The current backend endpoint returns an acknowledgement, not a full
+      // ProfileModel. CurrencyManager is the app-wide source of truth; keep
+      // the existing profile object intact.
+      await ProfileDependencies.completeProfile(
+        preferredLanguage: profile.preferredLanguage.isEmpty
+            ? LocaleManager.instance.currentLocale.languageCode
+            : profile.preferredLanguage,
+        currency: selected,
+      );
+
+      if (!mounted) return;
+      setState(() {});
+
+      _showMessage(
+        AppLocalization.of(context).translate('currency_updated_successfully'),
+      );
+    } catch (error) {
+      await CurrencyManager.instance.setCurrency(current);
+
+      if (mounted) {
+        _showError(error.toString().replaceFirst('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  String _currencyName(String code, bool isArabic) {
+    final keys = <String, String>{
+      'AED': 'currency_aed',
+      'USD': 'currency_usd',
+      'EUR': 'currency_eur',
+      'GBP': 'currency_gbp',
+      'SAR': 'currency_sar',
+      'JOD': 'currency_jod',
+      'ILS': 'currency_ils',
+    };
+
+    final key = keys[code];
+    return key == null
+        ? code
+        : AppLocalization.of(context).translate(key);
   }
 
   void _changeTheme(ThemeMode mode) {
@@ -286,9 +421,6 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _confirmLogout() async {
-    final isArabic =
-        LocaleManager.instance.isArabic;
-
     final confirmed = await showDialog<bool>(
       context: context,
       barrierDismissible: true,
@@ -312,9 +444,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
           title: Text(
-            isArabic
-                ? 'تأكيد تسجيل الخروج'
-                : 'Confirm logout',
+            AppLocalization.of(context).translate('confirm_logout'),
             style: AppTextStyles.headingSmall.copyWith(
               color: theme.colorScheme.onSurface,
               fontWeight: FontWeight.w800,
@@ -322,12 +452,9 @@ class _ProfilePageState extends State<ProfilePage> {
             textAlign: TextAlign.center,
           ),
           content: Text(
-            isArabic
-                ? 'هل أنت متأكد أنك تريد تسجيل الخروج من حسابك؟'
-                : 'Are you sure you want to log out of your account?',
+            AppLocalization.of(context).translate('confirm_logout_message'),
             style: AppTextStyles.bodyMedium.copyWith(
-              color:
-              theme.colorScheme.onSurfaceVariant,
+              color: theme.colorScheme.onSurfaceVariant,
             ),
             textAlign: TextAlign.center,
           ),
@@ -350,9 +477,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       );
                     },
                     child: Text(
-                      isArabic
-                          ? 'إلغاء'
-                          : 'Cancel',
+                      AppLocalization.of(context).translate('cancel'),
                     ),
                   ),
                 ),
@@ -373,9 +498,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       theme.colorScheme.onError,
                     ),
                     child: Text(
-                      isArabic
-                          ? 'تسجيل الخروج'
-                          : 'Log out',
+                      AppLocalization.of(context).translate('logout'),
                     ),
                   ),
                 ),
@@ -409,8 +532,6 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _showLanguagePicker() async {
-    final isArabic =
-        LocaleManager.instance.isArabic;
     final selected =
         LocaleManager.instance.currentLocale;
 
@@ -419,7 +540,6 @@ class _ProfilePageState extends State<ProfilePage> {
       showDragHandle: true,
       builder: (context) {
         final theme = Theme.of(context);
-
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(
@@ -432,9 +552,7 @@ class _ProfilePageState extends State<ProfilePage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  isArabic
-                      ? 'اختيار اللغة'
-                      : 'Choose language',
+                  AppLocalization.of(context).translate('choose_language'),
                   style: theme
                       .textTheme
                       .titleLarge
@@ -446,7 +564,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 _PreferenceOption(
                   icon:
                   Icons.language_rounded,
-                  title: 'English',
+                  title: AppLocalization.of(context).translate('english'),
                   selected:
                   selected.languageCode ==
                       'en',
@@ -462,7 +580,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 _PreferenceOption(
                   icon:
                   Icons.language_rounded,
-                  title: 'العربية',
+                  title: AppLocalization.of(context).translate('arabic'),
                   selected:
                   selected.languageCode ==
                       'ar',
@@ -483,8 +601,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _showThemePicker() async {
-    final isArabic =
-        LocaleManager.instance.isArabic;
+    final localization = AppLocalization.of(context);
     final currentMode =
         ThemeManager.instance.themeMode;
 
@@ -493,7 +610,6 @@ class _ProfilePageState extends State<ProfilePage> {
       showDragHandle: true,
       builder: (context) {
         final theme = Theme.of(context);
-
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(
@@ -506,9 +622,7 @@ class _ProfilePageState extends State<ProfilePage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  isArabic
-                      ? 'مظهر التطبيق'
-                      : 'App appearance',
+                  localization.translate('appearance'),
                   style: theme
                       .textTheme
                       .titleLarge
@@ -520,9 +634,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 _PreferenceOption(
                   icon:
                   Icons.brightness_auto_rounded,
-                  title: isArabic
-                      ? 'النظام'
-                      : 'System',
+                  title: localization.translate('system'),
                   selected:
                   currentMode ==
                       ThemeMode.system,
@@ -537,9 +649,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 _PreferenceOption(
                   icon:
                   Icons.light_mode_rounded,
-                  title: isArabic
-                      ? 'الوضع الفاتح'
-                      : 'Light',
+                  title: localization.translate('light'),
                   selected:
                   currentMode ==
                       ThemeMode.light,
@@ -554,9 +664,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 _PreferenceOption(
                   icon:
                   Icons.dark_mode_rounded,
-                  title: isArabic
-                      ? 'الوضع الداكن'
-                      : 'Dark',
+                  title: localization.translate('dark'),
                   selected:
                   currentMode ==
                       ThemeMode.dark,
@@ -600,12 +708,8 @@ class _ProfilePageState extends State<ProfilePage> {
         actions: [
           IconButton(
             tooltip: _editing
-                ? (isArabic
-                ? 'حفظ'
-                : 'Save')
-                : (isArabic
-                ? 'تعديل'
-                : 'Edit'),
+                ? AppLocalization.of(context).translate('save')
+                : AppLocalization.of(context).translate('edit'),
             onPressed: _saving
                 ? null
                 : () {
@@ -662,10 +766,17 @@ class _ProfilePageState extends State<ProfilePage> {
                       isArabic,
                     ),
                     const SizedBox(height: 20),
+                    _buildSecuritySection(
+                      theme,
+                      isArabic,
+                    ),
+                    const SizedBox(height: 20),
                     _buildLogoutButton(
                       theme,
                       isArabic,
                     ),
+                    // Keep the logout button above the floating bottom navigation.
+                    const SizedBox(height: 150),
                   ],
                 ),
               ),
@@ -768,9 +879,7 @@ class _ProfilePageState extends State<ProfilePage> {
           profile?.fullName.isNotEmpty ==
               true
               ? profile!.fullName
-              : (isArabic
-              ? 'المستخدم'
-              : 'User'),
+              : AppLocalization.of(context).translate('default_user'),
           style:
           AppTextStyles.headingMedium
               .copyWith(
@@ -845,9 +954,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           value: _valueOrFallback(
             _nameController.text,
-            isArabic
-                ? 'غير مضاف'
-                : 'Not added',
+            AppLocalization.of(context).translate('profile_not_added'),
           ),
         ),
         _InfoRow(
@@ -859,9 +966,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           value: _valueOrFallback(
             _emailController.text,
-            isArabic
-                ? 'غير مضاف'
-                : 'Not added',
+            AppLocalization.of(context).translate('profile_not_added'),
           ),
         ),
         _InfoRow(
@@ -873,33 +978,27 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           value: _valueOrFallback(
             _phoneController.text,
-            isArabic
-                ? 'غير مضاف'
-                : 'Not added',
+            AppLocalization.of(context).translate('profile_not_added'),
           ),
         ),
         _InfoRow(
           icon:
           Icons.location_city_outlined,
           title:
-          isArabic ? 'المدينة' : 'City',
+          AppLocalization.of(context).translate('city'),
           value: _valueOrFallback(
             _cityController.text,
-            isArabic
-                ? 'غير مضاف'
-                : 'Not added',
+            AppLocalization.of(context).translate('profile_not_added'),
           ),
         ),
         _InfoRow(
           icon:
           Icons.public_outlined,
           title:
-          isArabic ? 'الدولة' : 'Country',
+          AppLocalization.of(context).translate('country'),
           value: _valueOrFallback(
             _countryController.text,
-            isArabic
-                ? 'غير مضاف'
-                : 'Not added',
+            AppLocalization.of(context).translate('profile_not_added'),
           ),
         ),
         _InfoRow(
@@ -910,9 +1009,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           value: _valueOrFallback(
             _bioController.text,
-            isArabic
-                ? 'غير مضاف'
-                : 'Not added',
+            AppLocalization.of(context).translate('profile_not_added'),
           ),
           isLast: true,
         ),
@@ -929,26 +1026,20 @@ class _ProfilePageState extends State<ProfilePage> {
       children: [
         _buildField(
           controller: _nameController,
-          label: isArabic
-              ? 'الاسم الكامل'
-              : 'Full name',
+          label: AppLocalization.of(context).translate('full_name'),
           icon:
           Icons.person_outline_rounded,
         ),
         _buildField(
           controller: _emailController,
-          label: isArabic
-              ? 'البريد الإلكتروني'
-              : 'Email',
+          label: AppLocalization.of(context).translate('email'),
           icon: Icons.email_outlined,
           keyboardType:
           TextInputType.emailAddress,
         ),
         _buildField(
           controller: _phoneController,
-          label: isArabic
-              ? 'رقم الهاتف'
-              : 'Phone',
+          label: AppLocalization.of(context).translate('phone'),
           icon: Icons.phone_outlined,
           keyboardType:
           TextInputType.phone,
@@ -956,20 +1047,20 @@ class _ProfilePageState extends State<ProfilePage> {
         _buildField(
           controller: _cityController,
           label:
-          isArabic ? 'المدينة' : 'City',
+          AppLocalization.of(context).translate('city'),
           icon:
           Icons.location_city_outlined,
         ),
         _buildField(
           controller: _countryController,
           label:
-          isArabic ? 'الدولة' : 'Country',
+          AppLocalization.of(context).translate('country'),
           icon: Icons.public_outlined,
         ),
         _buildField(
           controller: _bioController,
           label:
-          isArabic ? 'نبذة عني' : 'Bio',
+          AppLocalization.of(context).translate('bio'),
           icon: Icons.notes_rounded,
           maxLines: 4,
         ),
@@ -982,9 +1073,7 @@ class _ProfilePageState extends State<ProfilePage> {
             icon:
             const Icon(Icons.check_rounded),
             label: Text(
-              isArabic
-                  ? 'حفظ التغييرات'
-                  : 'Save changes',
+              AppLocalization.of(context).translate('save_changes'),
             ),
           ),
         ),
@@ -998,24 +1087,19 @@ class _ProfilePageState extends State<ProfilePage> {
       ) {
     final themeManager =
         ThemeManager.instance;
+    final localization = AppLocalization.of(context);
 
     return _SectionCard(
-      title: isArabic
-          ? 'التفضيلات'
-          : 'Preferences',
+      title: localization.translate('preferences'),
       child: Column(
         children: [
           _PreferenceTile(
             icon:
             Icons.language_rounded,
-            title: isArabic
-                ? 'اللغة'
-                : 'Language',
-            subtitle:
-            LocaleManager.instance
-                .isArabic
-                ? 'العربية'
-                : 'English',
+            title: localization.translate('language'),
+            subtitle: LocaleManager.instance.isArabic
+                ? localization.translate('arabic')
+                : localization.translate('english'),
             onTap: _saving
                 ? null
                 : _showLanguagePicker,
@@ -1025,28 +1109,114 @@ class _ProfilePageState extends State<ProfilePage> {
             icon: themeManager.isDark
                 ? Icons.dark_mode_rounded
                 : Icons.light_mode_rounded,
-            title: isArabic
-                ? 'المظهر'
-                : 'Appearance',
-            subtitle: _themeLabel(
-              themeManager.themeMode,
-              isArabic,
-            ),
+            title: AppLocalization.of(context).translate('appearance'),
+            subtitle: _themeLabel(themeManager.themeMode),
             onTap: _showThemePicker,
           ),
           const Divider(height: 1),
           _PreferenceTile(
             icon:
             Icons.payments_outlined,
-            title: isArabic
-                ? 'العملة'
-                : 'Currency',
+            title: AppLocalization.of(context).translate('currency'),
             subtitle:
-            _profile?.currency
-                .isNotEmpty ==
-                true
-                ? _profile!.currency
-                : 'AED',
+            CurrencyManager.instance.currency,
+            onTap: _saving ? null : _showCurrencyPicker,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSecuritySection(
+      ThemeData theme,
+      bool isArabic,
+      ) {
+    return _SectionCard(
+      title: AppLocalization.of(context).translate('security'),
+      child: Column(
+        children: [
+          _PreferenceTile(
+            icon: Icons.lock_outline_rounded,
+            title: AppLocalization.of(context).translate('change_password'),
+            subtitle: AppLocalization.of(context).translate('change_password_subtitle'),
+            onTap: _saving
+                ? null
+                : () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                  const ChangePasswordPage(),
+                ),
+              );
+            },
+          ),
+          const Divider(height: 1),
+          _PreferenceTile(
+            icon: Icons.devices_rounded,
+            title: AppLocalization.of(context).translate('sessions_devices'),
+            subtitle: AppLocalization.of(context).translate('sessions_devices_subtitle'),
+            onTap: _saving
+                ? null
+                : () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                  const SessionsPage(),
+                ),
+              );
+            },
+          ),
+          const Divider(height: 1),
+          _PreferenceTile(
+            icon: Icons.security_rounded,
+            title: AppLocalization.of(context).translate('two_factor_security'),
+            subtitle: AppLocalization.of(context).translate('two_factor_security_subtitle'),
+            onTap: _saving
+                ? null
+                : () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                  const TwoFactorPage(),
+                ),
+              );
+            },
+          ),
+          const Divider(height: 1),
+          _PreferenceTile(
+            icon: Icons.location_on_outlined,
+            title: AppLocalization.of(context).translate('update_current_location'),
+            subtitle: AppLocalization.of(context).translate('update_current_location_subtitle'),
+            onTap: _saving
+                ? null
+                : _updateCurrentLocation,
+          ),
+          const Divider(height: 1),
+          _PreferenceTile(
+            icon: Icons.shield_outlined,
+            title: AppLocalization.of(context).translate('safety_security'),
+            subtitle: AppLocalization.of(context).translate('safety_security_subtitle'),
+            onTap: _saving
+                ? null
+                : () => Navigator.pushNamed(
+                      context,
+                      AppRouter.safetySecurity,
+                    ),
+          ),
+          const Divider(height: 1),
+          _PreferenceTile(
+            icon: Icons.help_outline_rounded,
+            title: AppLocalization.of(context).translate('help_center'),
+            subtitle: AppLocalization.of(context).translate('help_center_subtitle'),
+            onTap: _saving
+                ? null
+                : () => Navigator.pushNamed(
+                      context,
+                      AppRouter.helpCenter,
+                    ),
           ),
         ],
       ),
@@ -1065,9 +1235,7 @@ class _ProfilePageState extends State<ProfilePage> {
         icon:
         const Icon(Icons.logout_rounded),
         label: Text(
-          isArabic
-              ? 'تسجيل الخروج'
-              : 'Log out',
+          AppLocalization.of(context).translate('logout'),
         ),
         style:
         OutlinedButton.styleFrom(
@@ -1132,25 +1300,14 @@ class _ProfilePageState extends State<ProfilePage> {
     return trimmed;
   }
 
-  String _themeLabel(
-      ThemeMode mode,
-      bool isArabic,
-      ) {
+  String _themeLabel(ThemeMode mode) {
     switch (mode) {
       case ThemeMode.light:
-        return isArabic
-            ? 'فاتح'
-            : 'Light';
-
+        return AppLocalization.t('light');
       case ThemeMode.dark:
-        return isArabic
-            ? 'داكن'
-            : 'Dark';
-
+        return AppLocalization.t('dark');
       case ThemeMode.system:
-        return isArabic
-            ? 'حسب النظام'
-            : 'System';
+        return AppLocalization.t('system');
     }
   }
 
@@ -1307,12 +1464,12 @@ class _InfoRow
               Expanded(
                 child: Column(
                   crossAxisAlignment:
-                  CrossAxisAlignment
-                      .start,
+                  CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
-                      style: AppTextStyles
+                      style:
+                      AppTextStyles
                           .labelSmall
                           .copyWith(
                         color: theme
@@ -1325,7 +1482,8 @@ class _InfoRow
                     ),
                     Text(
                       value,
-                      style: AppTextStyles
+                      style:
+                      AppTextStyles
                           .bodyMedium
                           .copyWith(
                         color: theme
@@ -1374,11 +1532,15 @@ class _PreferenceTile
     final theme =
     Theme.of(context);
 
-    return ListTile(
-      contentPadding:
-      const EdgeInsets.symmetric(
-        vertical: 5,
-      ),
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        contentPadding:
+        const EdgeInsets.symmetric(
+          vertical: 5,
+        ),
       leading: Container(
         width: 42,
         height: 42,
@@ -1423,7 +1585,8 @@ class _PreferenceTile
         Icons
             .chevron_right_rounded,
       ),
-      onTap: onTap,
+        onTap: onTap,
+      ),
     );
   }
 }
