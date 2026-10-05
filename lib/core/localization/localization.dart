@@ -79,6 +79,9 @@ class AppLocalizationDelegate
 
   @override
   bool shouldReload(AppLocalizationDelegate old) {
-    return false;
+    // The delegate has no locale field; MaterialApp provides the locale
+    // to load(). Returning true guarantees the newly selected locale is
+    // reloaded immediately when the locale changes.
+    return true;
   }
 }

@@ -130,7 +130,7 @@ class RecommendedPropertyCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 5),
-                          _FavoriteButton(propertyId: property.id),
+                          _FavoriteButton(property: property),
                         ],
                       ),
                       const SizedBox(height: 6),
@@ -298,9 +298,11 @@ class RecommendedPropertyCard extends StatelessWidget {
 }
 
 class _FavoriteButton extends StatelessWidget {
-  const _FavoriteButton({required this.propertyId});
+  const _FavoriteButton({required this.property});
 
-  final int propertyId;
+  final PropertyModel property;
+
+  int get propertyId => property.id;
 
   @override
   Widget build(BuildContext context) {
@@ -324,7 +326,7 @@ class _FavoriteButton extends StatelessWidget {
               ? null
               : () async {
                   try {
-                    await controller.toggle(propertyId);
+                    await controller.toggleProperty(property);
                   } catch (error) {
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(

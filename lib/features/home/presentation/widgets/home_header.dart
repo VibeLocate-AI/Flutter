@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../../app/navigation/app_bar_actions.dart';
+
 import '../../../../core/localization/localization.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/state/location_manager.dart';
@@ -112,7 +114,9 @@ class HomeHeader extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 6),
+        const AgentAppBarAction(),
+        const SizedBox(width: 4),
         Material(
           color: Colors.transparent,
           child: InkWell(

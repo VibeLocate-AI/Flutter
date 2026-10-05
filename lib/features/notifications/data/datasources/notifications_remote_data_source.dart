@@ -126,10 +126,10 @@ class NotificationsRemoteDataSourceImpl
 
   @override
   Future<void> markAllAsRead() async {
-    await ApiClient.put(
-      ApiEndpoints.notificationsReadAll,
-      authenticated: true,
-    );
+    final result = await getNotifications();
+    for (final item in result.items.where((item) => !item.isRead)) {
+      await markAsRead(item.id);
+    }
   }
 
   @override

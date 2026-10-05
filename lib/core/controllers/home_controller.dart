@@ -5,7 +5,6 @@ import '../../features/home/data/models/property_model.dart';
 import '../../features/home/home_dependencies.dart';
 import '../../features/properties/properties_dependencies.dart';
 import '../errors/exceptions.dart';
-import '../storage/token_storage.dart';
 
 class HomeController extends GetxController {
   HomeModel? home;
@@ -51,7 +50,8 @@ class HomeController extends GetxController {
       highlightedProperty = highlighted;
       _initialized = true;
       } on UnauthorizedException {
-      await TokenStorage.clearTokens();
+      // ApiClient already performs a single refresh-token attempt on 401.
+      // A transient/endpoint-specific 401 must not destroy the local session.
       errorMessage = 'unauthorized';
       rethrow;
     } catch (e) {

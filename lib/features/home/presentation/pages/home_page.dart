@@ -66,14 +66,15 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     LocaleManager.instance.addListener(_onLocaleChanged);
-    _loadHome(force: false);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    _loadHome(force: true);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final manager = LocationManager.instance;
-      if (!manager.isUpdating) {
-        // Always try to refresh the GPS position once when the Home tab
-        // is created. The IndexedStack keeps Home alive, so switching
-        // between tabs will not trigger a page refresh.
-        manager.updateCurrentLocation();
+      if (manager.isUpdating) return;
+      final changed = await manager.updateCurrentLocation();
+      if (changed && mounted) {
+        // The first Home payload is shown immediately. Once GPS resolves,
+        // refresh once so nearby/recommended data uses the real location.
+        await _loadHome(force: true);
       }
     });
   }
@@ -496,7 +497,7 @@ class _HomePageState extends State<HomePage> {
     );
 
     if (result == true && mounted) {
-      await _loadHome(force: false);
+      await _loadHome(force: true);
     }
   }
 

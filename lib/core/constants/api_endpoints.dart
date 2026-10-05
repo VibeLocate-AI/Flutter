@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 class ApiEndpoints {
   ApiEndpoints._();
 
@@ -30,6 +29,7 @@ class ApiEndpoints {
   static const String completeProfile = '/api/complete-profile';
   static const String profileAvatar = '/api/profile/avatar';
   static const String profileLocation = '/api/profile/location';
+  static const String profilePreferences = '/api/profile/preferences';
 
   // Sessions
   static const String sessions = '/api/sessions';
@@ -56,7 +56,7 @@ class ApiEndpoints {
   static const String properties = '/api/properties';
 
   static String propertiesPage(int page) =>
-      '/api/properties/$page';
+      '/api/properties?page=$page';
 
   static String propertyDetails(int id) =>
       '/api/properties/$id';
@@ -72,20 +72,10 @@ class ApiEndpoints {
   static String propertyReview(int propertyId) =>
       '/api/properties/$propertyId/review';
 
-  // AI Contextual Search is served by the separate Python AI service.
-  // Android emulators reach the host machine through 10.0.2.2.
-  static const String aiContextualSearchLocal =
-      'http://127.0.0.1:8000/api/ai/contextual-search';
-  static const String aiContextualSearchAndroid =
-      'http://10.0.2.2:8000/api/ai/contextual-search';
-
-  static String get aiContextualSearch {
-    if (kIsWeb) return aiContextualSearchLocal;
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return aiContextualSearchAndroid;
-    }
-    return aiContextualSearchLocal;
-  }
+  // AI Contextual Search is part of the Laravel API collection supplied
+  // with the project. Always use the deployed API base instead of localhost.
+  static const String aiContextualSearch =
+      '/api/ai/contextual-search';
 
   // Map
   static const String map = '/api/map';
@@ -102,6 +92,12 @@ class ApiEndpoints {
       '/api/notifications/unread-count';
   static const String notificationsReadAll =
       '/api/notifications/read-all';
+
+  // Agent
+  static const String agentRegister = '/api/agent/register';
+  static const String agentLicense = '/api/agent/onboarding/license';
+  static const String agentProperties = '/api/agent/properties';
+  static const String agentPois = '/api/agent/pois';
 
   static String notificationRead(int id) =>
       '/api/notifications/$id/read';

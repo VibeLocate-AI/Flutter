@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../localization/security_strings.dart';
+import '../../../auth/presentation/widgets/password_strength_indicator.dart';
 import '../../security_dependencies.dart';
 
 class ChangePasswordPage extends StatefulWidget {
@@ -15,13 +16,26 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   final _currentController = TextEditingController();
   final _newController = TextEditingController();
   final _confirmController = TextEditingController();
+
   final _otpController = TextEditingController();
+  bool get _strongPassword => PasswordStrengthIndicator(password: _newController.text).isStrong;
   bool _loading = false;
   bool _otpSent = false;
 
   @override
+  void initState() {
+    super.initState();
+    _newController.addListener(_passwordChanged);
+  }
+
+  void _passwordChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
     _currentController.dispose();
+    _newController.removeListener(_passwordChanged);
     _newController.dispose();
     _confirmController.dispose();
     _otpController.dispose();
@@ -35,6 +49,10 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     }
     if (_newController.text != _confirmController.text) {
       _message(SecurityStrings.passwordsMismatch);
+      return;
+    }
+    if (!_strongPassword) {
+      _message('Use at least 8 characters with uppercase, lowercase, number and special character.');
       return;
     }
     setState(() => _loading = true);
@@ -94,6 +112,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                     _field(_currentController, SecurityStrings.currentPassword),
                     const SizedBox(height: 14),
                     _field(_newController, SecurityStrings.newPassword),
+                    PasswordStrengthIndicator(password: _newController.text),
                     const SizedBox(height: 14),
                     _field(_confirmController, SecurityStrings.confirmPassword),
                     const SizedBox(height: 22),

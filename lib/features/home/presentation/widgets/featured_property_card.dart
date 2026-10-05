@@ -147,7 +147,7 @@ class FeaturedPropertyCard extends StatelessWidget {
                                     : () async {
                                         try {
                                           await FavoritesManager.instance
-                                              .toggle(property.id);
+                                              .toggleProperty(property);
                                         } catch (error) {
                                           if (!context.mounted) return;
                                           ScaffoldMessenger.of(context).showSnackBar(

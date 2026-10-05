@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/localization/localization.dart';
+import '../../../../core/state/location_manager.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -21,11 +22,8 @@ class LocationPickerPage extends StatefulWidget {
 
 class _LocationPickerPageState
     extends State<LocationPickerPage> {
-  static const double _defaultLatitude =
-  25.2048;
-
-  static const double _defaultLongitude =
-  55.2708;
+  static const double _defaultLatitude = 0;
+  static const double _defaultLongitude = 0;
 
   final MapController _mapController =
   MapController();
@@ -51,10 +49,13 @@ class _LocationPickerPageState
       );
     }
 
-    return const LatLng(
-      _defaultLatitude,
-      _defaultLongitude,
-    );
+    final current = LocationManager.instance;
+    if (current.hasCurrentLocation &&
+        current.latitude != null &&
+        current.longitude != null) {
+      return LatLng(current.latitude!, current.longitude!);
+    }
+    return const LatLng(_defaultLatitude, _defaultLongitude);
   }
 
   @override
@@ -73,11 +74,39 @@ class _LocationPickerPageState
         latitude <= 90 &&
         longitude >= -180 &&
         longitude <= 180) {
-      _selectedLocation =
-          LatLng(
-            latitude,
-            longitude,
-          );
+      _selectedLocation = LatLng(latitude, longitude);
+    } else {
+      final current = LocationManager.instance;
+      if (current.hasCurrentLocation &&
+          current.latitude != null &&
+          current.longitude != null) {
+        _selectedLocation = LatLng(
+          current.latitude!,
+          current.longitude!,
+        );
+      }
+    }
+
+    if (_selectedLocation == null) {
+      LocationManager.instance.updateCurrentLocation().then((_) {
+        if (!mounted || _selectedLocation != null) return;
+        final current = LocationManager.instance;
+        if (current.hasCurrentLocation &&
+            current.latitude != null &&
+            current.longitude != null) {
+          setState(() {
+            _selectedLocation = LatLng(
+              current.latitude!,
+              current.longitude!,
+            );
+          });
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _selectedLocation != null) {
+              _mapController.move(_selectedLocation!, 14);
+            }
+          });
+        }
+      });
     }
   }
 

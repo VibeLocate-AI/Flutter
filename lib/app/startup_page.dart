@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/storage/onboarding_storage.dart';
@@ -59,10 +61,15 @@ class _StartupPageState extends State<StartupPage> {
         refreshToken != null &&
         refreshToken.isNotEmpty) {
       try {
-        final refreshed = await ApiClient.refreshSession();
+        final refreshed = await ApiClient.refreshSession().timeout(
+          const Duration(seconds: 7),
+        );
         if (!refreshed) {
           throw const UnauthorizedException('Session expired.');
         }
+      } on TimeoutException {
+        // Render can cold-start. Do not leave the user on a blank startup
+        // screen just because refresh took longer than the first frame.
       } catch (_) {
         await TokenStorage.clearTokens();
 
@@ -79,12 +86,9 @@ class _StartupPageState extends State<StartupPage> {
       return;
     }
 
-    final role = (await TokenStorage.getRole() ?? '').trim().toLowerCase();
-    if (!mounted) return;
-    Navigator.pushReplacementNamed(
-      context,
-      role == 'agent' ? AppRouter.agent : AppRouter.home,
-    );
+    // Always open the shared user shell. MainNavigationPage reads the role and
+    // adds the Agent tab without changing the regular-user navigation.
+    Navigator.pushReplacementNamed(context, AppRouter.home);
   }
 
   @override

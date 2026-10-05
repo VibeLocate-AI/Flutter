@@ -8,10 +8,12 @@ class AppBottomNavigation extends StatefulWidget {
     super.key,
     required this.currentIndex,
     required this.onItemSelected,
+    this.isAgent = false,
   });
 
   final int currentIndex;
   final ValueChanged<int> onItemSelected;
+  final bool isAgent;
 
   @override
   State<AppBottomNavigation> createState() => _AppBottomNavigationState();
@@ -193,6 +195,8 @@ class _AppBottomNavigationState extends State<AppBottomNavigation> {
         return Icons.favorite_rounded;
       case 4:
         return Icons.person_rounded;
+      case 5:
+        return Icons.real_estate_agent_rounded;
       default:
         return Icons.home_rounded;
     }

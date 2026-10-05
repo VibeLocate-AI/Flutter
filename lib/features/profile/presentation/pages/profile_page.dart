@@ -5,17 +5,16 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/errors/exceptions.dart';
 import '../../../../app/app_router.dart';
+import '../../../../app/navigation/app_bar_actions.dart';
 import '../../../../core/localization/locale_manager.dart';
 import '../../../../core/localization/localization.dart';
 import '../../../../core/state/location_manager.dart';
+import '../../../../core/storage/token_storage.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/state/currency_manager.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/theme_manager.dart';
 import '../../../auth/auth_dependencies.dart';
-import '../../../security/presentation/pages/change_password_page.dart';
-import '../../../security/presentation/pages/sessions_page.dart';
-import '../../../security/presentation/pages/two_factor_page.dart';
 import '../../data/models/profile_model.dart';
 import '../../profile_dependencies.dart';
 
@@ -94,22 +93,30 @@ class _ProfilePageState extends State<ProfilePage> {
         AppLocalization.of(context).translate('profile_load_error'),
       );
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
+      if (!mounted) return;
+      final email = await TokenStorage.getEmail() ?? '';
+      final name = await TokenStorage.getLocalProfileName() ?? '';
+      final phone = await TokenStorage.getLocalProfilePhone() ?? '';
+      final city = await TokenStorage.getLocalProfileCity() ?? '';
+      final country = await TokenStorage.getLocalProfileCountry() ?? '';
+      final local = ProfileModel(
+        id: await TokenStorage.getUserId() ?? 0,
+        fullName: name,
+        email: email,
+        phone: phone,
+        city: city,
+        country: country,
+        bio: '',
+        avatarUrl: null,
+        preferredLanguage: LocaleManager.instance.currentLocale.languageCode,
+        currency: CurrencyManager.instance.currency,
+        role: await TokenStorage.getRole() ?? 'tenant',
+      );
       setState(() {
+        _setProfile(local);
         _loading = false;
       });
-
-      _showError(
-        error
-            .toString()
-            .replaceFirst(
-          'Exception: ',
-          '',
-        ),
-      );
+      // Do not show a blocking error over a usable local profile.
     }
   }
 
@@ -127,6 +134,12 @@ class _ProfilePageState extends State<ProfilePage> {
     _cityController.text = profile.city;
     _countryController.text = profile.country;
     _bioController.text = profile.bio;
+    TokenStorage.saveLocalProfile(
+      name: profile.fullName,
+      phone: profile.phone,
+      city: profile.city,
+      country: profile.country,
+    );
   }
 
   Future<void> _saveProfile() async {
@@ -273,7 +286,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final previousLocale =
         LocaleManager.instance.currentLocale;
 
-    LocaleManager.instance.setLocale(locale);
+    await LocaleManager.instance.setLocale(locale);
 
     try {
       final profile = _profile;
@@ -297,7 +310,7 @@ class _ProfilePageState extends State<ProfilePage> {
       if (!mounted) return;
       setState(() {});
     } catch (error) {
-      LocaleManager.instance.setLocale(previousLocale);
+      await LocaleManager.instance.setLocale(previousLocale);
 
       if (mounted) {
         _showError(error.toString());
@@ -517,17 +530,23 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _logout() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+
     try {
       await AuthDependencies.logout();
-    } catch (_) {}
-
-    if (!mounted) {
-      return;
+    } catch (_) {
+      // The local session is still cleared by the auth data source when the
+      // logout request succeeds. If the server is unavailable, clear the
+      // local tokens below so the user is never trapped in a stale session.
+      await TokenStorage.clearTokens();
     }
+
+    if (!mounted) return;
 
     Navigator.of(context).pushNamedAndRemoveUntil(
       '/login',
-          (_) => false,
+      (_) => false,
     );
   }
 
@@ -706,6 +725,8 @@ class _ProfilePageState extends State<ProfilePage> {
           localization.translate('profile'),
         ),
         actions: [
+          const AgentAppBarAction(),
+          const NotificationAppBarAction(),
           IconButton(
             tooltip: _editing
                 ? AppLocalization.of(context).translate('save')
@@ -762,11 +783,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     const SizedBox(height: 20),
                     _buildPreferencesSection(
-                      theme,
-                      isArabic,
-                    ),
-                    const SizedBox(height: 20),
-                    _buildSecuritySection(
                       theme,
                       isArabic,
                     ),
@@ -1085,164 +1101,15 @@ class _ProfilePageState extends State<ProfilePage> {
       ThemeData theme,
       bool isArabic,
       ) {
-    final themeManager =
-        ThemeManager.instance;
     final localization = AppLocalization.of(context);
-
     return _SectionCard(
       title: localization.translate('preferences'),
-      child: Column(
-        children: [
-          _PreferenceTile(
-            icon:
-            Icons.language_rounded,
-            title: localization.translate('language'),
-            subtitle: LocaleManager.instance.isArabic
-                ? localization.translate('arabic')
-                : localization.translate('english'),
-            onTap: _saving
-                ? null
-                : _showLanguagePicker,
-          ),
-          const Divider(height: 1),
-          _PreferenceTile(
-            icon: themeManager.isDark
-                ? Icons.dark_mode_rounded
-                : Icons.light_mode_rounded,
-            title: AppLocalization.of(context).translate('appearance'),
-            subtitle: _themeLabel(themeManager.themeMode),
-            onTap: _showThemePicker,
-          ),
-          const Divider(height: 1),
-          _PreferenceTile(
-            icon:
-            Icons.payments_outlined,
-            title: AppLocalization.of(context).translate('currency'),
-            subtitle:
-            CurrencyManager.instance.currency,
-            onTap: _saving ? null : _showCurrencyPicker,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSecuritySection(
-      ThemeData theme,
-      bool isArabic,
-      ) {
-    return _SectionCard(
-      title: AppLocalization.of(context).translate('security'),
-      child: Column(
-        children: [
-          _PreferenceTile(
-            icon: Icons.lock_outline_rounded,
-            title: AppLocalization.of(context).translate('change_password'),
-            subtitle: AppLocalization.of(context).translate('change_password_subtitle'),
-            onTap: _saving
-                ? null
-                : () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                  const ChangePasswordPage(),
-                ),
-              );
-            },
-          ),
-          const Divider(height: 1),
-          _PreferenceTile(
-            icon: Icons.devices_rounded,
-            title: AppLocalization.of(context).translate('sessions_devices'),
-            subtitle: AppLocalization.of(context).translate('sessions_devices_subtitle'),
-            onTap: _saving
-                ? null
-                : () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                  const SessionsPage(),
-                ),
-              );
-            },
-          ),
-          const Divider(height: 1),
-          _PreferenceTile(
-            icon: Icons.security_rounded,
-            title: AppLocalization.of(context).translate('two_factor_security'),
-            subtitle: AppLocalization.of(context).translate('two_factor_security_subtitle'),
-            onTap: _saving
-                ? null
-                : () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                  const TwoFactorPage(),
-                ),
-              );
-            },
-          ),
-          const Divider(height: 1),
-          _PreferenceTile(
-            icon: Icons.location_on_outlined,
-            title: AppLocalization.of(context).translate('update_current_location'),
-            subtitle: AppLocalization.of(context).translate('update_current_location_subtitle'),
-            onTap: _saving
-                ? null
-                : _updateCurrentLocation,
-          ),
-          const Divider(height: 1),
-          _PreferenceTile(
-            icon: Icons.shield_outlined,
-            title: AppLocalization.of(context).translate('safety_security'),
-            subtitle: AppLocalization.of(context).translate('safety_security_subtitle'),
-            onTap: _saving
-                ? null
-                : () => Navigator.pushNamed(
-                      context,
-                      AppRouter.safetySecurity,
-                    ),
-          ),
-          const Divider(height: 1),
-          _PreferenceTile(
-            icon: Icons.help_outline_rounded,
-            title: AppLocalization.of(context).translate('help_center'),
-            subtitle: AppLocalization.of(context).translate('help_center_subtitle'),
-            onTap: _saving
-                ? null
-                : () => Navigator.pushNamed(
-                      context,
-                      AppRouter.helpCenter,
-                    ),
-          ),
-          const Divider(height: 1),
-          _PreferenceTile(
-            icon: Icons.description_outlined,
-            title: AppLocalization.of(context).translate('terms_title'),
-            subtitle: AppLocalization.of(context).translate('terms_subtitle'),
-            onTap: _saving
-                ? null
-                : () => Navigator.pushNamed(
-                      context,
-                      AppRouter.terms,
-                    ),
-          ),
-          const Divider(height: 1),
-          _PreferenceTile(
-            icon: Icons.privacy_tip_outlined,
-            title: AppLocalization.of(context).translate('privacy_title'),
-            subtitle: AppLocalization.of(context).translate('privacy_subtitle'),
-            onTap: _saving
-                ? null
-                : () => Navigator.pushNamed(
-                      context,
-                      AppRouter.privacy,
-                    ),
-          ),
-        ],
+      child: _PreferenceTile(
+        icon: Icons.settings_outlined,
+        title: localization.translate('settings'),
+        subtitle: localization.translate('settings_subtitle'),
+        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+        onTap: () => Navigator.pushNamed(context, AppRouter.settingsPage),
       ),
     );
   }
@@ -1256,8 +1123,13 @@ class _ProfilePageState extends State<ProfilePage> {
       child: OutlinedButton.icon(
         onPressed:
         _saving ? null : _confirmLogout,
-        icon:
-        const Icon(Icons.logout_rounded),
+        icon: _saving
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.logout_rounded),
         label: Text(
           AppLocalization.of(context).translate('logout'),
         ),
@@ -1542,12 +1414,14 @@ class _PreferenceTile
     required this.title,
     required this.subtitle,
     this.onTap,
+    this.trailing,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback? onTap;
+  final Widget? trailing;
 
   @override
   Widget build(
@@ -1603,12 +1477,10 @@ class _PreferenceTile
         style: theme.textTheme
             .bodySmall,
       ),
-      trailing: onTap == null
-          ? null
-          : const Icon(
-        Icons
-            .chevron_right_rounded,
-      ),
+      trailing: trailing ??
+          (onTap == null
+              ? null
+              : const Icon(Icons.chevron_right_rounded)),
         onTap: onTap,
       ),
     );

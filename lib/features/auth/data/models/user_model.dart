@@ -13,15 +13,20 @@ class UserModel extends User {
   factory UserModel.fromJson(
       Map<String, dynamic> json,
       ) {
-    final source =
-    json['user'] is Map<String, dynamic>
-        ? json['user'] as Map<String, dynamic>
-        : json;
+    final nested = json['data'] is Map ? (json['data'] as Map) : null;
+    final raw = json['user'] ?? nested?['user'] ?? json['profile'] ?? nested?['profile'] ?? json;
+    final source = raw is Map<String, dynamic>
+        ? raw
+        : raw is Map
+            ? raw.map((key, value) => MapEntry(key.toString(), value))
+            : json;
 
+    final fullName = source['full_name']?.toString().trim() ?? '';
+    final nameParts = fullName.isEmpty ? const <String>[] : fullName.split(RegExp(r'\s+'));
     return UserModel(
       id: _toInt(source['id']),
-      firstName: source['first_name']?.toString(),
-      lastName: source['last_name']?.toString(),
+      firstName: source['first_name']?.toString() ?? (nameParts.isNotEmpty ? nameParts.first : null),
+      lastName: source['last_name']?.toString() ?? (nameParts.length > 1 ? nameParts.sublist(1).join(' ') : null),
       email: source['email']?.toString(),
       phone: source['phone']?.toString(),
       roleSlug: _roleSlug(source),

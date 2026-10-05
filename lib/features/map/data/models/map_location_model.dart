@@ -56,24 +56,35 @@ class MapLocationModel {
 
     final location = _asMap(json['location']);
 
+    var latitude = _toDouble(
+      json['latitude'] ??
+          json['lat'] ??
+          property?['latitude'] ??
+          location?['latitude'],
+    );
+    var longitude = _toDouble(
+      json['longitude'] ??
+          json['lng'] ??
+          json['lon'] ??
+          property?['longitude'] ??
+          location?['longitude'],
+    );
+
+    // Protect the map from the common lat/lng inversion. Do not swap valid
+    // coordinates; only correct an impossible latitude value.
+    if (latitude.abs() > 90 && longitude.abs() <= 90) {
+      final tmp = latitude;
+      latitude = longitude;
+      longitude = tmp;
+    }
+
     return MapLocationModel(
       id: id,
       propertyId: _nullableInt(
         json['property_id'] ?? property?['id'] ?? json['id'],
       ),
-      latitude: _toDouble(
-        json['latitude'] ??
-            json['lat'] ??
-            property?['latitude'] ??
-            location?['latitude'],
-      ),
-      longitude: _toDouble(
-        json['longitude'] ??
-            json['lng'] ??
-            json['lon'] ??
-            property?['longitude'] ??
-            location?['longitude'],
-      ),
+      latitude: latitude ?? 0,
+      longitude: longitude ?? 0,
       title: _text(
         json['title'] ??
             json['name'] ??

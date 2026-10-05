@@ -39,7 +39,10 @@ class SecurityRemoteDataSourceImpl
       authenticated: true,
     );
 
-    final sessions = response['sessions'];
+    dynamic sessions = response['sessions'] ?? response['data'];
+    if (sessions is Map) {
+      sessions = sessions['sessions'] ?? sessions['items'] ?? sessions['data'];
+    }
 
     if (sessions is! List) {
       return const [];
@@ -101,11 +104,14 @@ class SecurityRemoteDataSourceImpl
       authenticated: true,
     );
 
-    final data = response['two_factor'];
+    dynamic data = response['two_factor'] ?? response['data'] ?? response;
+    if (data is Map) {
+      data = data['two_factor'] ?? data['data'] ?? data;
+    }
 
     return TwoFactorModel.fromJson(
-      data is Map<String, dynamic>
-          ? data
+      data is Map
+          ? data.map((key, value) => MapEntry(key.toString(), value))
           : const {},
     );
   }
@@ -118,8 +124,14 @@ class SecurityRemoteDataSourceImpl
       body: {'action': 'start'},
     );
 
+    dynamic data = response['data'] ?? response;
+    if (data is Map) {
+      data = data['two_factor'] ?? data['setup'] ?? data;
+    }
     return TwoFactorSetupModel.fromJson(
-      response,
+      data is Map
+          ? data.map((key, value) => MapEntry(key.toString(), value))
+          : const {},
     );
   }
 

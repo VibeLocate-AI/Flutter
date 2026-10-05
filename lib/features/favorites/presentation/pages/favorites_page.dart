@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../app/navigation/app_bar_actions.dart';
 import 'package:get/get.dart';
 import '../../../../core/controllers/favorites_controller.dart';
 import '../../../../core/localization/localization.dart';
@@ -80,7 +81,10 @@ class _FavoritesPageState extends State<FavoritesPage> {
 
       return Scaffold(
       backgroundColor: theme.colorScheme.surface,
-      appBar: AppBar(title: Text(FavoritesStrings.title)),
+      appBar: AppBar(
+        title: Text(FavoritesStrings.title),
+        actions: const [AgentAppBarAction(), NotificationAppBarAction()],
+      ),
       body: RefreshIndicator(
         onRefresh: _load,
         child: loading

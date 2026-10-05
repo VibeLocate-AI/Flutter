@@ -24,11 +24,14 @@ class AgentController extends GetxController {
     isLoading.value = true;
     error.value = null;
     try {
-      final results = await Future.wait([
-        dataSource.getProperties('pending'),
-        dataSource.getProperties('approved'),
-        dataSource.getProperties('rejected'),
-        dataSource.getPois(),
+      // Keep the Agent section usable even if one endpoint is temporarily
+      // unavailable. The backend exposes these as separate endpoints, so one
+      // failing request must not blank the whole Agent screen.
+      final results = await Future.wait<dynamic>([
+        _safeProperties('pending'),
+        _safeProperties('approved'),
+        _safeProperties('rejected'),
+        _safePois(),
       ]);
 
       pending.assignAll(results[0] as List<AgentProperty>);
@@ -40,6 +43,23 @@ class AgentController extends GetxController {
       error.value = e.toString().replaceFirst('Exception: ', '');
     } finally {
       isLoading.value = false;
+    }
+  }
+
+
+  Future<List<AgentProperty>> _safeProperties(String status) async {
+    try {
+      return await dataSource.getProperties(status);
+    } catch (_) {
+      return const <AgentProperty>[];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _safePois() async {
+    try {
+      return await dataSource.getPois();
+    } catch (_) {
+      return const <Map<String, dynamic>>[];
     }
   }
 
@@ -59,7 +79,7 @@ class AgentController extends GetxController {
   Future<void> deletePoi(int id) async {
     await dataSource.deletePoi(id);
     pois.removeWhere((poi) {
-      final poiId = int.tryParse((poi['id'] ?? '').toString());
+      final poiId = int.tryParse((poi['id'] ?? poi['osm_id'] ?? '').toString());
       return poiId == id;
     });
     pois.refresh();
@@ -72,8 +92,8 @@ class AgentController extends GetxController {
     await load();
   }
 
-  Future<void> reject(int id) async {
-    await dataSource.rejectProperty(id);
+  Future<void> reject(int id, {String? reason}) async {
+    await dataSource.rejectProperty(id, reason: reason);
     await load();
   }
 }

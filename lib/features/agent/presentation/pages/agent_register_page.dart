@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/app_router.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/localization/localization.dart';
+import '../../../../core/state/location_manager.dart';
 import '../../../auth/auth_dependencies.dart';
 import '../../../auth/presentation/pages/verification_page.dart';
 
@@ -23,8 +24,8 @@ class _AgentRegisterPageState extends State<AgentRegisterPage> {
   final _confirm = TextEditingController();
   final _agency = TextEditingController();
   final _license = TextEditingController();
-  final _city = TextEditingController(text: 'Dubai');
-  final _country = TextEditingController(text: 'UAE');
+  final _city = TextEditingController();
+  final _country = TextEditingController();
 
   bool _loading = false;
   bool _obscure = true;
@@ -84,6 +85,23 @@ class _AgentRegisterPageState extends State<AgentRegisterPage> {
       _showMessage(error.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final location = LocationManager.instance;
+    _city.text = location.city;
+    _country.text = location.country;
+    if (_city.text.isEmpty && _country.text.isEmpty) {
+      location.updateCurrentLocation().then((_) {
+        if (!mounted) return;
+        setState(() {
+          if (_city.text.isEmpty) _city.text = location.city;
+          if (_country.text.isEmpty) _country.text = location.country;
+        });
+      });
     }
   }
 

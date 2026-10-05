@@ -12,6 +12,7 @@ import '../features/auth/presentation/pages/verification_page.dart';
 import '../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../features/agent/presentation/pages/agent_dashboard_page.dart';
 import '../features/agent/presentation/pages/agent_register_page.dart';
+import '../features/settings/presentation/pages/settings_page.dart';
 import '../features/properties/presentation/pages/properties_page.dart';
 import '../features/properties/presentation/pages/property_details_page.dart';
 import '../features/map/presentation/pages/map_page.dart';
@@ -36,6 +37,7 @@ class AppRouter {
   static const String home = '/home';
   static const String agent = '/agent';
   static const String agentRegister = '/agent-register';
+  static const String settingsPage = '/settings';
   static const String properties = '/properties';
   static const String propertyDetails = '/property-details';
   static const String propertyLocation = '/property-location';
@@ -148,6 +150,12 @@ class AppRouter {
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => const AgentRegisterPage(),
+        );
+
+      case settingsPage:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const SettingsPage(),
         );
 
       case properties:

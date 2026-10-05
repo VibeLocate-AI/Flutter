@@ -11,7 +11,7 @@ import '../storage/token_storage.dart';
 class ApiClient {
   ApiClient._();
 
-  static const Duration _timeout = Duration(seconds: 20);
+  static const Duration _timeout = Duration(seconds: 60);
 
   static Future<bool>? _refreshing;
 

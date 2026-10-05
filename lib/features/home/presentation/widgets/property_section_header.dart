@@ -40,8 +40,10 @@ class PropertySectionHeader extends StatelessWidget {
                   localization.translate(subtitleKey!),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.bodySmall.copyWith(
+                  style: AppTextStyles.bodyMedium.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                    height: 1.25,
                   ),
                 ),
               ],

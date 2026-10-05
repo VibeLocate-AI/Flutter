@@ -22,6 +22,10 @@ class TokenStorage {
       'email';
 
   static const String _roleKey = 'role_slug';
+  static const String _nameKey = 'profile_name';
+  static const String _phoneKey = 'profile_phone';
+  static const String _cityKey = 'profile_city';
+  static const String _countryKey = 'profile_country';
 
   static const String _rememberMeKey =
       'remember_me';
@@ -132,6 +136,19 @@ class TokenStorage {
       key: _deviceUuidKey,
     );
   }
+
+
+  static Future<void> saveLocalProfile({String? name, String? phone, String? city, String? country}) async {
+    if (name != null) await _storage.write(key: _nameKey, value: name);
+    if (phone != null) await _storage.write(key: _phoneKey, value: phone);
+    if (city != null) await _storage.write(key: _cityKey, value: city);
+    if (country != null) await _storage.write(key: _countryKey, value: country);
+  }
+
+  static Future<String?> getLocalProfileName() => _storage.read(key: _nameKey);
+  static Future<String?> getLocalProfilePhone() => _storage.read(key: _phoneKey);
+  static Future<String?> getLocalProfileCity() => _storage.read(key: _cityKey);
+  static Future<String?> getLocalProfileCountry() => _storage.read(key: _countryKey);
 
   static Future<void> clearTokens() async {
     await _storage.delete(

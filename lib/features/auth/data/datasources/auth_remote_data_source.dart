@@ -95,9 +95,14 @@ class AuthRemoteDataSourceImpl
     required String licenseNumber,
   }) async {
     final response = await ApiClient.post(
-      '/api/agent/register',
+      ApiEndpoints.agentRegister,
       body: {
-        ...request.toJson(),
+        'first_name': request.firstName,
+        'last_name': request.lastName,
+        'email': request.email,
+        'phone': request.phone,
+        'password': request.password,
+        'password_confirmation': request.passwordConfirmation,
         'agency_name': agencyName,
         'license_number': licenseNumber,
       },
@@ -126,7 +131,8 @@ class AuthRemoteDataSourceImpl
     final tokens =
     AuthTokensModel.fromJson(response);
 
-    final rawUser = response['user'];
+    final nestedData = response['data'] is Map ? response['data'] as Map : null;
+    final rawUser = response['user'] ?? nestedData?['user'] ?? response['profile'] ?? nestedData?['profile'];
     if (rawUser is Map) {
       final user = UserModel.fromJson(
         rawUser.map((key, value) => MapEntry(key.toString(), value)),
@@ -187,14 +193,19 @@ class AuthRemoteDataSourceImpl
     );
 
     if (result.user?.id != null) {
-      await TokenStorage.saveUserId(
-        result.user!.id!,
+      await TokenStorage.saveUserId(result.user!.id!);
+    }
+    if (result.user != null) {
+      final user = result.user!;
+      await TokenStorage.saveLocalProfile(
+        name: [user.firstName, user.lastName].where((v) => v != null && v!.trim().isNotEmpty).map((v) => v!.trim()).join(' '),
+        phone: user.phone,
       );
     }
-    if (result.user?.roleSlug != null &&
-        result.user!.roleSlug!.trim().isNotEmpty) {
-      await TokenStorage.saveRole(result.user!.roleSlug!.trim());
-    }
+    final role = result.user?.roleSlug?.trim();
+    await TokenStorage.saveRole(
+      role != null && role.isNotEmpty ? role : 'tenant',
+    );
 
     return result;
   }
@@ -238,9 +249,10 @@ class AuthRemoteDataSourceImpl
         user!.id!,
       );
     }
-    if (user?.roleSlug != null && user!.roleSlug!.trim().isNotEmpty) {
-      await TokenStorage.saveRole(user.roleSlug!.trim());
-    }
+    final role = user?.roleSlug?.trim();
+    await TokenStorage.saveRole(
+      role != null && role.isNotEmpty ? role : 'tenant',
+    );
 
     return result;
   }

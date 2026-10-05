@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../app/navigation/app_bar_actions.dart';
 import 'package:get/get.dart';
 import '../../../../core/controllers/my_properties_controller.dart';
 import '../../../home/data/models/property_model.dart';
@@ -81,12 +82,13 @@ class _PropertiesPageState extends State<PropertiesPage> {
     return Obx(() {
       final properties = controller.filtered;
       final loading = controller.isLoading.value;
-      final error = controller.error.value;
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
         title: Text(localization.translate('my_properties')),
         actions: [
+          const AgentAppBarAction(),
+          const NotificationAppBarAction(),
           IconButton(
             tooltip: localization.translate('add_property'),
             onPressed: _openAddProperty,

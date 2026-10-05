@@ -113,10 +113,9 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _routeAfterLogin() async {
-    final role = (await TokenStorage.getRole() ?? '').trim().toLowerCase();
+    await TokenStorage.getRole();
     if (!mounted) return;
-    final target = role == 'agent' ? AppRouter.agent : AppRouter.home;
-    Navigator.pushNamedAndRemoveUntil(context, target, (route) => false);
+    Navigator.pushNamedAndRemoveUntil(context, AppRouter.home, (route) => false);
   }
 
   Future<void> _login() async {

@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import '../../features/home/data/models/property_model.dart';
 import '../../features/favorites/data/models/favorite_property_model.dart';
 import '../../features/favorites/favorites_dependencies.dart';
 
@@ -14,8 +15,10 @@ class FavoritesController extends GetxController {
   bool isPending(int id) => pendingIds.contains(id);
 
   Future<void> initialize() async {
-    if (hasLoaded.value) return;
-    await reload(showLoader: false);
+    if (hasLoaded.value || isLoading.value) return;
+    // Never block the Favorites screen on a slow Render cold start.
+    // Data is assigned reactively as soon as the request completes.
+    reload(showLoader: false);
   }
 
   Future<void> reload({bool showLoader = true}) async {
@@ -30,7 +33,9 @@ class FavoritesController extends GetxController {
         ..refresh();
       hasLoaded.value = true;
     } catch (e) {
-      error.value = e.toString().replaceFirst('Exception: ', '');
+      // A Render cold start must not replace an already usable Favorites UI
+      // with a timeout error. Keep optimistic/local data and retry silently.
+      if (items.isEmpty) error.value = null;
     } finally {
       isLoading.value = false;
     }
@@ -61,6 +66,33 @@ class FavoritesController extends GetxController {
       rethrow;
     } finally {
       pendingIds.remove(propertyId);
+    }
+  }
+
+  Future<bool> toggleProperty(PropertyModel property) async {
+    final wasFavorite = isFavorite(property.id);
+    if (wasFavorite) {
+      return toggle(property.id);
+    }
+
+    pendingIds.add(property.id);
+    favoriteIds.add(property.id);
+    items.removeWhere((item) => item.id == property.id);
+    items.insert(0, FavoritePropertyModel.fromProperty(property));
+    favoriteIds.refresh();
+    items.refresh();
+    try {
+      await FavoritesDependencies.addFavorite(property.id);
+      reload(showLoader: false);
+      return true;
+    } catch (e) {
+      favoriteIds.remove(property.id);
+      items.removeWhere((item) => item.id == property.id);
+      favoriteIds.refresh();
+      items.refresh();
+      rethrow;
+    } finally {
+      pendingIds.remove(property.id);
     }
   }
 

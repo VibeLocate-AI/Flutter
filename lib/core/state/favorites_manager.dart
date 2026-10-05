@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 import '../../features/favorites/data/models/favorite_property_model.dart';
+import '../../features/home/data/models/property_model.dart';
 import '../../features/favorites/favorites_dependencies.dart';
 import '../controllers/favorites_controller.dart';
 
@@ -26,6 +27,16 @@ class FavoritesManager extends ChangeNotifier {
       await controller.reload(showLoader: false);
     }
     notifyListeners();
+  }
+
+  Future<bool> toggleProperty(PropertyModel property) async {
+    try {
+      final value = await controller.toggleProperty(property);
+      notifyListeners();
+      return value;
+    } finally {
+      notifyListeners();
+    }
   }
 
   Future<bool> toggle(int propertyId) async {

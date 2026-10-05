@@ -3,6 +3,9 @@ import 'package:get/get.dart';
 
 import '../../../../app/app_router.dart';
 import '../../../../core/localization/localization.dart';
+import '../../../../core/state/location_manager.dart';
+import '../../../notifications/presentation/pages/notifications_page.dart';
+import '../../../profile/presentation/pages/profile_page.dart';
 import '../../../auth/auth_dependencies.dart';
 import '../../../properties/presentation/pages/add_property_page.dart';
 import '../../agent_controller.dart';
@@ -24,8 +27,9 @@ class _AgentDashboardPageState extends State<AgentDashboardPage> {
     controller = Get.isRegistered<AgentController>()
         ? Get.find<AgentController>()
         : Get.put(AgentController(), permanent: true);
-    if (!controller.hasLoaded.value) {
-      controller.load();
+    controller.load();
+    if (!LocationManager.instance.isUpdating) {
+      LocationManager.instance.updateCurrentLocation();
     }
   }
 
@@ -39,14 +43,25 @@ class _AgentDashboardPageState extends State<AgentDashboardPage> {
         title: Text(localization.translate('agent_dashboard')),
         actions: [
           IconButton(
+            tooltip: localization.translate('notifications'),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const NotificationsPage()),
+            ),
+            icon: const Icon(Icons.notifications_none_rounded),
+          ),
+          IconButton(
+            tooltip: localization.translate('profile'),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfilePage()),
+            ),
+            icon: const Icon(Icons.person_outline_rounded),
+          ),
+          IconButton(
             tooltip: localization.translate('refresh'),
             onPressed: controller.isLoading.value ? null : controller.load,
             icon: const Icon(Icons.refresh_rounded),
-          ),
-          IconButton(
-            tooltip: localization.translate('logout'),
-            onPressed: _logout,
-            icon: const Icon(Icons.logout_rounded),
           ),
         ],
       ),
@@ -80,6 +95,8 @@ class _AgentDashboardPageState extends State<AgentDashboardPage> {
               120,
             ),
             children: [
+              _AgentLocationCard(),
+              const SizedBox(height: 12),
               if (error != null) _InlineError(message: error),
               _SummaryRow(controller: controller),
               const SizedBox(height: 18),
@@ -96,7 +113,7 @@ class _AgentDashboardPageState extends State<AgentDashboardPage> {
                     ),
                     IconButton(
                       tooltip: localization.translate('rejected'),
-                      onPressed: () => controller.reject(property.id),
+                      onPressed: () => _rejectProperty(property.id),
                       icon: const Icon(Icons.cancel_outlined),
                     ),
                   ],
@@ -114,9 +131,34 @@ class _AgentDashboardPageState extends State<AgentDashboardPage> {
               _PoiSection(
                 title: localization.translate('agent_pois'),
                 pois: controller.pois,
-                onAdd: _openAddPoi,
+                onAdd: () => _openAddPoi(),
+                onEdit: _openEditPoi,
+                onDelete: _deletePoi,
               ),
               const SizedBox(height: 22),
+              OutlinedButton.icon(
+                onPressed: controller.isLoading.value
+                    ? null
+                    : () async {
+                        try {
+                          await controller.submitLicense();
+                          if (mounted) {
+                            _showMessage(
+                              localization.translate('agent_license_submitted'),
+                            );
+                          }
+                        } catch (error) {
+                          if (mounted) {
+                            _showMessage(
+                              error.toString().replaceFirst('Exception: ', ''),
+                            );
+                          }
+                        }
+                      },
+                icon: const Icon(Icons.verified_outlined),
+                label: Text(localization.translate('agent_submit_license')),
+              ),
+              const SizedBox(height: 10),
               FilledButton.icon(
                 onPressed: _openAddProperty,
                 icon: const Icon(Icons.add_rounded),
@@ -137,18 +179,35 @@ class _AgentDashboardPageState extends State<AgentDashboardPage> {
     await controller.load();
   }
 
-  Future<void> _openAddPoi() async {
+  Future<void> _openAddPoi({Map<String, dynamic>? existing}) async {
     final nameController = TextEditingController();
     final typeController = TextEditingController();
-    final latController = TextEditingController();
-    final lngController = TextEditingController();
+    final categoryController = TextEditingController();
+    final subcategoryController = TextEditingController();
+    final iconController = TextEditingController();
+    final latController = TextEditingController(
+      text: existing?['latitude']?.toString() ?? '',
+    );
+    final lngController = TextEditingController(
+      text: existing?['longitude']?.toString() ?? '',
+    );
+    nameController.text = existing?['name']?.toString() ??
+        existing?['title']?.toString() ?? '';
+    typeController.text = existing?['type']?.toString() ??
+        existing?['category']?.toString() ?? '';
+    categoryController.text = existing?['category']?.toString() ??
+        existing?['type']?.toString() ?? '';
+    subcategoryController.text = existing?['subcategory']?.toString() ?? '';
+    iconController.text = existing?['icon']?.toString() ?? '';
 
     final localization = AppLocalization.of(context);
     try {
       final submit = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text(localization.translate('agent_add_place')),
+          title: Text(existing == null
+                ? localization.translate('agent_add_place')
+                : localization.translate('agent_edit_place')),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -164,6 +223,27 @@ class _AgentDashboardPageState extends State<AgentDashboardPage> {
                   controller: typeController,
                   decoration: InputDecoration(
                     labelText: localization.translate('agent_place_type'),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: categoryController,
+                  decoration: InputDecoration(
+                    labelText: localization.translate('agent_place_category'),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: subcategoryController,
+                  decoration: InputDecoration(
+                    labelText: localization.translate('agent_place_subcategory'),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: iconController,
+                  decoration: InputDecoration(
+                    labelText: localization.translate('agent_place_icon'),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -214,21 +294,105 @@ class _AgentDashboardPageState extends State<AgentDashboardPage> {
         return;
       }
 
-      await controller.createPoi({
-        'name': name,
-        'type': type,
-        'latitude': latitude,
-        'longitude': longitude,
-      });
+      final existingId = int.tryParse(
+        (existing?['id'] ?? existing?['osm_id'] ?? '').toString(),
+      );
+      if (existingId != null && existingId > 0) {
+        await controller.updatePoi(existingId, {
+          'name': name,
+          'category': categoryController.text.trim().isEmpty
+              ? type
+              : categoryController.text.trim(),
+          'subcategory': subcategoryController.text.trim(),
+          'latitude': latitude,
+          'longitude': longitude,
+          'icon': iconController.text.trim(),
+        });
+      } else {
+        await controller.createPoi({
+          'name': name,
+          'category': categoryController.text.trim().isEmpty
+              ? type
+              : categoryController.text.trim(),
+          'subcategory': subcategoryController.text.trim(),
+          'latitude': latitude,
+          'longitude': longitude,
+          'icon': iconController.text.trim(),
+        });
+      }
 
       if (mounted) {
-        _showMessage(localization.translate('agent_add_place_success'));
+        _showMessage(localization.translate(existing == null ? 'agent_add_place_success' : 'agent_place_updated'));
       }
     } finally {
       nameController.dispose();
       typeController.dispose();
+      categoryController.dispose();
+      subcategoryController.dispose();
+      iconController.dispose();
       latController.dispose();
       lngController.dispose();
+    }
+  }
+
+  Future<void> _rejectProperty(int propertyId) async {
+    final localization = AppLocalization.of(context);
+    final reasonController = TextEditingController();
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(localization.translate('rejected')),
+          content: TextField(
+            controller: reasonController,
+            maxLines: 3,
+            decoration: InputDecoration(
+              labelText: localization.translate('agent_rejection_reason'),
+              hintText: localization.translate('agent_rejection_reason'),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(localization.translate('cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(localization.translate('rejected')),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+      await controller.reject(propertyId, reason: reasonController.text.trim());
+      if (mounted) _showMessage(localization.translate('agent_property_rejected'));
+    } catch (error) {
+      if (mounted) {
+        _showMessage(error.toString().replaceFirst('Exception: ', ''));
+      }
+    } finally {
+      reasonController.dispose();
+    }
+  }
+
+  Future<void> _openEditPoi(Map<String, dynamic> poi) async {
+    await _openAddPoi(existing: poi);
+  }
+
+  Future<void> _deletePoi(Map<String, dynamic> poi) async {
+    final id = int.tryParse((poi['id'] ?? poi['osm_id'] ?? '').toString());
+    if (id == null || id <= 0) return;
+    try {
+      await controller.deletePoi(id);
+      if (mounted) {
+        _showMessage(
+          AppLocalization.of(context).translate('agent_place_deleted'),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        _showMessage(error.toString().replaceFirst('Exception: ', ''));
+      }
     }
   }
 
@@ -247,6 +411,49 @@ class _AgentDashboardPageState extends State<AgentDashboardPage> {
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
+    );
+  }
+}
+
+class _AgentLocationCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final localization = AppLocalization.of(context);
+    final theme = Theme.of(context);
+    return AnimatedBuilder(
+      animation: LocationManager.instance,
+      builder: (context, _) {
+        final manager = LocationManager.instance;
+        final location = manager.displayLocation;
+        return Card(
+          margin: EdgeInsets.zero,
+          child: ListTile(
+            leading: Icon(
+              Icons.location_on_rounded,
+              color: theme.colorScheme.primary,
+            ),
+            title: Text(localization.translate('current_location')),
+            subtitle: Text(
+              manager.isUpdating
+                  ? localization.translate('location_detecting')
+                  : (location.isEmpty
+                      ? localization.translate('location_unavailable')
+                      : location),
+            ),
+            trailing: manager.isUpdating
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : IconButton(
+                    tooltip: localization.translate('refresh'),
+                    onPressed: () => manager.updateCurrentLocation(),
+                    icon: const Icon(Icons.my_location_rounded),
+                  ),
+          ),
+        );
+      },
     );
   }
 }
@@ -330,7 +537,7 @@ class _PropertySection extends StatelessWidget {
             ),
           )
         else
-          ...properties.take(12).map(
+          ...properties.map(
                 (property) => Card(
                   margin: const EdgeInsets.only(bottom: 8),
                   clipBehavior: Clip.antiAlias,
@@ -341,12 +548,20 @@ class _PropertySection extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    subtitle: Text(
-                      property.address.isEmpty
-                          ? property.price
-                          : property.address,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          property.address.isEmpty ? property.price : property.address,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (property.raw.isNotEmpty)
+                          Text(
+                            '${property.raw.length} API fields',
+                            style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.primary),
+                          ),
+                      ],
                     ),
                     trailing: actionBuilder?.call(property),
                     onTap: property.id == 0
@@ -356,6 +571,7 @@ class _PropertySection extends StatelessWidget {
                               AppRouter.propertyDetails,
                               arguments: property.id,
                             ),
+                    onLongPress: property.raw.isEmpty ? null : () => _showApiData(context, property.raw),
                   ),
                 ),
               ),
@@ -363,6 +579,35 @@ class _PropertySection extends StatelessWidget {
       ],
     );
   }
+}
+
+void _showApiData(BuildContext context, Map<String, dynamic> data) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (context) => SafeArea(
+      child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: .65,
+        maxChildSize: .92,
+        builder: (context, scrollController) => ListView(
+          controller: scrollController,
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+          children: [
+            Text(AppLocalization.of(context).translate('agent_api_data'), style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
+            const SizedBox(height: 12),
+            ...data.entries.map((entry) => Card(
+              child: ListTile(
+                title: Text(entry.key),
+                subtitle: Text(entry.value is Map || entry.value is List ? entry.value.toString() : '${entry.value ?? ''}'),
+              ),
+            )),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _PropertyImage extends StatelessWidget {
@@ -400,11 +645,15 @@ class _PoiSection extends StatelessWidget {
     required this.title,
     required this.pois,
     required this.onAdd,
+    required this.onEdit,
+    required this.onDelete,
   });
 
   final String title;
   final List<Map<String, dynamic>> pois;
   final VoidCallback onAdd;
+  final ValueChanged<Map<String, dynamic>> onEdit;
+  final ValueChanged<Map<String, dynamic>> onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -430,7 +679,7 @@ class _PoiSection extends StatelessWidget {
         if (pois.isEmpty)
           Text(AppLocalization.of(context).translate('agent_empty'))
         else
-          ...pois.take(10).map(
+          ...pois.map(
                 (poi) => ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.place_outlined),
@@ -442,7 +691,22 @@ class _PoiSection extends StatelessWidget {
                   subtitle: Text(
                     (poi['type'] ?? poi['category'] ?? '').toString(),
                   ),
-                ),
+                   trailing: Row(
+                     mainAxisSize: MainAxisSize.min,
+                     children: [
+                       IconButton(
+                         tooltip: AppLocalization.of(context).translate('edit'),
+                         onPressed: () => onEdit(poi),
+                         icon: const Icon(Icons.edit_outlined),
+                       ),
+                       IconButton(
+                         tooltip: AppLocalization.of(context).translate('delete'),
+                         onPressed: () => onDelete(poi),
+                         icon: const Icon(Icons.delete_outline_rounded),
+                       ),
+                     ],
+                   ),
+                 ),
               ),
       ],
     );

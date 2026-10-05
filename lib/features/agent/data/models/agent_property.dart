@@ -8,6 +8,7 @@ class AgentProperty {
     this.imageUrl = '',
     this.price = '',
     this.address = '',
+    this.raw = const {},
   });
 
   final int id;
@@ -16,6 +17,7 @@ class AgentProperty {
   final String imageUrl;
   final String price;
   final String address;
+  final Map<String, dynamic> raw;
 
   factory AgentProperty.fromJson(Map<String, dynamic> json) {
     final image = json['primary_image'] ??
@@ -29,7 +31,8 @@ class AgentProperty {
       status: (json['status'] ?? json['approval_status'] ?? '').toString(),
       imageUrl: _normalizeImage(image),
       price: (json['price'] ?? '').toString(),
-      address: (json['address'] ?? json['address_line_1'] ?? '').toString(),
+      address: (json['address'] ?? json['address_line_1'] ?? json['location']?.toString() ?? '').toString(),
+      raw: Map<String, dynamic>.from(json),
     );
   }
 

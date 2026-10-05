@@ -1,13 +1,13 @@
+import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/network/api_client.dart';
 import '../models/agent_property.dart';
 
 class AgentRemoteDataSource {
   Future<List<AgentProperty>> getProperties(String status) async {
     final response = await ApiClient.get(
-      '/api/agent/properties',
+      ApiEndpoints.agentProperties,
       queryParameters: {
         'status': status,
-        'per_page': 100,
       },
       authenticated: true,
     );
@@ -32,7 +32,7 @@ class AgentRemoteDataSource {
 
   Future<List<Map<String, dynamic>>> getPois() async {
     final response = await ApiClient.get(
-      '/api/agent/pois',
+      ApiEndpoints.agentPois,
       authenticated: true,
     );
 
@@ -55,7 +55,7 @@ class AgentRemoteDataSource {
 
   Future<void> createPoi(Map<String, dynamic> body) async {
     await ApiClient.post(
-      '/api/agent/pois',
+      ApiEndpoints.agentPois,
       authenticated: true,
       body: body,
     );
@@ -66,7 +66,7 @@ class AgentRemoteDataSource {
     Map<String, dynamic> body,
   ) async {
     await ApiClient.put(
-      '/api/agent/pois/$id',
+      '${ApiEndpoints.agentPois}/$id',
       authenticated: true,
       body: body,
     );
@@ -74,29 +74,32 @@ class AgentRemoteDataSource {
 
   Future<void> deletePoi(int id) async {
     await ApiClient.delete(
-      '/api/agent/pois/$id',
+      '${ApiEndpoints.agentPois}/$id',
       authenticated: true,
     );
   }
 
   Future<void> submitLicense() async {
     await ApiClient.post(
-      '/api/agent/onboarding/license',
+      ApiEndpoints.agentLicense,
       authenticated: true,
     );
   }
 
   Future<void> approveProperty(int id) async {
     await ApiClient.put(
-      '/api/agent/properties/$id/approve',
+      '${ApiEndpoints.agentProperties}/$id/approve',
       authenticated: true,
     );
   }
 
-  Future<void> rejectProperty(int id) async {
+  Future<void> rejectProperty(int id, {String? reason}) async {
     await ApiClient.put(
-      '/api/agent/properties/$id/reject',
+      '${ApiEndpoints.agentProperties}/$id/reject',
       authenticated: true,
+      body: {
+        if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
+      },
     );
   }
 }

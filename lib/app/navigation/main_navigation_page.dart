@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
+
+import '../../core/storage/token_storage.dart';
 import '../../core/controllers/favorites_controller.dart';
 import '../../core/controllers/my_properties_controller.dart';
 import '../../core/controllers/home_controller.dart';
@@ -20,24 +22,31 @@ class MainNavigationPage extends StatefulWidget {
 
 class _MainNavigationPageState extends State<MainNavigationPage> {
   int _currentIndex = 0;
+  bool _isAgent = false;
 
   @override
   void initState() {
     super.initState();
-    Get.find<HomeController>().initialize();
-    Get.find<FavoritesController>().initialize();
+    Get.find<HomeController>().load(force: true);
+    Get.find<FavoritesController>().reload(showLoader: false);
     Get.find<MyPropertiesController>().initialize();
+    _loadAccountRole();
+  }
+
+  Future<void> _loadAccountRole() async {
+    final role = (await TokenStorage.getRole() ?? '').trim().toLowerCase();
+    if (!mounted) return;
+    final isAgent = role == 'agent' || role == 'real_estate_agent';
+    setState(() {
+      _isAgent = isAgent;
+      if (!_isAgent && _currentIndex > 4) _currentIndex = 0;
+    });
   }
 
   void _selectTab(int index) {
+    if (index < 0 || index > 4) return;
     if (index == _currentIndex) return;
     setState(() => _currentIndex = index);
-
-    // Do not refetch when switching tabs. The tab widgets/controllers stay
-    // alive in IndexedStack; pull-to-refresh is the explicit refresh action.
-    if (index == 0) {
-      // Home location state is managed independently.
-    }
   }
 
   @override
@@ -57,6 +66,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
       bottomNavigationBar: AppBottomNavigation(
         currentIndex: _currentIndex,
         onItemSelected: _selectTab,
+        isAgent: _isAgent,
       ),
     );
   }

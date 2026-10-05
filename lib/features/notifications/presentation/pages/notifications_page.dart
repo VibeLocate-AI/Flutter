@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/localization/localization.dart';
+import '../../../../app/navigation/app_bar_actions.dart';
+import 'package:get/get.dart';
 import '../../notifications_dependencies.dart';
 import '../../data/models/notification_model.dart';
 
@@ -36,6 +38,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
         _items = result.items;
         _loading = false;
       });
+      _refreshBadge();
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -61,6 +64,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             )
             .toList(growable: false);
       });
+      _refreshBadge();
     } catch (error) {
       if (mounted) _message(error.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -80,6 +84,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             .map((item) => item.copyWith(isRead: true))
             .toList(growable: false);
       });
+      _refreshBadge();
     } catch (error) {
       if (mounted) _message(error.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -96,8 +101,15 @@ class _NotificationsPageState extends State<NotificationsPage> {
             .where((value) => value.id != item.id)
             .toList(growable: false);
       });
+      _refreshBadge();
     } catch (error) {
       if (mounted) _message(error.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  void _refreshBadge() {
+    if (Get.isRegistered<NotificationBadgeController>()) {
+      Get.find<NotificationBadgeController>().refreshCount();
     }
   }
 

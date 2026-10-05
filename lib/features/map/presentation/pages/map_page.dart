@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../app/navigation/app_bar_actions.dart';
 import 'package:get/get.dart';
 import '../../../../core/controllers/map_controller_x.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -37,7 +38,11 @@ class _MapPageState extends State<MapPage> {
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
-    controller.initialize().then((_) {
+    controller.initialize().then((_) async {
+      final locationManager = LocationManager.instance;
+      if (!locationManager.hasCurrentLocation && !locationManager.isUpdating) {
+        await locationManager.updateCurrentLocation();
+      }
       if (!mounted) return;
       final locations = controller.locations.toList(growable: false);
       MapLocationModel? initial;
@@ -50,7 +55,20 @@ class _MapPageState extends State<MapPage> {
       setState(() => _selected = initial);
       if (initial != null) {
         _loadNearbyPois(initial);
+      } else {
+        final manager = LocationManager.instance;
+        if (manager.hasCurrentLocation &&
+            manager.latitude != null &&
+            manager.longitude != null) {
+          _loadNearbyPoisAt(
+            manager.latitude!,
+            manager.longitude!,
+          );
+        }
       }
+      // The Map tab is a property-discovery map: on entry it must focus
+      // the properties already loaded from the Home/API, not the user's GPS.
+      // The user's GPS is only used by the explicit "my location" action.
       final focus = initial ?? (locations.isNotEmpty ? locations.first : null);
       if (focus != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -94,7 +112,13 @@ class _MapPageState extends State<MapPage> {
       final location = all.first;
       return LatLng(location.latitude, location.longitude);
     }
-    return const LatLng(25.2048, 55.2708);
+    final manager = LocationManager.instance;
+    if (manager.hasCurrentLocation &&
+        manager.latitude != null &&
+        manager.longitude != null) {
+      return LatLng(manager.latitude!, manager.longitude!);
+    }
+    return const LatLng(0, 0);
   }
 
   void _selectLocation(MapLocationModel location) {
@@ -109,6 +133,18 @@ class _MapPageState extends State<MapPage> {
     );
   }
 
+
+  Future<void> _loadNearbyPoisAt(
+    double latitude,
+    double longitude,
+  ) async {
+    final pois = await NearbyPoiService.instance.nearby(
+      latitude,
+      longitude,
+    );
+    if (!mounted) return;
+    setState(() => _nearbyPois = pois);
+  }
 
   Future<void> _loadNearbyPois(MapLocationModel property) async {
     // POIs are loaded independently from the property API, so they never
@@ -146,6 +182,7 @@ class _MapPageState extends State<MapPage> {
       LatLng(latitude, longitude),
       14.5,
     );
+    await _loadNearbyPoisAt(latitude, longitude);
   }
 
   double _navigationOverlayInset(BuildContext context) {
@@ -167,6 +204,8 @@ class _MapPageState extends State<MapPage> {
       appBar: AppBar(
         title: Text(localization.translate('map_title')),
         actions: [
+          const AgentAppBarAction(),
+          const NotificationAppBarAction(),
           IconButton(
             tooltip: localization.translate('map_refresh'),
             onPressed: loading ? null : _load,

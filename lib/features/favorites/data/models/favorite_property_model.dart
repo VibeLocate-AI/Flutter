@@ -1,4 +1,5 @@
 import '../../../../core/constants/api_endpoints.dart';
+import '../../../home/data/models/property_model.dart';
 
 class FavoritePropertyModel {
   const FavoritePropertyModel({
@@ -46,6 +47,35 @@ class FavoritePropertyModel {
   final String imageUrl;
   final String? favoritedAt;
   final bool isFavorite;
+
+  factory FavoritePropertyModel.fromProperty(PropertyModel property) {
+    final image = property.primaryImage?.imageUrl ??
+        (property.images.isNotEmpty ? property.images.first.imageUrl : '');
+    final location = property.location;
+    return FavoritePropertyModel(
+      id: property.id,
+      title: property.displayTitle,
+      slug: property.slug,
+      price: property.price,
+      currency: property.currency,
+      bedrooms: property.bedrooms,
+      bathrooms: property.bathrooms,
+      areaSqft: property.areaSqft,
+      actionType: property.listingType.isNotEmpty ? property.listingType : (property.actionType ?? ''),
+      typeId: property.typeId,
+      propertyType: property.propertyCondition ?? '',
+      categoryId: property.categoryId,
+      categoryName: '',
+      latitude: location?.latitude ?? 0,
+      longitude: location?.longitude ?? 0,
+      address: location?.addressLine1 ?? '',
+      neighborhoodId: location?.neighborhoodId,
+      neighborhood: location?.neighborhoodName ?? '',
+      imageUrl: _normalizeImage(image),
+      favoritedAt: null,
+      isFavorite: true,
+    );
+  }
 
   factory FavoritePropertyModel.fromJson(
     Map<String, dynamic> json,

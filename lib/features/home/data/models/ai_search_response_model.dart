@@ -22,37 +22,71 @@ class AiSearchResponseModel {
   factory AiSearchResponseModel.fromJson(
       Map<String, dynamic> json,
       ) {
+    final source = _deepestDataMap(json);
     final understoodJson =
-        json['understood'] ?? json['ai_understanding'];
+        source['understood'] ??
+        source['ai_understanding'] ??
+        json['understood'] ??
+        json['ai_understanding'];
 
     final propertiesJson =
+        source['properties'] ??
+        source['results'] ??
+        source['items'] ??
         json['properties'] ??
         json['results'] ??
-        json['items'] ??
-        (json['data'] is Map<String, dynamic>
-            ? (json['data'] as Map<String, dynamic>)['properties']
-            : null);
+        json['items'];
+
+    final properties = propertiesJson is List
+        ? propertiesJson
+            .whereType<Map>()
+            .map((item) => AiSearchPropertyModel.fromJson(
+                  item.map((key, value) => MapEntry(key.toString(), value)),
+                ))
+            .toList()
+        : const <AiSearchPropertyModel>[];
 
     return AiSearchResponseModel(
-      success: json['success'] == true || (propertiesJson is List && propertiesJson.isNotEmpty),
-      query: json['query']?.toString() ?? '',
-      searchMode: json['search_mode']?.toString() ?? '',
-      understood: understoodJson is Map<String, dynamic>
+      success: source['success'] == true ||
+          json['success'] == true ||
+          properties.isNotEmpty,
+      query: (source['query'] ?? json['query'])?.toString() ?? '',
+      searchMode: (source['search_mode'] ?? json['search_mode'])?.toString() ?? '',
+      understood: understoodJson is Map
           ? AiSearchUnderstandingModel.fromJson(
-        understoodJson,
-      )
+              understoodJson.map((key, value) => MapEntry(key.toString(), value)),
+            )
           : const AiSearchUnderstandingModel(),
       exactMatches: _toInt(
-        json['exact_matches'] ?? json['exact_matches_count'],
+        source['exact_matches'] ??
+            source['exact_matches_count'] ??
+            json['exact_matches'] ??
+            json['exact_matches_count'],
       ),
-      totalResults: _toInt(json['total_results'] ?? (propertiesJson is List ? propertiesJson.length : 0)),
-      properties: propertiesJson is List
-          ? propertiesJson
-          .whereType<Map<String, dynamic>>()
-          .map(AiSearchPropertyModel.fromJson)
-          .toList()
-          : const [],
+      totalResults: _toInt(
+        source['total_results'] ??
+            (properties.isNotEmpty ? properties.length : json['total_results']),
+      ),
+      properties: properties,
     );
+  }
+
+  static Map<String, dynamic> _deepestDataMap(Map<String, dynamic> json) {
+    dynamic current = json;
+    for (var i = 0; i < 5; i++) {
+      if (current is Map) {
+        final next = current['data'] ?? current['result'] ?? current['response'];
+        if (next is Map) {
+          current = next;
+          continue;
+        }
+      }
+      break;
+    }
+    if (current is Map) {
+      return current.map((key, value) => MapEntry(key.toString(), value));
+    }
+    return json;
   }
 
   static int _toInt(dynamic value) {

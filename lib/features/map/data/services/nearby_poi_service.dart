@@ -11,7 +11,7 @@ class NearbyPoiService {
   static final NearbyPoiService instance = NearbyPoiService._();
 
   static const _assetPath = 'assets/data/dubai_pois.json';
-  static const _radiusKm = 2.0;
+  static const _radiusKm = 3.0;
   static const _maxResults = 8;
 
   List<NearbyPoiModel>? _cache;

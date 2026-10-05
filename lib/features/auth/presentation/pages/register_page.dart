@@ -1,10 +1,13 @@
 import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibe_locate_ai/features/auth/presentation/pages/verification_page.dart';
 
 import '../../../../app/app_router.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/localization/localization.dart';
+import '../../../../core/state/location_manager.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../auth_dependencies.dart';
 import '../widgets/auth_text_field.dart';
@@ -65,6 +68,32 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _obscureConfirmPassword = true;
   bool _acceptedTerms = false;
   bool _isLoading = false;
+  bool _isAgent = false;
+  String? _identityImagePath;
+
+  final TextEditingController _agencyController = TextEditingController();
+  final TextEditingController _licenseController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    final location = LocationManager.instance;
+    if (location.city.isNotEmpty) _cityController.text = location.city;
+    if (location.country.isNotEmpty) _countryController.text = location.country;
+    if (location.city.isEmpty && location.country.isEmpty) {
+      location.updateCurrentLocation().then((_) {
+        if (!mounted) return;
+        setState(() {
+          if (_cityController.text.isEmpty) {
+            _cityController.text = location.city;
+          }
+          if (_countryController.text.isEmpty) {
+            _countryController.text = location.country;
+          }
+        });
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -76,6 +105,8 @@ class _RegisterPageState extends State<RegisterPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _agencyController.dispose();
+    _licenseController.dispose();
     super.dispose();
   }
 
@@ -177,6 +208,23 @@ class _RegisterPageState extends State<RegisterPage> {
     return null;
   }
 
+  Future<void> _pickIdentityImage() async {
+    final image = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 1800,
+    );
+    if (image == null || !mounted) return;
+    setState(() => _identityImagePath = image.path);
+  }
+
+  Future<void> _saveIdentityImageLocally(String email) async {
+    final path = _identityImagePath;
+    if (path == null || path.isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('agent_identity_document_$email', path);
+  }
+
   Future<void> _register() async {
     FocusScope.of(context).unfocus();
 
@@ -234,10 +282,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
     if (!_isStrongPassword(password)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Please create a strong password before continuing.',
-          ),
+        SnackBar(
+          content: Text(localization.translate('strong_password_required')),
         ),
       );
       return;
@@ -245,10 +291,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
     if (password != passwordConfirmation) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Passwords do not match.',
-          ),
+        SnackBar(
+          content: Text(localization.translate('passwords_not_match')),
         ),
       );
       return;
@@ -272,17 +316,48 @@ class _RegisterPageState extends State<RegisterPage> {
     });
 
     try {
-      await AuthDependencies.register(
-        firstName: firstName,
-        lastName: lastName,
-        city: city,
-        country: country,
-        email: email,
-        phone: phone,
-        password: password,
-        passwordConfirmation:
-        passwordConfirmation,
-      );
+      if (_isAgent) {
+        if (_agencyController.text.trim().isEmpty ||
+            _licenseController.text.trim().isEmpty ||
+            _identityImagePath == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                localization.translate('agent_registration_complete_fields'),
+              ),
+            ),
+          );
+          return;
+        }
+
+        await AuthDependencies.registerAgent(
+          firstName: firstName,
+          lastName: lastName,
+          city: city,
+          country: country,
+          email: email,
+          phone: phone,
+          password: password,
+          passwordConfirmation: passwordConfirmation,
+          agencyName: _agencyController.text.trim(),
+          licenseNumber: _licenseController.text.trim(),
+        );
+        // The supplied backend collection does not expose an identity-document
+        // field or upload endpoint for /api/agent/register. Keep the selected
+        // document staged locally instead of silently sending it as another field.
+        await _saveIdentityImageLocally(email);
+      } else {
+        await AuthDependencies.register(
+          firstName: firstName,
+          lastName: lastName,
+          city: city,
+          country: country,
+          email: email,
+          phone: phone,
+          password: password,
+          passwordConfirmation: passwordConfirmation,
+        );
+      }
 
       if (!mounted) {
         return;
@@ -441,15 +516,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 _passwordController.text;
 
     return Scaffold(
-      appBar: AppBar(
-        actions: [
-          TextButton.icon(
-            onPressed: () => Navigator.pushReplacementNamed(context, AppRouter.agentRegister),
-            icon: const Icon(Icons.business_center_outlined, size: 18),
-            label: Text('Agent'),
-          ),
-        ],
-      ),
+      appBar: AppBar(),
       backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
@@ -471,6 +538,81 @@ class _RegisterPageState extends State<RegisterPage> {
                   crossAxisAlignment:
                   CrossAxisAlignment.stretch,
                   children: [
+                    Container(
+                      height: 52,
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(
+                          color: colorScheme.outlineVariant,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _AccountTypeOption(
+                              label: localization.translate('regular_user'),
+                              selected: !_isAgent,
+                              onTap: _isLoading
+                                  ? null
+                                  : () => setState(() => _isAgent = false),
+                            ),
+                          ),
+                          Expanded(
+                            child: _AccountTypeOption(
+                              label: localization.translate('real_estate_agent'),
+                              selected: _isAgent,
+                              onTap: _isLoading
+                                  ? null
+                                  : () => setState(() => _isAgent = true),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_isAgent) ...[
+                      const SizedBox(height: 14),
+                      AuthTextField(
+                        controller: _agencyController,
+                        label: localization.translate('agency_name'),
+                        hint: localization.translate('agency_name'),
+                        prefixIcon: Icons.business_outlined,
+                        validator: (value) => _isAgent
+                            ? _required(
+                                value,
+                                localization.translate('agency_name_required'),
+                              )
+                            : null,
+                      ),
+                      const SizedBox(height: 14),
+                      AuthTextField(
+                        controller: _licenseController,
+                        label: localization.translate('license_number'),
+                        hint: localization.translate('license_number'),
+                        prefixIcon: Icons.badge_outlined,
+                        validator: (value) => _isAgent
+                            ? _required(
+                                value,
+                                localization.translate('license_required'),
+                              )
+                            : null,
+                      ),
+                      const SizedBox(height: 14),
+                      OutlinedButton.icon(
+                        onPressed: _isLoading ? null : _pickIdentityImage,
+                        icon: Icon(
+                          _identityImagePath == null
+                              ? Icons.badge_outlined
+                              : Icons.check_circle_outline_rounded,
+                        ),
+                        label: Text(
+                          _identityImagePath == null
+                              ? localization.translate('upload_identity')
+                              : localization.translate('identity_selected'),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 26),
                     Row(
                       crossAxisAlignment:
@@ -910,6 +1052,60 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ],
                 ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+class _AccountTypeOption extends StatelessWidget {
+  const _AccountTypeOption({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        color: selected ? theme.colorScheme.primary : Colors.transparent,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: selected
+            ? [
+                BoxShadow(
+                  color: theme.colorScheme.primary.withValues(alpha: .18),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ]
+            : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: onTap,
+          child: Center(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: selected
+                    ? theme.colorScheme.onPrimary
+                    : theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
               ),
             ),
           ),

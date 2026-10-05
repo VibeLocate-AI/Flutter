@@ -10,7 +10,7 @@ import '../location/location_service.dart';
 
 class LocationManager extends ChangeNotifier {
   LocationManager._() {
-    _load();
+    _ready = _load();
   }
 
   static final LocationManager instance = LocationManager._();
@@ -18,12 +18,17 @@ class LocationManager extends ChangeNotifier {
   static const _latKey = 'location_latitude';
   static const _lngKey = 'location_longitude';
   static const _nameKey = 'location_name';
+  static const _cityKey = 'location_city';
+  static const _countryKey = 'location_country';
 
   double? _latitude;
   double? _longitude;
   String _locationName = '';
+  String _city = '';
+  String _country = '';
   bool _updating = false;
   bool _hasFreshLocation = false;
+  late final Future<void> _ready;
 
   double? get latitude => _latitude;
   double? get longitude => _longitude;
@@ -31,13 +36,21 @@ class LocationManager extends ChangeNotifier {
   bool get hasCurrentLocation =>
       _hasFreshLocation && _latitude != null && _longitude != null;
 
-  /// Displays the detected city and country, for example:
-  /// "Dubai, United Arab Emirates".
+  /// Displays the detected city and country from the device location.
   String get displayLocation {
     if (!hasCurrentLocation) return '';
     if (_locationName.trim().isNotEmpty) return _locationName.trim();
+    if (_city.trim().isNotEmpty || _country.trim().isNotEmpty) {
+      return [
+        if (_city.trim().isNotEmpty) _city.trim(),
+        if (_country.trim().isNotEmpty) _country.trim(),
+      ].join(', ');
+    }
     return '${_latitude!.toStringAsFixed(5)}, ${_longitude!.toStringAsFixed(5)}';
   }
+
+  String get city => _city;
+  String get country => _country;
 
   String get lastKnownLocation {
     if (_locationName.trim().isNotEmpty) return _locationName.trim();
@@ -53,6 +66,8 @@ class LocationManager extends ChangeNotifier {
       _latitude = prefs.getDouble(_latKey);
       _longitude = prefs.getDouble(_lngKey);
       _locationName = prefs.getString(_nameKey) ?? '';
+      _city = prefs.getString(_cityKey) ?? '';
+      _country = prefs.getString(_countryKey) ?? '';
       // Cached coordinates are immediately usable in the UI. A fresh GPS
       // request still runs from Home/Profile when needed.
       _hasFreshLocation = _latitude != null && _longitude != null;
@@ -75,11 +90,17 @@ class LocationManager extends ChangeNotifier {
     final name = await _reverseGeocode(latitude, longitude);
     if (name.isEmpty) return;
     _locationName = name;
+    final parts = name.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    _city = parts.isNotEmpty ? parts.first : '';
+    _country = parts.length > 1 ? parts.last : '';
     await prefs.setString(_nameKey, name);
+    await prefs.setString(_cityKey, _city);
+    await prefs.setString(_countryKey, _country);
     notifyListeners();
   }
 
   Future<bool> updateCurrentLocation() async {
+    await _ready;
     if (_updating) return false;
 
     _updating = true;
@@ -95,10 +116,25 @@ class LocationManager extends ChangeNotifier {
         return false;
       }
 
+      // Normalize coordinates at the single source of truth so no screen
+      // can accidentally swap latitude and longitude.
+      var latitude = position.latitude;
+      var longitude = position.longitude;
+      if (latitude.abs() > 90 && longitude.abs() <= 90) {
+        final tmp = latitude;
+        latitude = longitude;
+        longitude = tmp;
+      }
+      if (latitude.abs() > 90 || longitude.abs() > 180) {
+        _hasFreshLocation = false;
+        notifyListeners();
+        return false;
+      }
+
       // Coordinates are available immediately. Do not wait for reverse
       // geocoding before returning to the UI; this keeps location updates fast.
-      _latitude = position.latitude;
-      _longitude = position.longitude;
+      _latitude = latitude;
+      _longitude = longitude;
       _hasFreshLocation = true;
       _locationName = '';
 
@@ -111,7 +147,7 @@ class LocationManager extends ChangeNotifier {
 
       // City/country resolution runs in the background and updates the header
       // as soon as the result is available.
-      _resolveFreshName(position.latitude, position.longitude, prefs);
+      _resolveFreshName(latitude, longitude, prefs);
 
       return true;
     } catch (_) {
@@ -134,7 +170,12 @@ class LocationManager extends ChangeNotifier {
     if (_latitude != latitude || _longitude != longitude) return;
 
     _locationName = name;
+    final parts = name.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    _city = parts.isNotEmpty ? parts.first : '';
+    _country = parts.length > 1 ? parts.last : '';
     await prefs.setString(_nameKey, name);
+    await prefs.setString(_cityKey, _city);
+    await prefs.setString(_countryKey, _country);
     notifyListeners();
   }
 

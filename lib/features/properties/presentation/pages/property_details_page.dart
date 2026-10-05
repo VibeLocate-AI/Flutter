@@ -107,7 +107,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
     if (property == null) return;
 
     try {
-      await FavoritesManager.instance.toggle(property.id);
+      await FavoritesManager.instance.toggleProperty(property);
       if (mounted) setState(() {});
     } catch (error) {
       if (mounted) _message(error.toString().replaceFirst('Exception: ', ''));
