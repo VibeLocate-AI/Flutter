@@ -1,3 +1,4 @@
+import 'data/models/home_model.dart';
 import 'data/datasources/ai_search_remote_data_source.dart';
 import 'data/datasources/home_remote_data_source.dart';
 import 'data/repositories/ai_search_repository_impl.dart';
@@ -18,6 +19,10 @@ class HomeDependencies {
 
   static final GetHome getHome =
   GetHome(repository);
+
+  static Future<HomeModel?> getCachedHome() {
+    return repository.getCachedHome();
+  }
 
   static final AiSearchRemoteDataSource aiSearchRemoteDataSource =
   AiSearchRemoteDataSourceImpl();

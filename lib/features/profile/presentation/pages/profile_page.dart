@@ -8,12 +8,10 @@ import '../../../../app/app_router.dart';
 import '../../../../app/navigation/app_bar_actions.dart';
 import '../../../../core/localization/locale_manager.dart';
 import '../../../../core/localization/localization.dart';
-import '../../../../core/state/location_manager.dart';
 import '../../../../core/storage/token_storage.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/state/currency_manager.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../../../core/theme/theme_manager.dart';
 import '../../../auth/auth_dependencies.dart';
 import '../../data/models/profile_model.dart';
 import '../../profile_dependencies.dart';
@@ -30,6 +28,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   bool _loading = true;
   bool _saving = false;
+  bool _currencySaving = false;
   bool _editing = false;
 
   final _nameController = TextEditingController();
@@ -57,66 +56,41 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _loadProfile() async {
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
+    // Render the locally persisted account immediately. The network request
+    // updates it in the background instead of blocking the whole Profile page.
+    final local = ProfileModel(
+      id: await TokenStorage.getUserId() ?? 0,
+      fullName: await TokenStorage.getLocalProfileName() ?? '',
+      email: await TokenStorage.getEmail() ?? '',
+      phone: await TokenStorage.getLocalProfilePhone() ?? '',
+      city: await TokenStorage.getLocalProfileCity() ?? '',
+      country: await TokenStorage.getLocalProfileCountry() ?? '',
+      bio: '',
+      avatarUrl: null,
+      preferredLanguage: LocaleManager.instance.currentLocale.languageCode,
+      currency: CurrencyManager.instance.currency,
+      role: await TokenStorage.getRole() ?? 'tenant',
+    );
+
+    if (!mounted) return;
     setState(() {
-      _loading = true;
+      _setProfile(local);
+      _loading = false;
     });
 
     try {
-      final profile = await ProfileDependencies
-          .getProfile()
-          .timeout(
-        const Duration(seconds: 15),
+      final profile = await ProfileDependencies.getProfile().timeout(
+        const Duration(seconds: 10),
       );
 
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _setProfile(profile);
-        _loading = false;
-      });
-    } on TimeoutException {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _loading = false;
-      });
-
-      _showError(
-        AppLocalization.of(context).translate('profile_load_error'),
-      );
-    } catch (error) {
       if (!mounted) return;
-      final email = await TokenStorage.getEmail() ?? '';
-      final name = await TokenStorage.getLocalProfileName() ?? '';
-      final phone = await TokenStorage.getLocalProfilePhone() ?? '';
-      final city = await TokenStorage.getLocalProfileCity() ?? '';
-      final country = await TokenStorage.getLocalProfileCountry() ?? '';
-      final local = ProfileModel(
-        id: await TokenStorage.getUserId() ?? 0,
-        fullName: name,
-        email: email,
-        phone: phone,
-        city: city,
-        country: country,
-        bio: '',
-        avatarUrl: null,
-        preferredLanguage: LocaleManager.instance.currentLocale.languageCode,
-        currency: CurrencyManager.instance.currency,
-        role: await TokenStorage.getRole() ?? 'tenant',
-      );
-      setState(() {
-        _setProfile(local);
-        _loading = false;
-      });
-      // Do not show a blocking error over a usable local profile.
+      setState(() => _setProfile(profile));
+    } on TimeoutException {
+      // Local profile is already visible; do not block or show an error.
+    } catch (_) {
+      // Keep the locally persisted profile. A later pull-to-refresh can retry.
     }
   }
 
@@ -247,83 +221,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<void> _updateCurrentLocation() async {
-    setState(() {
-      _saving = true;
-    });
-
-    try {
-      final success = await LocationManager.instance.updateCurrentLocation();
-
-      if (!mounted) return;
-
-      if (!success) {
-        _showError(
-          AppLocalization.of(context).translate('location_update_failed'),
-        );
-        return;
-      }
-
-      _showMessage(
-        AppLocalization.of(context).translate('location_updated_successfully'),
-      );
-    } catch (error) {
-      if (mounted) {
-        _showError(
-          error.toString().replaceFirst('Exception: ', ''),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _saving = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _changeLanguage(Locale locale) async {
-    final previousLocale =
-        LocaleManager.instance.currentLocale;
-
-    await LocaleManager.instance.setLocale(locale);
-
-    try {
-      final profile = _profile;
-
-      if (profile == null) {
-        return;
-      }
-
-      setState(() {
-        _saving = true;
-      });
-
-      // complete-profile returns only {success, message} in the current
-      // Laravel backend. Do not replace the loaded ProfileModel with that
-      // acknowledgement or it would reset currency/profile fields.
-      await ProfileDependencies.completeProfile(
-        preferredLanguage: locale.languageCode,
-        currency: profile.currency.isEmpty ? 'AED' : profile.currency,
-      );
-
-      if (!mounted) return;
-      setState(() {});
-    } catch (error) {
-      await LocaleManager.instance.setLocale(previousLocale);
-
-      if (mounted) {
-        _showError(error.toString());
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _saving = false;
-        });
-      }
-    }
-  }
-
   Future<void> _showCurrencyPicker() async {
     final current = CurrencyManager.instance.currency;
     final isArabic = LocaleManager.instance.isArabic;
@@ -380,7 +277,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final profile = _profile;
     if (profile == null) return;
 
-    setState(() => _saving = true);
+    setState(() => _currencySaving = true);
 
     try {
       await CurrencyManager.instance.setCurrency(selected);
@@ -408,7 +305,7 @@ class _ProfilePageState extends State<ProfilePage> {
         _showError(error.toString().replaceFirst('Exception: ', ''));
       }
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) setState(() => _currencySaving = false);
     }
   }
 
@@ -427,10 +324,6 @@ class _ProfilePageState extends State<ProfilePage> {
     return key == null
         ? code
         : AppLocalization.of(context).translate(key);
-  }
-
-  void _changeTheme(ThemeMode mode) {
-    ThemeManager.instance.setThemeMode(mode);
   }
 
   Future<void> _confirmLogout() async {
@@ -539,7 +432,7 @@ class _ProfilePageState extends State<ProfilePage> {
       // The local session is still cleared by the auth data source when the
       // logout request succeeds. If the server is unavailable, clear the
       // local tokens below so the user is never trapped in a stale session.
-      await TokenStorage.clearTokens();
+      await TokenStorage.clearSession();
     }
 
     if (!mounted) return;
@@ -547,158 +440,6 @@ class _ProfilePageState extends State<ProfilePage> {
     Navigator.of(context).pushNamedAndRemoveUntil(
       '/login',
       (_) => false,
-    );
-  }
-
-  Future<void> _showLanguagePicker() async {
-    final selected =
-        LocaleManager.instance.currentLocale;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        final theme = Theme.of(context);
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              20,
-              8,
-              20,
-              24,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  AppLocalization.of(context).translate('choose_language'),
-                  style: theme
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _PreferenceOption(
-                  icon:
-                  Icons.language_rounded,
-                  title: AppLocalization.of(context).translate('english'),
-                  selected:
-                  selected.languageCode ==
-                      'en',
-                  onTap: () async {
-                    Navigator.pop(context);
-
-                    await _changeLanguage(
-                      const Locale('en'),
-                    );
-                  },
-                ),
-                const SizedBox(height: 8),
-                _PreferenceOption(
-                  icon:
-                  Icons.language_rounded,
-                  title: AppLocalization.of(context).translate('arabic'),
-                  selected:
-                  selected.languageCode ==
-                      'ar',
-                  onTap: () async {
-                    Navigator.pop(context);
-
-                    await _changeLanguage(
-                      const Locale('ar'),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _showThemePicker() async {
-    final localization = AppLocalization.of(context);
-    final currentMode =
-        ThemeManager.instance.themeMode;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        final theme = Theme.of(context);
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              20,
-              8,
-              20,
-              24,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  localization.translate('appearance'),
-                  style: theme
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _PreferenceOption(
-                  icon:
-                  Icons.brightness_auto_rounded,
-                  title: localization.translate('system'),
-                  selected:
-                  currentMode ==
-                      ThemeMode.system,
-                  onTap: () {
-                    _changeTheme(
-                      ThemeMode.system,
-                    );
-                    Navigator.pop(context);
-                  },
-                ),
-                const SizedBox(height: 8),
-                _PreferenceOption(
-                  icon:
-                  Icons.light_mode_rounded,
-                  title: localization.translate('light'),
-                  selected:
-                  currentMode ==
-                      ThemeMode.light,
-                  onTap: () {
-                    _changeTheme(
-                      ThemeMode.light,
-                    );
-                    Navigator.pop(context);
-                  },
-                ),
-                const SizedBox(height: 8),
-                _PreferenceOption(
-                  icon:
-                  Icons.dark_mode_rounded,
-                  title: localization.translate('dark'),
-                  selected:
-                  currentMode ==
-                      ThemeMode.dark,
-                  onTap: () {
-                    _changeTheme(
-                      ThemeMode.dark,
-                    );
-                    Navigator.pop(context);
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -1104,12 +845,30 @@ class _ProfilePageState extends State<ProfilePage> {
     final localization = AppLocalization.of(context);
     return _SectionCard(
       title: localization.translate('preferences'),
-      child: _PreferenceTile(
-        icon: Icons.settings_outlined,
-        title: localization.translate('settings'),
-        subtitle: localization.translate('settings_subtitle'),
-        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
-        onTap: () => Navigator.pushNamed(context, AppRouter.settingsPage),
+      child: Column(
+        children: [
+          _PreferenceTile(
+            icon: Icons.currency_exchange_rounded,
+            title: localization.translate('currency'),
+            subtitle: '${CurrencyManager.instance.currency} · ${_currencyName(CurrencyManager.instance.currency, isArabic)}',
+            trailing: _currencySaving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.chevron_right_rounded),
+            onTap: _currencySaving ? null : _showCurrencyPicker,
+          ),
+          const Divider(height: 1),
+          _PreferenceTile(
+            icon: Icons.settings_outlined,
+            title: localization.translate('settings'),
+            subtitle: localization.translate('settings_subtitle'),
+            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+            onTap: () => Navigator.pushNamed(context, AppRouter.settingsPage),
+          ),
+        ],
       ),
     );
   }
@@ -1194,17 +953,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     return trimmed;
-  }
-
-  String _themeLabel(ThemeMode mode) {
-    switch (mode) {
-      case ThemeMode.light:
-        return AppLocalization.t('light');
-      case ThemeMode.dark:
-        return AppLocalization.t('dark');
-      case ThemeMode.system:
-        return AppLocalization.t('system');
-    }
   }
 
   void _showMessage(
@@ -1482,106 +1230,6 @@ class _PreferenceTile
               ? null
               : const Icon(Icons.chevron_right_rounded)),
         onTap: onTap,
-      ),
-    );
-  }
-}
-
-class _PreferenceOption
-    extends StatelessWidget {
-  const _PreferenceOption({
-    required this.icon,
-    required this.title,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(
-      BuildContext context,
-      ) {
-    final theme =
-    Theme.of(context);
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius:
-        BorderRadius.circular(
-          16,
-        ),
-        child: Container(
-          padding:
-          const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 14,
-          ),
-          decoration:
-          BoxDecoration(
-            color: selected
-                ? theme
-                .colorScheme
-                .primary
-                .withValues(
-              alpha: 0.09,
-            )
-                : theme
-                .colorScheme
-                .surface,
-            borderRadius:
-            BorderRadius.circular(
-              16,
-            ),
-            border: Border.all(
-              color: selected
-                  ? theme
-                  .colorScheme
-                  .primary
-                  : theme
-                  .colorScheme
-                  .outlineVariant,
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                color: theme
-                    .colorScheme
-                    .primary,
-              ),
-              const SizedBox(
-                width: 12,
-              ),
-              Expanded(
-                child: Text(
-                  title,
-                  style: theme
-                      .textTheme
-                      .titleSmall
-                      ?.copyWith(
-                    fontWeight:
-                    FontWeight.w700,
-                  ),
-                ),
-              ),
-              if (selected)
-                Icon(
-                  Icons
-                      .check_circle_rounded,
-                  color: theme
-                      .colorScheme
-                      .primary,
-                ),
-            ],
-          ),
-        ),
       ),
     );
   }

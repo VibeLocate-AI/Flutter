@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
-import '../../../../app/navigation/app_bar_actions.dart';
 import 'package:get/get.dart';
 import '../../../../core/controllers/favorites_controller.dart';
+import '../../../../core/state/favorites_manager.dart';
+import '../../../../core/controllers/property_details_controller.dart';
 import '../../../../core/localization/localization.dart';
 import '../../../../core/theme/theme_helpers.dart';
+import '../../../home/presentation/widgets/property_filter_sheet.dart';
+import '../../../home/presentation/widgets/property_categories.dart';
 import '../../../../core/widgets/currency_price.dart';
 import '../../../../core/widgets/no_results_view.dart';
 import '../../data/models/favorite_property_model.dart';
+import '../../../home/data/models/property_model.dart';
 import '../../localization/favorites_strings.dart';
 
 class FavoritesPage extends StatefulWidget {
@@ -17,34 +21,69 @@ class FavoritesPage extends StatefulWidget {
 }
 
 class _FavoritesPageState extends State<FavoritesPage> {
-  final TextEditingController _searchController = TextEditingController();
-  String _query = '';
+  PropertyFilterValues _filters = const PropertyFilterValues();
+  int? _selectedTypeId;
 
   FavoritesController get controller => Get.find<FavoritesController>();
 
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(_searchChanged);
     controller.initialize();
   }
 
-  @override
-  void dispose() {
-    _searchController.removeListener(_searchChanged);
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _searchChanged() {
-    setState(() => _query = _searchController.text.trim().toLowerCase());
+  Future<void> _showFilters() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => SizedBox(
+        height: MediaQuery.sizeOf(context).height * .90,
+        child: PropertyFilterSheet(
+          initialValues: _filters,
+          onApply: (value) => setState(() => _filters = value),
+        ),
+      ),
+    );
   }
 
   Future<void> _load() => controller.reload();
 
+  void _openFavorite(FavoritePropertyModel item) {
+    final details = Get.find<PropertyDetailsController>();
+    details.setProperty(PropertyModel.fromJson({
+      'id': item.id,
+      'type_id': item.typeId,
+      'category_id': item.categoryId,
+      'status_id': 0,
+      'title': item.title,
+      'title_en': item.titleEn,
+      'title_ar': item.titleAr,
+      'description': item.description,
+      'description_en': item.descriptionEn,
+      'description_ar': item.descriptionAr,
+      'price': item.price,
+      'currency': item.currency,
+      'bedrooms': item.bedrooms,
+      'bathrooms': item.bathrooms,
+      'area_sqft': item.areaSqft,
+      'listing_type': item.actionType,
+      'property_condition': item.propertyType,
+      'cover_image': item.imageUrl,
+      'latitude': item.latitude,
+      'longitude': item.longitude,
+      'address_line_1': item.address,
+      'neighborhood_name': item.neighborhood,
+      'is_furnished': item.isFurnished,
+      'rent_frequency': item.rentFrequency,
+      'is_featured': item.isFeatured,
+    }));
+    Navigator.pushNamed(context, '/property-details', arguments: item.id);
+  }
+
   Future<void> _remove(FavoritePropertyModel item) async {
     try {
-      await controller.toggle(item.id);
+      await FavoritesManager.instance.toggle(item.id);
       if (!mounted) return;
       _message(FavoritesStrings.removed);
     } catch (error) {
@@ -55,14 +94,27 @@ class _FavoritesPageState extends State<FavoritesPage> {
   }
 
   List<FavoritePropertyModel> get _filtered {
-    final list = controller.items.toList(growable: false);
-    if (_query.isEmpty) return list;
-    return list.where((item) {
-      final values = [
-        item.title, item.slug, item.propertyType, item.categoryName,
-        item.actionType, item.neighborhood, item.address,
-      ];
-      return values.any((value) => value.toLowerCase().contains(_query));
+    final f = _filters;
+    return controller.items.where((item) {
+      if (_selectedTypeId != null && item.typeId != _selectedTypeId) return false;
+      if (f.categoryId != null && item.categoryId != f.categoryId) return false;
+      if (f.listingType != null) {
+        final listing = item.actionType.toLowerCase();
+        if (f.listingType == 'rent' && listing != 'rent' && listing != 'rental' && listing != 'for_rent') return false;
+        if (f.listingType == 'sale' && listing != 'sale' && listing != 'sell' && listing != 'for_sale' && listing != 'buy') return false;
+        if (f.listingType == 'under_construction' && item.propertyType.toLowerCase() != 'off_plan') return false;
+      }
+      if (f.minPrice != null && item.price < f.minPrice!) return false;
+      if (f.maxPrice != null && item.price > f.maxPrice!) return false;
+      if (f.minBedrooms != null && item.bedrooms < f.minBedrooms!) return false;
+      if (f.minBathrooms != null && item.bathrooms < f.minBathrooms!) return false;
+      if (f.minArea != null && item.areaSqft < f.minArea!) return false;
+      if (f.maxArea != null && item.areaSqft > f.maxArea!) return false;
+      if (f.furnished == 'furnished' && !item.isFurnished) return false;
+      if (f.furnished == 'unfurnished' && item.isFurnished) return false;
+      if (f.rentFrequency != null && item.rentFrequency.toLowerCase() != f.rentFrequency!.toLowerCase()) return false;
+      if (f.featuredOnly && !item.isFeatured) return false;
+      return true;
     }).toList(growable: false);
   }
 
@@ -83,7 +135,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         title: Text(FavoritesStrings.title),
-        actions: const [AgentAppBarAction(), NotificationAppBarAction()],
+        actions: const [],
       ),
       body: RefreshIndicator(
         onRefresh: _load,
@@ -94,7 +146,17 @@ class _FavoritesPageState extends State<FavoritesPage> {
                 : CustomScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     slivers: [
-                      SliverToBoxAdapter(child: _searchBar(context)),
+                      SliverToBoxAdapter(
+                        child: PropertyCategories(
+                          onCategorySelected: (typeId) {
+                            setState(() {
+                              _selectedTypeId = typeId;
+                              _filters = _filters.copyWith(clearCategoryId: true);
+                            });
+                          },
+                          onMoreFilters: _showFilters,
+                        ),
+                      ),
                       SliverToBoxAdapter(
                         child: Padding(
                           padding: ThemeHelpers.pagePadding(context).copyWith(top: 4, bottom: 12),
@@ -102,15 +164,13 @@ class _FavoritesPageState extends State<FavoritesPage> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  _query.isEmpty ? FavoritesStrings.savedCount(controller.items.length) : FavoritesStrings.resultsCount(items.length),
+                                  FavoritesStrings.savedCount(items.length),
                                   style: theme.textTheme.bodyMedium?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
-                              if (_query.isNotEmpty)
-                                TextButton(onPressed: _clearSearch, child: Text(FavoritesStrings.clear)),
                             ],
                           ),
                         ),
@@ -122,17 +182,32 @@ class _FavoritesPageState extends State<FavoritesPage> {
                       else
                         SliverPadding(
                           padding: ThemeHelpers.pagePadding(context).copyWith(top: 0),
-                          sliver: SliverGrid(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) => _card(context, items[index]),
-                              childCount: items.length,
-                            ),
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: columns.round(),
-                              crossAxisSpacing: 14,
-                              mainAxisSpacing: 14,
-                              childAspectRatio: columns >= 3 ? .76 : .68,
-                            ),
+                          sliver: SliverLayoutBuilder(
+                            builder: (context, constraints) {
+                              final availableWidth = constraints.crossAxisExtent;
+                              // Favorites always uses a two-column grid, including
+                              // narrow phones; the cards adapt to the available width.
+                              const responsiveColumns = 2;
+                              final cardWidth = (availableWidth -
+                                      ((responsiveColumns - 1) * 14)) /
+                                  responsiveColumns;
+                              final cardHeight =
+                                  (cardWidth * 1.42).clamp(300.0, 500.0);
+
+                              return SliverGrid(
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, index) => _card(context, items[index]),
+                                  childCount: items.length,
+                                ),
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: responsiveColumns,
+                                  crossAxisSpacing: 14,
+                                  mainAxisSpacing: 14,
+                                  mainAxisExtent: cardHeight.toDouble(),
+                                ),
+                              );
+                            },
                           ),
                         ),
                     ],
@@ -142,33 +217,14 @@ class _FavoritesPageState extends State<FavoritesPage> {
     });
   }
 
-  Widget _searchBar(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: ThemeHelpers.pagePadding(context).copyWith(bottom: 8),
-      child: TextField(
-        controller: _searchController,
-        decoration: InputDecoration(
-          hintText: FavoritesStrings.searchHint,
-          prefixIcon: const Icon(Icons.search_rounded),
-          suffixIcon: _query.isEmpty ? null : IconButton(onPressed: _clearSearch, icon: const Icon(Icons.close_rounded)),
-        ),
-        style: TextStyle(color: theme.colorScheme.onSurface),
-      ),
-    );
-  }
 
-  void _clearSearch() {
-    _searchController.clear();
-    setState(() => _query = '');
-  }
 
   Widget _card(BuildContext context, FavoritePropertyModel item) {
     final theme = Theme.of(context);
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => Navigator.pushNamed(context, '/property-details', arguments: item.id),
+        onTap: () => _openFavorite(item),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -217,7 +273,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(item.title.isEmpty ? FavoritesStrings.property : item.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                    Text(item.displayTitle.isEmpty ? FavoritesStrings.property : item.displayTitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
                     const SizedBox(height: 5),
                     Row(children: [Icon(Icons.location_on_outlined, size: 14, color: theme.colorScheme.onSurfaceVariant), const SizedBox(width: 3), Expanded(child: Text(item.neighborhood.isEmpty ? item.address : item.neighborhood, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)))]),
                     const SizedBox(height: 7),
@@ -365,7 +421,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
   }
 
   Widget _noResults() => NoResultsView(
-        onClear: _clearSearch,
+        onClear: () => _showFilters(),
         title: FavoritesStrings.noResults,
         message: FavoritesStrings.noResultsBody,
       );

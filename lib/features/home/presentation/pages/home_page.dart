@@ -26,6 +26,7 @@ import '../widgets/property_filter_sheet.dart';
 import '../widgets/property_section_header.dart';
 import '../widgets/recommended_property_card.dart';
 import '../widgets/top_agent_card.dart';
+import '../../../agent/presentation/pages/agent_profile_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({
@@ -94,35 +95,56 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadHome({bool force = true}) async {
     final controller = Get.find<HomeController>();
-    if (force) {
-      await controller.load(
-        force: true,
-        highlightPropertyId: widget.highlightPropertyId,
-      );
-    } else {
-      await controller.initialize(
-        highlightPropertyId: widget.highlightPropertyId,
-      );
+
+    // IMPORTANT: paint the cache first. Do not wait for Render/Laravel before
+    // the first setState; otherwise the app still looks like a blank/error
+    // screen even though a valid cached Home payload exists.
+    await controller.restoreCached();
+    if (mounted) {
+      setState(() {
+        _home = controller.home;
+        _highlightedProperty = controller.highlightedProperty;
+        _errorMessage = controller.errorMessage;
+      });
     }
-    if (!mounted) return;
-    setState(() {
-      _home = controller.home;
-      _highlightedProperty = controller.highlightedProperty;
-      _errorMessage = controller.errorMessage;
-      _aiSearchResponse = controller.aiSearchResponse;
-      _aiSearchError = controller.aiSearchError;
-      _isAiSearching = controller.isAiSearching;
-    });
+
+    try {
+      if (force) {
+        await controller.load(
+          force: true,
+          highlightPropertyId: widget.highlightPropertyId,
+        );
+      } else {
+        await controller.initialize(
+          highlightPropertyId: widget.highlightPropertyId,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _home = controller.home;
+          _highlightedProperty = controller.highlightedProperty;
+          _errorMessage = controller.errorMessage;
+          _aiSearchResponse = controller.aiSearchResponse;
+          _aiSearchError = controller.aiSearchError;
+          _isAiSearching = controller.isAiSearching;
+        });
+      }
+    }
   }
 
   void _onCategorySelected(int? typeId) {
+    final searching = _searchQuery.trim().isNotEmpty;
     setState(() {
       _selectedTypeId = typeId;
-      _searchQuery = '';
-      _aiSearchResponse = null;
-      _aiSearchError = null;
-      _searchController.clear();
-      _isAiSearching = false;
+      // When the user is already searching, category chips are filters for
+      // that search. Do not erase the query or its results.
+      if (!searching) {
+        _aiSearchResponse = null;
+        _aiSearchError = null;
+        _searchController.clear();
+        _isAiSearching = false;
+      }
     });
   }
 
@@ -157,7 +179,9 @@ class _HomePageState extends State<HomePage> {
       _searchQuery = value.trim();
 
       if (_searchQuery.isEmpty) {
+        Get.find<HomeController>().clearSearch();
         _aiSearchResponse = null;
+        _aiSearchError = null;
         _isAiSearching = false;
       }
     });
@@ -171,8 +195,17 @@ class _HomePageState extends State<HomePage> {
     final controller = Get.find<HomeController>();
     setState(() {
       _searchQuery = query;
+      _isAiSearching = true;
+      _aiSearchError = null;
     });
-    await controller.searchAi(query);
+    final searchFuture = controller.searchAi(query);
+    // Render local matches immediately while the remote/AI search continues.
+    setState(() {
+      _aiSearchResponse = controller.aiSearchResponse;
+      _aiSearchError = controller.aiSearchError;
+      _isAiSearching = controller.isAiSearching;
+    });
+    await searchFuture;
     if (!mounted) return;
     setState(() {
       _aiSearchResponse = controller.aiSearchResponse;
@@ -191,6 +224,7 @@ class _HomePageState extends State<HomePage> {
 
 
   void _clearSearch() {
+    Get.find<HomeController>().clearSearch();
     setState(() {
       _searchController.clear();
       _searchQuery = '';
@@ -203,6 +237,7 @@ class _HomePageState extends State<HomePage> {
   List<PropertyModel> _filterProperties(
       List<PropertyModel> properties, {
         bool applyTypeFilter = true,
+        bool applySearchText = true,
       }) {
     return properties.where((property) {
       final matchesType =
@@ -285,7 +320,7 @@ class _HomePageState extends State<HomePage> {
         return false;
       }
 
-      if (_searchQuery.isEmpty) {
+      if (!applySearchText || _searchQuery.isEmpty) {
         return true;
       }
 
@@ -626,9 +661,9 @@ class _HomePageState extends State<HomePage> {
           ),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(
-              20,
-              22,
-              20,
+              16,
+              10,
+              16,
               0,
             ),
             sliver: SliverToBoxAdapter(
@@ -647,17 +682,10 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
+          // Keep the filter chips directly under the search field so they
+          // remain immediately accessible on every screen size.
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 26, 20, 0),
-            sliver: SliverToBoxAdapter(
-              child: PropertySectionHeader(
-                titleKey: 'filter_properties',
-                subtitleKey: 'filter_properties_subtitle',
-              ),
-            ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.only(top: 12),
+            padding: EdgeInsets.fromLTRB(16, isSearchMode ? 0 : 4, 16, 0),
             sliver: SliverToBoxAdapter(
               child: PropertyCategories(
                 onCategorySelected: _onCategorySelected,
@@ -1060,6 +1088,12 @@ class _HomePageState extends State<HomePage> {
                   itemBuilder: (context, index) {
                     return TopAgentCard(
                       agent: home.topAgents[index],
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AgentProfilePage(),
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -1106,7 +1140,7 @@ class _HomePageState extends State<HomePage> {
       BuildContext context,
       AppLocalization localization,
       ) {
-    if (_isAiSearching) {
+    if (_isAiSearching && _aiSearchResponse == null) {
       return [
         SliverFillRemaining(
           hasScrollBody: false,
@@ -1161,11 +1195,18 @@ class _HomePageState extends State<HomePage> {
       ];
     }
 
+    final filteredResults = response.properties.where((result) {
+      return _filterProperties(
+        [result.property],
+        applySearchText: false,
+      ).isNotEmpty;
+    }).toList(growable: false);
+
     return [
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(
           20,
-          28,
+          12,
           20,
           0,
         ),
@@ -1226,7 +1267,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${response.totalResults} ${localization.translate('properties_found')}',
+                  '${filteredResults.length} ${localization.translate('properties_found')}',
                   style:
                   Theme.of(context)
                       .textTheme
@@ -1253,7 +1294,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
-      if (response.properties.isEmpty)
+      if (filteredResults.isEmpty)
         SliverFillRemaining(
           hasScrollBody: false,
           child: NoResultsView(
@@ -1262,31 +1303,13 @@ class _HomePageState extends State<HomePage> {
         )
       else
         SliverPadding(
-          padding:
-          const EdgeInsets.fromLTRB(
-            20,
-            14,
-            20,
-            30,
-          ),
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 30),
           sliver: SliverList.separated(
-            itemCount:
-            response.properties.length,
-            separatorBuilder:
-                (_, _) {
-              return const SizedBox(
-                height: 12,
-              );
-            },
-            itemBuilder:
-                (context, index) {
-              final result =
-              response.properties[index];
-
-              return _buildAiResultCard(
-                context,
-                result,
-              );
+            itemCount: filteredResults.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final result = filteredResults[index];
+              return _buildAiResultCard(context, result);
             },
           ),
         ),
@@ -1335,59 +1358,39 @@ class _HomePageState extends State<HomePage> {
       AiSearchPropertyModel result,
       ) {
     final theme = Theme.of(context);
-    final localization = AppLocalization.of(context);
 
-    return Container(
-      decoration: BoxDecoration(
-        color:
-        theme.colorScheme.surface,
-        borderRadius:
-        BorderRadius.circular(18),
-        border: Border.all(
-          color:
-          theme.colorScheme.outlineVariant,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Padding(
-            padding:
-            const EdgeInsets.all(8),
-            child: RecommendedPropertyCard(
-              property: result.property,
-              onTap: () => _openProperty(result.property.id),
-            ),
-          ),
-          PositionedDirectional(
-            top: 16,
-            start: 16,
-            child: Container(
-              padding:
-              const EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 6,
-              ),
-              decoration:
-              BoxDecoration(
-                color:
-                theme.colorScheme.primary,
-                borderRadius:
-                BorderRadius.circular(10),
-              ),
-              child: Text(
-                '${result.matchScore}% ${localization.translate('ai_match')}',
-                style: TextStyle(
-                  color:
-                  theme.colorScheme.onPrimary,
-                  fontSize: 11,
-                  fontWeight:
-                  FontWeight.w700,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsetsDirectional.only(start: 4, bottom: 7),
+          child: Row(
+            children: [
+              Icon(Icons.auto_awesome_rounded, size: 16, color: theme.colorScheme.primary),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '${result.matchScore}% AI Match',
+                  style: TextStyle(
+                    color: theme.colorScheme.onPrimary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        ),
+        RecommendedPropertyCard(
+          property: result.property,
+          onTap: () => _openProperty(result.property.id),
+        ),
+      ],
     );
   }
 

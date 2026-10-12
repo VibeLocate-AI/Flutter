@@ -41,6 +41,44 @@ class PropertyFilterValues {
       furnished != null ||
       rentFrequency != null ||
       featuredOnly;
+
+  PropertyFilterValues copyWith({
+    int? categoryId,
+    bool clearCategoryId = false,
+    String? listingType,
+    bool clearListingType = false,
+    double? minPrice,
+    bool clearMinPrice = false,
+    double? maxPrice,
+    bool clearMaxPrice = false,
+    int? minBedrooms,
+    bool clearMinBedrooms = false,
+    int? minBathrooms,
+    bool clearMinBathrooms = false,
+    double? minArea,
+    bool clearMinArea = false,
+    double? maxArea,
+    bool clearMaxArea = false,
+    String? furnished,
+    bool clearFurnished = false,
+    String? rentFrequency,
+    bool clearRentFrequency = false,
+    bool? featuredOnly,
+  }) {
+    return PropertyFilterValues(
+      categoryId: clearCategoryId ? null : (categoryId ?? this.categoryId),
+      listingType: clearListingType ? null : (listingType ?? this.listingType),
+      minPrice: clearMinPrice ? null : (minPrice ?? this.minPrice),
+      maxPrice: clearMaxPrice ? null : (maxPrice ?? this.maxPrice),
+      minBedrooms: clearMinBedrooms ? null : (minBedrooms ?? this.minBedrooms),
+      minBathrooms: clearMinBathrooms ? null : (minBathrooms ?? this.minBathrooms),
+      minArea: clearMinArea ? null : (minArea ?? this.minArea),
+      maxArea: clearMaxArea ? null : (maxArea ?? this.maxArea),
+      furnished: clearFurnished ? null : (furnished ?? this.furnished),
+      rentFrequency: clearRentFrequency ? null : (rentFrequency ?? this.rentFrequency),
+      featuredOnly: featuredOnly ?? this.featuredOnly,
+    );
+  }
 }
 
 class PropertyFilterSheet extends StatefulWidget {

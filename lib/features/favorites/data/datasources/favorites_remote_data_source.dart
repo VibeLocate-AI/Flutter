@@ -4,15 +4,36 @@ import '../models/favorite_property_model.dart';
 
 abstract class FavoritesRemoteDataSource {
   Future<List<FavoritePropertyModel>> getFavorites();
-
   Future<void> addFavorite(int propertyId);
-
   Future<void> removeFavorite(int propertyId);
 }
 
-class FavoritesRemoteDataSourceImpl
-    implements FavoritesRemoteDataSource {
+class FavoritesRemoteDataSourceImpl implements FavoritesRemoteDataSource {
   const FavoritesRemoteDataSourceImpl();
+
+  static dynamic _findList(dynamic source) {
+    if (source is List) return source;
+    if (source is! Map) return null;
+
+    const keys = [
+      'favorites',
+      'saved_properties',
+      'items',
+      'properties',
+      'results',
+      'records',
+      'data',
+    ];
+
+    for (final key in keys) {
+      final value = source[key];
+      if (value is List) return value;
+      final nested = _findList(value);
+      if (nested is List) return nested;
+    }
+
+    return null;
+  }
 
   @override
   Future<List<FavoritePropertyModel>> getFavorites() async {
@@ -21,22 +42,18 @@ class FavoritesRemoteDataSourceImpl
       authenticated: true,
     );
 
-    dynamic data = response['data'];
-    if (data is Map<String, dynamic>) {
-      data = data['favorites'] ?? data['saved_properties'] ?? data['items'] ?? data['data'];
-    }
-    data ??= response['favorites'] ?? response['saved_properties'] ?? response['items'];
-
-    if (data is! List) {
-      return const [];
-    }
+    final data = _findList(response);
+    if (data is! List) return const [];
 
     return data
         .whereType<Map>()
-        .map((item) => FavoritePropertyModel.fromJson(
-              item.map((key, value) => MapEntry(key.toString(), value)),
-            ))
-        .toList();
+        .map(
+          (item) => FavoritePropertyModel.fromJson(
+            item.map((key, value) => MapEntry(key.toString(), value)),
+          ),
+        )
+        .where((item) => item.id > 0)
+        .toList(growable: false);
   }
 
   @override

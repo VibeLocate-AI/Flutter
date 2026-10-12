@@ -5,6 +5,8 @@ import '../../../../app/navigation/app_bar_actions.dart';
 import 'package:get/get.dart';
 import '../../notifications_dependencies.dart';
 import '../../data/models/notification_model.dart';
+import '../../../properties/presentation/pages/property_details_page.dart';
+import '../../../agent/presentation/pages/agent_profile_page.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -89,6 +91,40 @@ class _NotificationsPageState extends State<NotificationsPage> {
       if (mounted) _message(error.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _working = false);
+    }
+  }
+
+  Future<void> _handleTap(NotificationModel item) async {
+    await _markRead(item);
+    if (!mounted) return;
+
+    final type = (item.referenceType ?? item.type).toLowerCase();
+    final id = item.referenceId;
+    if (id != null && id > 0 && (type.contains('property') || type.contains('listing'))) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => PropertyDetailsPage(propertyId: id)),
+      );
+      return;
+    }
+    if (id != null && id > 0 && type.contains('agent')) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AgentProfilePage()),
+      );
+      return;
+    }
+
+    final url = item.actionUrl?.trim() ?? '';
+    final match = RegExp(r'/properties/(\d+)').firstMatch(url);
+    if (match != null) {
+      final propertyId = int.tryParse(match.group(1) ?? '');
+      if (propertyId != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => PropertyDetailsPage(propertyId: propertyId)),
+        );
+      }
     }
   }
 
@@ -182,7 +218,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                             child: _NotificationTile(
                               item: item,
                               date: _date(item.createdAt),
-                              onTap: () => _markRead(item),
+                              onTap: () => _handleTap(item),
                             ),
                           );
                         },

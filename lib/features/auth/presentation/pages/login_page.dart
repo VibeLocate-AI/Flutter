@@ -146,22 +146,17 @@ class _LoginPageState extends State<LoginPage> {
         _emailController.text.trim(),
         password:
         _passwordController.text,
-        rememberMe: _rememberMe,
+        rememberMe: true,
         deviceUuid: deviceUuid,
         deviceType: deviceType,
       );
 
-      if (_rememberMe) {
-        final refreshToken =
-        await TokenStorage.getRefreshToken();
-
-        if (refreshToken != null &&
-            refreshToken.isNotEmpty) {
-          await AuthDependencies.rememberMe(
-            remember: true,
-            refreshToken: refreshToken,
-          );
-        }
+      final refreshToken = await TokenStorage.getRefreshToken();
+      if (refreshToken != null && refreshToken.isNotEmpty) {
+        await AuthDependencies.rememberMe(
+          remember: true,
+          refreshToken: refreshToken,
+        );
       }
 
       if (!mounted) {
@@ -178,11 +173,11 @@ class _LoginPageState extends State<LoginPage> {
       e.message.trim().toLowerCase();
 
       final isEmailNotVerified =
-          message ==
-              'please verify your email first' ||
-              message.contains(
-                'verify your email',
-              );
+          message.contains('verify your email') ||
+          message.contains('email is not verified') ||
+          message.contains('email not verified') ||
+          message.contains('email verification required') ||
+          message.contains('not verified');
 
       if (isEmailNotVerified) {
         await _handleUnverifiedEmail();
@@ -242,6 +237,13 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       await AuthDependencies.loginWithGoogle();
+      final googleRefreshToken = await TokenStorage.getRefreshToken();
+      if (googleRefreshToken != null && googleRefreshToken.isNotEmpty) {
+        await AuthDependencies.rememberMe(
+          remember: true,
+          refreshToken: googleRefreshToken,
+        );
+      }
 
       debugPrint(
         'GOOGLE LOGIN: Laravel login successful.',

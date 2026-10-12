@@ -26,7 +26,7 @@ class NotificationModel {
   final String? createdAt;
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
-    final reference = _asMap(json['reference']);
+    final reference = _asMap(json['reference']) ?? _asMap(json['data']);
 
     return NotificationModel(
       id: _toInt(json['id']),
@@ -34,9 +34,9 @@ class NotificationModel {
       title: _text(json['title']),
       message: _text(json['message'] ?? json['body']),
       image: _nullableText(json['image'] ?? json['image_url']),
-      referenceType: _nullableText(reference?['type']),
-      referenceId: _nullableInt(reference?['id']),
-      actionUrl: _nullableText(json['action_url'] ?? json['url']),
+      referenceType: _nullableText(reference?['type'] ?? json['reference_type'] ?? json['referenceType']),
+      referenceId: _nullableInt(reference?['id'] ?? json['reference_id'] ?? json['referenceId']),
+      actionUrl: _nullableText(json['action_url'] ?? json['url'] ?? reference?['action_url'] ?? reference?['url']),
       isRead: _toBool(
         json['is_read'] ?? json['read'] ?? json['read_at'] != null,
       ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../../app/navigation/app_bar_actions.dart';
 import 'package:get/get.dart';
 import '../../../../core/controllers/map_controller_x.dart';
+import '../../../../core/controllers/property_details_controller.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -13,6 +13,8 @@ import '../../../../core/widgets/currency_price.dart';
 import '../../data/models/map_location_model.dart';
 import '../../data/models/nearby_poi_model.dart';
 import '../../data/services/nearby_poi_service.dart';
+import '../../../home/presentation/widgets/property_filter_sheet.dart';
+import '../../../home/presentation/widgets/property_categories.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({
@@ -28,16 +30,16 @@ class MapPage extends StatefulWidget {
 
 class _MapPageState extends State<MapPage> {
   final MapController _mapController = MapController();
-  final TextEditingController _searchController = TextEditingController();
+  PropertyFilterValues _filters = const PropertyFilterValues();
   MapLocationModel? _selected;
   List<NearbyPoiModel> _nearbyPois = const [];
+  List<MapLocationModel> _nearbyProperties = const [];
 
   MapControllerX get controller => Get.find<MapControllerX>();
 
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(_onSearchChanged);
     controller.initialize().then((_) async {
       final locationManager = LocationManager.instance;
       if (!locationManager.hasCurrentLocation && !locationManager.isUpdating) {
@@ -52,7 +54,21 @@ class _MapPageState extends State<MapPage> {
           break;
         }
       }
-      setState(() => _selected = initial);
+      if (widget.initialPropertyId != null && initial == null) {
+        await controller.reload();
+        if (!mounted) return;
+        final refreshed = controller.locations.toList(growable: false);
+        for (final location in refreshed) {
+          if (location.propertyId == widget.initialPropertyId) {
+            initial = location;
+            break;
+          }
+        }
+      }
+      setState(() {
+        _selected = initial;
+        _nearbyProperties = initial == null ? const [] : _findNearbyProperties(initial);
+      });
       if (initial != null) {
         _loadNearbyPois(initial);
       } else {
@@ -82,16 +98,22 @@ class _MapPageState extends State<MapPage> {
     });
   }
 
-  @override
-  void dispose() {
-    _searchController
-      ..removeListener(_onSearchChanged)
-      ..dispose();
-    super.dispose();
-  }
-
-  void _onSearchChanged() {
-    controller.setQuery(_searchController.text);
+  Future<void> _showFilters() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => SizedBox(
+        height: MediaQuery.sizeOf(context).height * .90,
+        child: PropertyFilterSheet(
+          initialValues: _filters,
+          onApply: (value) {
+            setState(() => _filters = value);
+            controller.setFilters(value);
+          },
+        ),
+      ),
+    );
   }
 
   List<MapLocationModel> get _filteredLocations => controller.filtered;
@@ -118,13 +140,29 @@ class _MapPageState extends State<MapPage> {
         manager.longitude != null) {
       return LatLng(manager.latitude!, manager.longitude!);
     }
-    return const LatLng(0, 0);
+    return const LatLng(25.2048, 55.2708);
+  }
+
+  List<MapLocationModel> _visiblePropertyLocations(List<MapLocationModel> source) {
+    if (source.length <= 50) return source;
+    final center = _selected == null ? _center : LatLng(_selected!.latitude, _selected!.longitude);
+    final distance = Distance();
+    final sorted = source
+        .where((item) => item.latitude != 0 && item.longitude != 0)
+        .map((item) => (
+              item: item,
+              km: distance.as(LengthUnit.Kilometer, center, LatLng(item.latitude, item.longitude)),
+            ))
+        .toList()
+      ..sort((a, b) => a.km.compareTo(b.km));
+    return sorted.take(30).map((entry) => entry.item).toList(growable: false);
   }
 
   void _selectLocation(MapLocationModel location) {
     setState(() {
       _selected = location;
       _nearbyPois = const [];
+      _nearbyProperties = _findNearbyProperties(location);
     });
     _loadNearbyPois(location);
     _mapController.move(
@@ -133,6 +171,24 @@ class _MapPageState extends State<MapPage> {
     );
   }
 
+
+  List<MapLocationModel> _findNearbyProperties(MapLocationModel selected) {
+    final distance = Distance();
+    final nearby = controller.locations
+        .where((item) => item.id != selected.id && item.latitude != 0 && item.longitude != 0)
+        .map((item) => (
+              item: item,
+              km: distance.as(
+                LengthUnit.Kilometer,
+                LatLng(selected.latitude, selected.longitude),
+                LatLng(item.latitude, item.longitude),
+              ),
+            ))
+        .where((entry) => entry.km <= 3)
+        .toList()
+      ..sort((a, b) => a.km.compareTo(b.km));
+    return nearby.take(5).map((entry) => entry.item).toList(growable: false);
+  }
 
   Future<void> _loadNearbyPoisAt(
     double latitude,
@@ -164,10 +220,17 @@ class _MapPageState extends State<MapPage> {
     final success = await manager.updateCurrentLocation();
     if (!mounted) return;
 
+    // A GPS refresh can legitimately time out while the map already has a
+    // valid cached/current coordinate. In that case, focus the map on the
+    // coordinate we have instead of showing a misleading unavailable snack.
     final latitude = manager.latitude;
     final longitude = manager.longitude;
+    final usableCoordinates = latitude != null &&
+        longitude != null &&
+        latitude >= -90 && latitude <= 90 &&
+        longitude >= -180 && longitude <= 180;
 
-    if (!success || latitude == null || longitude == null) {
+    if (!usableCoordinates) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -183,6 +246,32 @@ class _MapPageState extends State<MapPage> {
       14.5,
     );
     await _loadNearbyPoisAt(latitude, longitude);
+
+    if (!success && mounted) {
+      // No error toast: the requested focus operation succeeded using the
+      // cached coordinate, which is exactly what the user asked for.
+    }
+  }
+
+  void _focusProperties() {
+    final locations = controller.locations;
+    if (locations.isEmpty) return;
+    final valid = locations.where((item) => item.latitude != 0 && item.longitude != 0).toList(growable: false);
+    if (valid.isEmpty) return;
+    final lat = valid.map((e) => e.latitude).reduce((a, b) => a + b) / valid.length;
+    final lng = valid.map((e) => e.longitude).reduce((a, b) => a + b) / valid.length;
+    _mapController.move(LatLng(lat, lng), 10.8);
+    if (mounted) setState(() => _selected = null);
+  }
+
+  void _openProperty(MapLocationModel location) {
+    final id = location.propertyId;
+    if (id == null) return;
+    final details = Get.isRegistered<PropertyDetailsController>()
+        ? Get.find<PropertyDetailsController>()
+        : Get.put(PropertyDetailsController(), permanent: true);
+    details.seedFromMap(location);
+    Navigator.pushNamed(context, AppRouter.propertyDetails, arguments: id);
   }
 
   double _navigationOverlayInset(BuildContext context) {
@@ -204,8 +293,6 @@ class _MapPageState extends State<MapPage> {
       appBar: AppBar(
         title: Text(localization.translate('map_title')),
         actions: [
-          const AgentAppBarAction(),
-          const NotificationAppBarAction(),
           IconButton(
             tooltip: localization.translate('map_refresh'),
             onPressed: loading ? null : _load,
@@ -228,8 +315,9 @@ class _MapPageState extends State<MapPage> {
 
               final markers = <Marker>[];
 
+              final visibleLocations = _visiblePropertyLocations(locations);
               markers.addAll(
-                locations.map((location) {
+                visibleLocations.map((location) {
                   final selected = _selected?.id == location.id;
 
                   return Marker(
@@ -237,8 +325,8 @@ class _MapPageState extends State<MapPage> {
                       location.latitude,
                       location.longitude,
                     ),
-                    width: selected ? 58 : 48,
-                    height: selected ? 58 : 48,
+                    width: selected ? 58 : 42,
+                    height: selected ? 58 : 42,
                     child: GestureDetector(
                       onTap: () => _selectLocation(location),
                       child: AnimatedContainer(
@@ -263,13 +351,37 @@ class _MapPageState extends State<MapPage> {
                         child: Icon(
                           Icons.location_on_rounded,
                           color: theme.colorScheme.onPrimary,
-                          size: selected ? 28 : 24,
+                          size: selected ? 28 : 21,
                         ),
                       ),
                     ),
                   );
                 }),
               );
+
+              if (_selected != null && _nearbyProperties.isNotEmpty) {
+                markers.addAll(
+                  _nearbyProperties.map(
+                    (location) => Marker(
+                      point: LatLng(location.latitude, location.longitude),
+                      width: 44,
+                      height: 44,
+                      child: GestureDetector(
+                        onTap: () => _selectLocation(location),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: theme.colorScheme.primary, width: 2),
+                            boxShadow: const [BoxShadow(blurRadius: 7, offset: Offset(0, 3), color: Colors.black26)],
+                          ),
+                          child: Icon(Icons.home_work_rounded, color: theme.colorScheme.primary, size: 20),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }
 
               if (_selected != null && _nearbyPois.isNotEmpty) {
                 markers.addAll(
@@ -345,7 +457,7 @@ class _MapPageState extends State<MapPage> {
                   minZoom: 3,
                   maxZoom: 19,
                   onTap: (_, _) {
-                    if (mounted) setState(() => _selected = null);
+                    if (mounted) setState(() { _selected = null; _nearbyProperties = const []; _nearbyPois = const []; });
                   },
                 ),
                 children: [
@@ -361,41 +473,33 @@ class _MapPageState extends State<MapPage> {
           ),
 
           PositionedDirectional(
-            start: 16,
-            end: 16,
-            top: 14,
-            child: _MapSearchBar(
-              controller: _searchController,
-              hintText: localization.translate('map_search_hint'),
+            start: 0,
+            end: 0,
+            top: 8,
+            child: PropertyCategories(
+              onCategorySelected: (typeId) {
+                controller.setTypeId(typeId);
+                final next = _filters.copyWith(clearCategoryId: true);
+                if (next != _filters) {
+                  setState(() => _filters = next);
+                  controller.setFilters(next);
+                }
+              },
+              onMoreFilters: _showFilters,
             ),
           ),
 
-          if (loading)
-            Positioned.fill(
-              child: ColoredBox(
-                color: Colors.black.withValues(alpha: 0.12),
-                child: const Center(
+          if (loading && locations.isEmpty)
+            const Positioned.fill(
+              child: IgnorePointer(
+                child: Center(
                   child: CircularProgressIndicator(),
                 ),
               ),
             ),
 
           if (!loading &&
-              _searchController.text.trim().isNotEmpty &&
-              locations.isEmpty)
-            PositionedDirectional(
-              start: 24,
-              end: 24,
-              top: 88,
-              child: _MapMessageCard(
-                icon: Icons.search_off_rounded,
-                message: localization.translate('map_no_results'),
-              ),
-            ),
-
-          if (!loading &&
               error == null &&
-              _searchController.text.trim().isEmpty &&
               locations.isEmpty)
             PositionedDirectional(
               start: 24,
@@ -445,6 +549,8 @@ class _MapPageState extends State<MapPage> {
                         ? manager.longitude
                         : null,
                     nearbyPois: _nearbyPois,
+                    nearbyProperties: _nearbyProperties,
+                    onPropertyTap: _openProperty,
                   );
                 },
               ),
@@ -452,63 +558,28 @@ class _MapPageState extends State<MapPage> {
         ],
       ),
       floatingActionButton: Padding(
-        padding: EdgeInsets.only(
-          bottom: _navigationOverlayInset(context) + 4,
-        ),
-        child: FloatingActionButton.small(
-          tooltip: localization.translate('map_current_location'),
-          onPressed: _goToCurrentLocation,
-          child: const Icon(Icons.my_location_rounded),
+        padding: EdgeInsets.only(bottom: _navigationOverlayInset(context) + 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FloatingActionButton.small(
+              heroTag: 'focus-properties',
+              tooltip: localization.translate('map_focus_properties'),
+              onPressed: _focusProperties,
+              child: const Icon(Icons.home_work_rounded),
+            ),
+            const SizedBox(height: 8),
+            FloatingActionButton.small(
+              heroTag: 'focus-user',
+              tooltip: localization.translate('map_current_location'),
+              onPressed: _goToCurrentLocation,
+              child: const Icon(Icons.my_location_rounded),
+            ),
+          ],
         ),
       ),
       );
     });
-  }
-}
-
-class _MapSearchBar extends StatelessWidget {
-  const _MapSearchBar({
-    required this.controller,
-    required this.hintText,
-  });
-
-  final TextEditingController controller;
-  final String hintText;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Material(
-      elevation: 8,
-      borderRadius: BorderRadius.circular(18),
-      color: theme.colorScheme.surface,
-      child: TextField(
-        controller: controller,
-        textInputAction: TextInputAction.search,
-        decoration: InputDecoration(
-          hintText: hintText,
-          prefixIcon: const Icon(Icons.search_rounded),
-          suffixIcon: controller.text.isEmpty
-              ? null
-              : IconButton(
-                  tooltip: AppLocalization.of(context).translate('clear'),
-                  onPressed: controller.clear,
-                  icon: const Icon(Icons.close_rounded),
-                ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: theme.colorScheme.surface,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 15,
-          ),
-        ),
-      ),
-    );
   }
 }
 
@@ -537,7 +608,7 @@ class _MapMessageCard extends StatelessWidget {
               icon,
               color: theme.colorScheme.primary,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 9),
             Expanded(
               child: Text(
                 message,
@@ -558,187 +629,115 @@ class _SelectedPropertyCard extends StatelessWidget {
     this.userLatitude,
     this.userLongitude,
     this.nearbyPois = const [],
+    this.nearbyProperties = const [],
+    required this.onPropertyTap,
   });
 
   final MapLocationModel location;
   final double? userLatitude;
   final double? userLongitude;
   final List<NearbyPoiModel> nearbyPois;
+  final List<MapLocationModel> nearbyProperties;
+  final ValueChanged<MapLocationModel> onPropertyTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final localization = AppLocalization.of(context);
     final width = Responsive.width(context);
-    final imageSize = width < 370 ? 76.0 : 88.0;
+    final imageSize = width < 370 ? 64.0 : 76.0;
 
     return Card(
       elevation: 10,
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: InkWell(
-        onTap: location.propertyId == null
-            ? null
-            : () {
-                Navigator.pushNamed(
-                  context,
-                  AppRouter.propertyDetails,
-                  arguments: location.propertyId,
-                );
-              },
+        onTap: location.propertyId == null ? null : () => onPropertyTap(location),
         child: Padding(
-          padding: EdgeInsets.all(width < 370 ? 10 : 12),
+          padding: const EdgeInsets.all(10),
           child: Row(
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(14),
                 child: location.imageUrl.isNotEmpty
                     ? Image.network(
                         location.imageUrl,
                         width: imageSize,
                         height: imageSize,
                         fit: BoxFit.cover,
-                        filterQuality: FilterQuality.medium,
-                        errorBuilder: (_, _, _) => _fallback(
-                          theme,
-                          imageSize,
-                        ),
+                        errorBuilder: (_, _, _) => _fallback(theme, imageSize),
                       )
                     : _fallback(theme, imageSize),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 11),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            location.title.isEmpty
-                                ? localization.translate('map_property')
-                                : location.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                        if (location.propertyId != null)
-                          Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            size: 15,
-                            color: theme.colorScheme.primary,
-                          ),
-                      ],
+                    Text(
+                      location.title.isEmpty
+                          ? localization.translate('map_property')
+                          : location.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     if (location.address.isNotEmpty) ...[
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(
-                            Icons.location_on_outlined,
-                            size: 15,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 4),
+                          Icon(Icons.location_on_outlined, size: 14, color: theme.colorScheme.primary),
+                          const SizedBox(width: 3),
                           Expanded(
                             child: Text(
                               location.address,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodySmall,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ],
-                    if (location.price.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      location.priceAmount != null
-                          ? CurrencyPrice(
-                              amount: location.priceAmount!,
-                              sourceCurrency: location.currency,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            )
-                          : Text(
-                              location.price,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                    ],
-                    if (userLatitude != null &&
-                        userLongitude != null &&
-                        location.latitude != 0 &&
-                        location.longitude != 0) ...[
-                      const SizedBox(height: 7),
-                      _TravelInfo(
-                        distanceKm: _distanceKm(),
-                      ),
-                    ],
-                    if (nearbyPois.isNotEmpty) ...[
-                      const SizedBox(height: 9),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.near_me_rounded,
-                            size: 15,
-                            color: theme.colorScheme.primary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            localization.translate('nearby_places'),
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: nearbyPois.take(4).map((poi) {
-                            return Padding(
-                              padding: const EdgeInsetsDirectional.only(end: 6),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.primary
-                                      .withValues(alpha: .07),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  '${poi.icon} ${poi.name}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    fontWeight: FontWeight.w700,
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 5,
+                      runSpacing: 4,
+                      children: [
+                        if (location.price.isNotEmpty)
+                          _basicChip(
+                            context,
+                            location.priceAmount != null
+                                ? CurrencyPrice(
+                                    amount: location.priceAmount!,
+                                    sourceCurrency: location.currency,
+                                    style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w900),
+                                  )
+                                : Text(
+                                    location.price,
+                                    style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w900),
                                   ),
-                                ),
-                              ),
-                            );
-                          }).toList(growable: false),
-                        ),
-                      ),
-                    ],
+                          ),
+                        if (location.bedrooms > 0)
+                          _basicChipText(context, '${location.bedrooms} ${localization.translate('bedrooms')}'),
+                        if (location.bathrooms > 0)
+                          _basicChipText(context, '${location.bathrooms} ${localization.translate('bathrooms')}'),
+                        if (location.areaSqft > 0)
+                          _basicChipText(context, '${location.areaSqft.round()} ${localization.translate('area_unit')}'),
+                      ],
+                    ),
                   ],
                 ),
               ),
+              if (location.propertyId != null)
+                Icon(Icons.arrow_forward_ios_rounded, size: 15, color: theme.colorScheme.primary),
             ],
           ),
         ),
@@ -746,14 +745,25 @@ class _SelectedPropertyCard extends StatelessWidget {
     );
   }
 
-  double _distanceKm() {
-    final distance = Distance();
-    return distance.as(
-      LengthUnit.Kilometer,
-      LatLng(userLatitude!, userLongitude!),
-      LatLng(location.latitude, location.longitude),
+  Widget _basicChip(BuildContext context, Widget child) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withValues(alpha: .07),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: child,
     );
   }
+
+  Widget _basicChipText(BuildContext context, String text) => _basicChip(
+        context,
+        Text(
+          text,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
+        ),
+      );
 
   Widget _fallback(ThemeData theme, double size) {
     return Container(
@@ -761,92 +771,12 @@ class _SelectedPropertyCard extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Icon(
         Icons.home_work_outlined,
         color: theme.colorScheme.onSurfaceVariant,
         size: 30,
-      ),
-    );
-  }
-}
-
-class _TravelInfo extends StatelessWidget {
-  const _TravelInfo({required this.distanceKm});
-
-  final double distanceKm;
-
-  String _minutes(double km, double speedKmh) {
-    final minutes = (km / speedKmh * 60).round().clamp(1, 999);
-    return minutes.toString();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final localization = AppLocalization.of(context);
-    final theme = Theme.of(context);
-    final distance = distanceKm < 1
-        ? '${(distanceKm * 1000).round()} m'
-        : '${distanceKm.toStringAsFixed(1)} km';
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 6,
-      children: [
-        _TravelChip(
-          icon: Icons.straighten_rounded,
-          text: '${localization.translate('approximate')} ${localization.translate('distance_away').replaceFirst('{distance}', distance)}',
-          theme: theme,
-        ),
-        _TravelChip(
-          icon: Icons.directions_walk_rounded,
-          text:
-              '${localization.translate('walking')} ${_minutes(distanceKm, 4.8)} ${localization.translate('minutes')}',
-          theme: theme,
-        ),
-        _TravelChip(
-          icon: Icons.directions_car_rounded,
-          text:
-              '${localization.translate('driving')} ${_minutes(distanceKm, 32)} ${localization.translate('minutes')}',
-          theme: theme,
-        ),
-      ],
-    );
-  }
-}
-
-class _TravelChip extends StatelessWidget {
-  const _TravelChip({
-    required this.icon,
-    required this.text,
-    required this.theme,
-  });
-
-  final IconData icon;
-  final String text;
-  final ThemeData theme;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withValues(alpha: .07),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: theme.colorScheme.primary),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: theme.textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
       ),
     );
   }

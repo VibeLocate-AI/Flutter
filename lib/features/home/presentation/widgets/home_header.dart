@@ -115,7 +115,7 @@ class HomeHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 6),
-        const AgentAppBarAction(),
+        const AgentAppBarAction(showOnHome: true),
         const SizedBox(width: 4),
         Material(
           color: Colors.transparent,

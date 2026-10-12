@@ -13,6 +13,7 @@ import 'package:latlong2/latlong.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/state/currency_manager.dart';
 import '../../../../core/storage/token_storage.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/storage/my_properties_storage.dart';
 import 'location_picker_page.dart';
 
@@ -112,6 +113,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
   String? _neighborhoodLoadError;
 
   String? _coverImagePath;
+  String? _identityImagePath;
 
   double? _aedPrice;
   double? _exchangeRate;
@@ -2322,13 +2324,63 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
       ThemeData theme,
       ) {
     return _buildSection(
-      title:
-      _tr('add_property_photos'),
-      icon:
-      Icons.photo_library_outlined,
-      child:
-      _buildPhotosSection(
-        theme,
+      title: _tr('add_property_photos'),
+      icon: Icons.photo_library_outlined,
+      child: Column(
+        children: [
+          _buildPhotosSection(theme),
+          const SizedBox(height: 22),
+          _buildIdentityUpload(theme),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIdentityUpload(ThemeData theme) {
+    final selected = _identityImagePath != null;
+    return KeyedSubtree(
+      key: _getFieldKey('identity_image'),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: selected ? theme.colorScheme.primary : theme.colorScheme.outlineVariant,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: .10),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(Icons.badge_outlined, color: theme.colorScheme.primary),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_tr('upload_identity'), style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 3),
+                  Text(
+                    selected ? _tr('identity_selected') : _tr('add_identity_required'),
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              onPressed: _isSubmitting ? null : _pickIdentityImage,
+              icon: Icon(selected ? Icons.edit_rounded : Icons.add_a_photo_rounded),
+              tooltip: _tr('upload_identity'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2345,9 +2397,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
 
     return KeyedSubtree(
       key:
-      _getFieldKey(
-        'gallery_images',
-      ),
+      _getFieldKey('gallery_images'),
       child:
       Column(
         crossAxisAlignment:
@@ -2438,32 +2488,25 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
             height:
             10,
           ),
-          GridView.builder(
-            shrinkWrap:
-            true,
-            physics:
-            const NeverScrollableScrollPhysics(),
-            itemCount:
-            5,
-            gridDelegate:
-            const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount:
-              2,
-              crossAxisSpacing:
-              10,
-              mainAxisSpacing:
-              10,
-              childAspectRatio:
-              1.3,
-            ),
-            itemBuilder:
-                (
-                context,
-                index,
-                ) {
-              return _buildPhotoSlot(
-                theme,
-                index + 1,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = constraints.maxWidth < 390 ? 1 : 2;
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: 5,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: columns == 1 ? 2.0 : 1.3,
+                ),
+                itemBuilder: (context, index) {
+                  return _buildPhotoSlot(
+                    theme,
+                    index + 1,
+                  );
+                },
               );
             },
           ),
@@ -2860,6 +2903,21 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
     setState(() {
       _coverImagePath =
           image.path;
+    });
+  }
+
+  Future<void> _pickIdentityImage() async {
+    final image = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 90,
+      maxWidth: 1800,
+    );
+
+    if (image == null) return;
+
+    if (!mounted) return;
+    setState(() {
+      _identityImagePath = image.path;
     });
   }
 
@@ -3964,9 +4022,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         _tr('add_add_the_cover_photo'),
       );
 
-      _scrollToField(
-        'gallery_images',
-      );
+      _scrollToField('gallery_images');
 
       return false;
     }
@@ -3977,9 +4033,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         _tr('add_add_5_additional_photos'),
       );
 
-      _scrollToField(
-        'gallery_images',
-      );
+      _scrollToField('gallery_images');
 
       return false;
     }
@@ -4275,188 +4329,127 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
     });
 
     try {
-      final token =
-      await TokenStorage
-          .getAccessToken();
+      // Resolve the session immediately before the multipart request.
+      // Access tokens are short-lived; the refresh token is the persistent
+      // session and must be used before showing a false "please login" error.
+      var token = await TokenStorage.getAccessToken();
 
-      if (token ==
-          null ||
-          token.isEmpty) {
+      if (token == null || token.trim().isEmpty) {
+        final refreshToken =
+            await TokenStorage.getRefreshToken();
+
+        if (refreshToken != null &&
+            refreshToken.trim().isNotEmpty) {
+          await ApiClient.refreshSession();
+          token = await TokenStorage.getAccessToken();
+        }
+      }
+
+      if (token == null || token.trim().isEmpty) {
+        // One final authenticated profile request lets ApiClient perform its
+        // own 401 -> refresh flow when an access token exists but is stale.
+        try {
+          await ApiClient.get(
+            ApiEndpoints.profile,
+            authenticated: true,
+          );
+        } catch (_) {
+          // The explicit session check below decides the final message.
+        }
+
+        token = await TokenStorage.getAccessToken();
+      }
+
+      if (token == null || token.trim().isEmpty) {
+        final hasRefresh =
+            (await TokenStorage.getRefreshToken())?.trim().isNotEmpty == true;
+
         throw Exception(
-          _tr('add_please_login_first'),
+          hasRefresh
+              ? 'Your session could not be restored. Please try again.'
+              : _tr('add_please_login_first'),
         );
       }
 
-      final request =
-      http.MultipartRequest(
-        'POST',
-        Uri.parse(
-          '${ApiEndpoints.baseUrl}${ApiEndpoints.properties}',
-        ),
-      );
+      Future<http.MultipartRequest> buildRequest(String authToken) async {
+        final request = http.MultipartRequest(
+          'POST',
+          Uri.parse(
+            '${ApiEndpoints.baseUrl}${ApiEndpoints.properties}',
+          ),
+        );
 
-      request.headers[
-      'Accept'] =
-      'application/json';
+        request.headers['Accept'] = 'application/json';
+        request.headers['Authorization'] = 'Bearer $authToken';
 
-      request.headers[
-      'Authorization'] =
-      'Bearer $token';
+        request.fields['title'] = _titleController.text.trim();
+        request.fields['type_id'] = _typeId.toString();
+        request.fields['listing_type'] = _listingType;
+        request.fields['price'] = (_aedPrice ?? price).toString();
+        request.fields['description'] = _descriptionController.text.trim();
+        request.fields['neighborhood_id'] = _selectedNeighborhoodId.toString();
+        request.fields['address_line_1'] = _addressController.text.trim();
 
-      request.fields[
-      'title'] =
-          _titleController.text
-              .trim();
+        if (_additionalAddressController.text.trim().isNotEmpty) {
+          request.fields['address_line_2'] = _additionalAddressController.text.trim();
+        }
+        if (_buildingController.text.trim().isNotEmpty) {
+          request.fields['building_name'] = _buildingController.text.trim();
+        }
 
-      request.fields[
-      'type_id'] =
-          _typeId.toString();
+        request.fields['latitude'] = latitude.toString();
+        request.fields['longitude'] = longitude.toString();
+        request.fields['area_sqft'] = area.toString();
+        request.fields['bedrooms'] = bedrooms.toString();
+        request.fields['bathrooms'] = bathrooms.toString();
+        request.fields['property_condition'] = _propertyCondition;
 
-      request.fields[
-      'listing_type'] =
-          _listingType;
+        if (_phoneController.text.trim().isNotEmpty) {
+          request.fields['phone'] = _phoneController.text.trim();
+        }
+        if (_whatsappController.text.trim().isNotEmpty) {
+          request.fields['whatsapp'] = _whatsappController.text.trim();
+        }
 
-      request.fields[
-      'price'] =
-          (_aedPrice ??
-              price)
-              .toString();
+        final selectedFeatureIds = _features
+            .where((feature) => _selectedFeatures.contains(feature.key))
+            .map((feature) => feature.id)
+            .whereType<int>()
+            .toList();
 
-      request.fields[
-      'description'] =
-          _descriptionController
-              .text
-              .trim();
-
-      request.fields[
-      'neighborhood_id'] =
-          _selectedNeighborhoodId
-              .toString();
-
-      request.fields[
-      'address_line_1'] =
-          _addressController
-              .text
-              .trim();
-
-      if (_additionalAddressController
-          .text
-          .trim()
-          .isNotEmpty) {
-        request.fields[
-        'address_line_2'] =
-            _additionalAddressController
-                .text
-                .trim();
-      }
-
-      if (_buildingController
-          .text
-          .trim()
-          .isNotEmpty) {
-        request.fields[
-        'building_name'] =
-            _buildingController
-                .text
-                .trim();
-      }
-
-      request.fields[
-      'latitude'] =
-          latitude.toString();
-
-      request.fields[
-      'longitude'] =
-          longitude.toString();
-
-      request.fields[
-      'area_sqft'] =
-          area.toString();
-
-      request.fields[
-      'bedrooms'] =
-          bedrooms.toString();
-
-      request.fields[
-      'bathrooms'] =
-          bathrooms.toString();
-
-      request.fields[
-      'property_condition'] =
-          _propertyCondition;
-
-      if (_phoneController
-          .text
-          .trim()
-          .isNotEmpty) {
-        request.fields[
-        'phone'] =
-            _phoneController
-                .text
-                .trim();
-      }
-
-      if (_whatsappController
-          .text
-          .trim()
-          .isNotEmpty) {
-        request.fields[
-        'whatsapp'] =
-            _whatsappController
-                .text
-                .trim();
-      }
-
-      final selectedFeatureIds = _features
-          .where((feature) => _selectedFeatures.contains(feature.key))
-          .map((feature) => feature.id)
-          .whereType<int>()
-          .toList();
-
-      for (var index = 0; index < selectedFeatureIds.length; index++) {
-        // PHP/Laravel turns features[0], features[1], ... into an array.
-        request.fields['features[$index]'] =
-            selectedFeatureIds[index].toString();
-      }
-
-      request.files.add(
-        await http.MultipartFile
-            .fromPath(
-          'cover_image',
-          _coverImagePath!,
-        ),
-      );
-
-      for (var i = 1;
-      i <= 5;
-      i++) {
-        final path =
-        _detailImages[
-        'photo_$i'];
-
-        if (path ==
-            null ||
-            path.isEmpty) {
-          continue;
+        for (var index = 0; index < selectedFeatureIds.length; index++) {
+          request.fields['features[$index]'] = selectedFeatureIds[index].toString();
         }
 
         request.files.add(
-          await http.MultipartFile
-              .fromPath(
-            'gallery_images[]',
-            path,
-          ),
+          await http.MultipartFile.fromPath('cover_image', _coverImagePath!),
         );
+        for (var i = 1; i <= 5; i++) {
+          final path = _detailImages['photo_$i'];
+          if (path == null || path.isEmpty) continue;
+          request.files.add(
+            await http.MultipartFile.fromPath('gallery_images[]', path),
+          );
+        }
+
+        return request;
       }
 
-      final streamed =
-      await request.send();
+      var request = await buildRequest(token);
+      var streamed = await request.send().timeout(const Duration(seconds: 45));
+      var response = await http.Response.fromStream(streamed);
 
-      final response =
-      await http.Response
-          .fromStream(
-        streamed,
-      );
+      // Multipart requests are single-use. If the access token expired,
+      // refresh it and rebuild the request before retrying once.
+      if (response.statusCode == 401) {
+        final refreshed = await ApiClient.refreshSession();
+        final freshToken = await TokenStorage.getAccessToken();
+        if (refreshed && freshToken != null && freshToken.isNotEmpty) {
+          request = await buildRequest(freshToken);
+          streamed = await request.send().timeout(const Duration(seconds: 45));
+          response = await http.Response.fromStream(streamed);
+        }
+      }
 
       final data =
       _decodeResponse(
@@ -4475,9 +4468,11 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
           _isSubmitting = false;
         });
 
-        // Return immediately with the created property id. The parent can
-        // fetch the new property and show it without waiting for another
-        // home request.
+        // Save the created property immediately for My Properties. The
+        // Laravel collection can be eventually consistent, especially while
+        // a new property is pending approval, so the screen must not depend
+        // on /api/my-properties becoming updated in the same millisecond.
+        final returnedProperty = _findPropertyMap(data);
         final rawData = data['data'];
         final dataMap = rawData is Map<String, dynamic> ? rawData : null;
         final propertyValue = data['property_id'] ??
@@ -4486,14 +4481,57 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
             dataMap?['id'] ??
             (dataMap?['property'] is Map<String, dynamic>
                 ? (dataMap?['property'] as Map<String, dynamic>)['id']
-                : null);
+                : null) ??
+            returnedProperty?['id'] ??
+            returnedProperty?['property_id'];
+
         final propertyId = int.tryParse(propertyValue?.toString() ?? '');
 
-        if (propertyId != null) {
+        final temporaryLocalId = -(DateTime.now().millisecondsSinceEpoch);
+        final hasServerPropertyId = propertyId != null && propertyId > 0;
+        final localPropertyId = hasServerPropertyId ? propertyId! : temporaryLocalId;
+        final optimisticProperty = <String, dynamic>{
+          'id': localPropertyId,
+          'type_id': _typeId,
+          'category_id': 0,
+          'status_id': 1,
+          'approval_status': 'pending',
+          'local_pending_sync': !hasServerPropertyId,
+          'is_featured': false,
+          'title': _titleController.text.trim(),
+          'description': _descriptionController.text.trim(),
+          'price': (_aedPrice ?? price).toString(),
+          'currency': 'AED',
+          'listing_type': _listingType,
+          'area_sqft': area,
+          'bedrooms': bedrooms,
+          'bathrooms': bathrooms,
+          'property_condition': _propertyCondition,
+          'address_line_1': _addressController.text.trim(),
+          'address_line_2': _additionalAddressController.text.trim(),
+          'building_name': _buildingController.text.trim(),
+          'latitude': latitude,
+          'longitude': longitude,
+        };
+
+        // Prefer the complete server object when the POST response contains
+        // it, but keep the form data as a guaranteed first-paint fallback.
+        final cachePayload = <String, dynamic>{
+          ...optimisticProperty,
+          ...?returnedProperty,
+          'id': localPropertyId,
+        };
+
+        // Persist even if the create response omits its new ID; a temporary
+        // negative local ID keeps the submitted property visible with Pending
+        // status until the backend returns its real ID on a later refresh.
+        await MyPropertiesStorage.cacheProperty(cachePayload);
+        if (propertyId != null && propertyId > 0) {
           await MyPropertiesStorage.remember(propertyId);
         }
+
         if (!mounted) return;
-        Navigator.of(context).pop(propertyId ?? true);
+        Navigator.of(context).pop(cachePayload);
         return;
       }
 
@@ -4637,6 +4675,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
       'whatsapp',
       'cover_image',
       'gallery_images',
+      'identity_image',
     ];
 
     for (final field
@@ -4847,9 +4886,44 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
     }
 
     return '${buffer.toString()}.$decimal';
-  }
-}
 
+  }
+  Map<String, dynamic>? _findPropertyMap(dynamic value) {
+    if (value is Map) {
+      final map = value.map(
+        (key, item) => MapEntry(key.toString(), item),
+      );
+
+      final id = int.tryParse(
+        (map['id'] ?? map['property_id'] ?? '').toString(),
+      );
+
+      final looksLikeProperty = id != null &&
+          id > 0 &&
+          (map.containsKey('title') ||
+              map.containsKey('price') ||
+              map.containsKey('description') ||
+              map.containsKey('type_id') ||
+              map.containsKey('approval_status') ||
+              map.containsKey('property_condition'));
+
+      if (looksLikeProperty) return map;
+
+      for (final child in map.values) {
+        final found = _findPropertyMap(child);
+        if (found != null) return found;
+      }
+    } else if (value is List) {
+      for (final item in value) {
+        final found = _findPropertyMap(item);
+        if (found != null) return found;
+      }
+    }
+
+    return null;
+  }
+
+}
 class _NeighborhoodOption {
   const _NeighborhoodOption({
     required this.id,

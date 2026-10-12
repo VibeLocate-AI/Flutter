@@ -38,12 +38,13 @@ class PropertySectionHeader extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   localization.translate(subtitleKey!),
-                  maxLines: 2,
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w600,
-                    height: 1.25,
+                    fontSize: 14.5,
+                    height: 1.35,
                   ),
                 ),
               ],

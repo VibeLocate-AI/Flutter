@@ -52,6 +52,9 @@ class ApiEndpoints {
   static String homeTopAgents(String language) =>
       '/api/home/$language/top-agents';
 
+  static String topAgentDetails(String language, int userId) =>
+      '/api/home/$language/top-agents/$userId';
+
   // Properties
   static const String properties = '/api/properties';
 

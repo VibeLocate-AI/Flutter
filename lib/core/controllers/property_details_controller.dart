@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import '../../features/home/data/models/property_model.dart';
+import '../../features/map/data/models/map_location_model.dart';
 import '../../features/properties/properties_dependencies.dart';
 
 class PropertyDetailsController extends GetxController {
@@ -32,6 +33,33 @@ class PropertyDetailsController extends GetxController {
       loading.refresh();
       cache.refresh();
     }
+  }
+
+  void seedFromMap(MapLocationModel location) {
+    final id = location.propertyId ?? location.id;
+    if (id <= 0 || cache.containsKey(id)) return;
+    cache[id] = PropertyModel.fromJson({
+      'id': id,
+      'type_id': location.typeId ?? 0,
+      'category_id': location.categoryId ?? 0,
+      'status_id': 0,
+      'title': location.title,
+      'description': '',
+      'price': location.priceAmount ?? 0,
+      'currency': location.currency,
+      'cover_image': location.imageUrl,
+      'latitude': location.latitude,
+      'longitude': location.longitude,
+      'address_line_1': location.address,
+      'bedrooms': location.bedrooms,
+      'bathrooms': location.bathrooms,
+      'area_sqft': location.areaSqft,
+      'listing_type': location.listingType,
+      'rent_frequency': location.rentFrequency,
+      'is_furnished': location.isFurnished,
+      'is_featured': location.isFeatured,
+    });
+    cache.refresh();
   }
 
   void setProperty(PropertyModel value) {

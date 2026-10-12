@@ -346,28 +346,15 @@ class _FavoriteButton extends StatelessWidget {
               width: 38,
               height: 38,
               child: Center(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
-                  child: loading
-                      ? SizedBox(
-                          key: const ValueKey('loading'),
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: theme.colorScheme.primary,
-                          ),
-                        )
-                      : Icon(
-                          key: ValueKey(isFavorite),
-                          isFavorite
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border_rounded,
-                          color: isFavorite
-                              ? theme.colorScheme.error
-                              : theme.colorScheme.onSurface,
-                          size: 20,
-                        ),
+                child: Icon(
+                  key: ValueKey(isFavorite),
+                  isFavorite
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                  color: isFavorite
+                      ? theme.colorScheme.error
+                      : theme.colorScheme.onSurface,
+                  size: 20,
                 ),
               ),
             ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../app/navigation/app_bar_actions.dart';
 import 'package:get/get.dart';
 
 import '../../../../app/app_router.dart';
@@ -27,6 +28,7 @@ class SettingsPage extends StatelessWidget {
           appBar: AppBar(
             leading: const BackButton(),
             title: Text(l10n.translate('settings')),
+            actions: const [AgentAppBarAction(), NotificationAppBarAction()],
           ),
           body: Obx(() {
             if (controller.isLoading.value) {

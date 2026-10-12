@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/controllers/property_details_controller.dart';
 
 import '../../../../app/app_router.dart';
+import '../../../../app/navigation/app_bar_actions.dart';
 import '../../../../core/localization/localization.dart';
 import '../../../../core/localization/locale_manager.dart';
 import '../../../../core/state/favorites_manager.dart';
@@ -242,7 +244,9 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
           errorText.contains('failed host lookup');
 
       return Scaffold(
-        appBar: AppBar(),
+        appBar: AppBar(
+          actions: const [AgentAppBarAction(), NotificationAppBarAction()],
+        ),
         body: networkError
             ? NoInternetView(onRetry: _load)
             : Center(
@@ -273,8 +277,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
     final images = _gallery(property);
     final isFavorite = FavoritesManager.instance.isFavorite(property.id);
 
-    final actionLabel = property.primaryAction?['label']?.toString() ??
-        localization.translate('book_now');
+    final actionLabel = localization.translate('contact_now');
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -349,15 +352,77 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
         minimum: const EdgeInsets.fromLTRB(20, 8, 20, 12),
         child: SizedBox(
           height: 54,
-          child: FilledButton(
-            onPressed: () {
-              _message(actionLabel);
-            },
-            child: Text(actionLabel),
+          child: FilledButton.icon(
+            onPressed: () => _showContactOptions(property),
+            icon: const Icon(Icons.chat_bubble_outline_rounded),
+            label: Text(actionLabel),
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _showContactOptions(PropertyModel property) async {
+    final source = property.agency ?? property.owner ?? const <String, dynamic>{};
+    final phone = (property.primaryAction?['phone'] ??
+            source['phone'] ?? source['phone_number'] ??
+            property.primaryAction?['phone_number'] ??
+            '+971501234567')
+        .toString()
+        .trim();
+    final whatsapp = (property.primaryAction?['whatsapp'] ?? source['whatsapp'] ?? phone)
+        .toString()
+        .trim();
+
+    if (!mounted) return;
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        final l10n = AppLocalization.of(sheetContext);
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.phone_outlined),
+                  title: Text(l10n.translate('contact_phone')),
+                  subtitle: Text(phone),
+                  onTap: () => Navigator.pop(sheetContext, 'phone'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.chat_outlined),
+                  title: Text(l10n.translate('contact_whatsapp')),
+                  subtitle: Text(whatsapp),
+                  onTap: () => Navigator.pop(sheetContext, 'whatsapp'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (choice == null || !mounted) return;
+
+    final normalized = (choice == 'whatsapp' ? whatsapp : phone).replaceAll(RegExp(r'[^0-9+]'), '');
+    if (normalized.isEmpty) {
+      _message(AppLocalization.of(context).translate('contact_number_missing'));
+      return;
+    }
+
+    final uri = choice == 'whatsapp'
+        ? Uri.parse('https://wa.me/${normalized.replaceFirst('+', '')}')
+        : Uri(scheme: 'tel', path: normalized);
+    try {
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!launched && mounted) {
+        _message(AppLocalization.of(context).translate('contact_number_missing'));
+      }
+    } catch (_) {
+      if (mounted) _message(AppLocalization.of(context).translate('contact_number_missing'));
+    }
   }
 
   List<dynamic> _gallery(PropertyModel property) {
@@ -399,6 +464,8 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
               ),
             ),
           ),
+          const AgentAppBarAction(),
+          const NotificationAppBarAction(),
           AnimatedBuilder(
             animation: FavoritesManager.instance,
             builder: (context, _) {
@@ -406,18 +473,12 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
               final pending = FavoritesManager.instance.isLoading(property.id);
               return IconButton(
                 onPressed: pending ? null : _toggleFavorite,
-                icon: pending
-                    ? const SizedBox(
-                        width: 21,
-                        height: 21,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(
-                        liveFavorite
-                            ? Icons.favorite_rounded
-                            : Icons.favorite_border_rounded,
-                        color: liveFavorite ? theme.colorScheme.error : null,
-                      ),
+                icon: Icon(
+                  liveFavorite
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                  color: liveFavorite ? theme.colorScheme.error : null,
+                ),
               );
             },
           ),

@@ -10,6 +10,8 @@ class PropertyModel {
     required this.typeId,
     required this.categoryId,
     required this.statusId,
+    this.approvalStatus = '',
+    this.localPendingSync = false,
     required this.isFeatured,
     required this.title,
     required this.slug,
@@ -51,6 +53,10 @@ class PropertyModel {
   final int typeId;
   final int categoryId;
   final int statusId;
+  final String approvalStatus;
+  /// True when the property was accepted by the create endpoint but the
+  /// response did not include a server ID yet. It is kept locally until sync.
+  final bool localPendingSync;
   final bool isFeatured;
 
   final String title;
@@ -152,6 +158,14 @@ class PropertyModel {
         condition == 'under construction';
   }
 
+  String get normalizedApprovalStatus {
+    final value = approvalStatus.trim().toLowerCase();
+    if (value.contains('reject')) return 'rejected';
+    if (value.contains('approv') || value == 'accepted') return 'approved';
+    if (value.contains('pending') || value.contains('review') || value == 'submitted') return 'pending';
+    return value.isEmpty ? 'pending' : value;
+  }
+
   factory PropertyModel.fromJson(
     Map<String, dynamic> json,
   ) {
@@ -204,7 +218,9 @@ class PropertyModel {
       id: _toInt(json['id']),
       typeId: _toInt(json['type_id']),
       categoryId: _toInt(json['category_id']),
-      statusId: _toInt(json['status_id']),
+      statusId: _toInt(json['status_id'] ?? json['approval_status_id']),
+      approvalStatus: _approvalStatus(json),
+      localPendingSync: _toBool(json['local_pending_sync'] ?? json['localPendingSync']),
       isFeatured: _toBool(json['is_featured']),
       title: _localizedText(json, 'title', fallback: 'title'),
       slug: json['slug']?.toString() ?? '',
@@ -320,6 +336,37 @@ class PropertyModel {
     );
   }
 
+  static String _approvalStatus(Map<String, dynamic> json) {
+    // Prefer explicit approval fields. A generic `status` may describe whether
+    // a listing is active/published, which is not the moderation status.
+    final explicit = json['approval_status'] ?? json['approvalStatus'];
+    String normalize(dynamic value) {
+      if (value is Map) {
+        value = value['slug'] ?? value['name'] ?? value['status'] ?? value['value'];
+      }
+      return value?.toString().trim().toLowerCase() ?? '';
+    }
+
+    final explicitValue = normalize(explicit);
+    if (explicitValue.isNotEmpty) return explicitValue;
+
+    final generic = normalize(json['status']);
+    const knownApprovalStates = {
+      'pending', 'under_review', 'under review', 'submitted',
+      'approved', 'approve', 'accepted', 'published',
+      'rejected', 'reject', 'declined',
+    };
+    if (knownApprovalStates.contains(generic)) return generic;
+
+    final id = _toInt(json['approval_status_id'] ?? json['status_id']);
+    switch (id) {
+      case 1: return 'pending';
+      case 2: return 'approved';
+      case 3: return 'rejected';
+      default: return generic;
+    }
+  }
+
   static Map<String, dynamic>? _parseOwner(Map<String, dynamic> json) {
     final rawOwner = json['owner'];
     final owner = rawOwner is Map<String, dynamic>
@@ -347,25 +394,17 @@ class PropertyModel {
     String key, {
     required String fallback,
   }) {
-    final value = json[key];
-    if (value is Map<String, dynamic>) {
-      final preferred = value[LocaleManager.instance.languageCode];
-      final english = value['en'];
-      final arabic = value['ar'];
-      final selected = preferred ?? (LocaleManager.instance.isArabic ? arabic : english);
-      if (selected != null && selected.toString().trim().isNotEmpty) {
-        return selected.toString();
-      }
-    }
+    final language = LocaleManager.instance.languageCode;
+    final preferred = _localizedVariant(json, key, language);
+    if (preferred != null && preferred.trim().isNotEmpty) return preferred;
 
-    final preferredKey = '${key}_${LocaleManager.instance.languageCode}';
-    final preferredValue = json[preferredKey];
-    if (preferredValue != null && preferredValue.toString().trim().isNotEmpty) {
-      return preferredValue.toString();
-    }
+    final opposite = _localizedVariant(json, key, language == 'ar' ? 'en' : 'ar');
+    if (opposite != null && opposite.trim().isNotEmpty) return opposite;
 
     final direct = json[fallback];
-    return direct?.toString() ?? '';
+    return direct is Map
+        ? (direct[language] ?? direct['en'] ?? direct['ar'] ?? '').toString()
+        : (direct?.toString() ?? '');
   }
 
   static String? _localizedVariant(
@@ -373,18 +412,84 @@ class PropertyModel {
     String key,
     String language,
   ) {
-    final mapValue = json[key];
-    if (mapValue is Map<String, dynamic>) {
-      final value = mapValue[language];
-      if (value != null && value.toString().trim().isNotEmpty) {
-        return value.toString();
+    final direct = json[key];
+    final value = _valueForLanguage(direct, language);
+    if (value != null && value.trim().isNotEmpty) return value;
+
+    final suffixCandidates = <String>[
+      '${key}_$language',
+      '${key}${language.toUpperCase()}',
+      '${key}_${language.toUpperCase()}',
+      '${key}$language',
+    ];
+    for (final candidate in suffixCandidates) {
+      final raw = json[candidate];
+      if (raw != null && raw.toString().trim().isNotEmpty) {
+        return raw.toString().trim();
       }
     }
-    final value = json['${key}_$language'];
-    if (value == null || value.toString().trim().isEmpty) {
-      return null;
+
+    final translations = json['translations'];
+    final translated = _valueFromTranslations(translations, key, language);
+    if (translated != null && translated.trim().isNotEmpty) return translated;
+
+    // Some Laravel serializers put the localized fields inside a nested
+    // property/attributes object. Keep parsing defensive so details work with
+    // either shape without hard-coding one response envelope.
+    for (final nestedKey in const ['property', 'attributes', 'localized']) {
+      final nested = json[nestedKey];
+      if (nested is Map) {
+        final normalized = nested.map((k, v) => MapEntry(k.toString(), v));
+        final nestedValue = _localizedVariant(normalized, key, language);
+        if (nestedValue != null && nestedValue.trim().isNotEmpty) return nestedValue;
+      }
     }
-    return value.toString();
+
+    return null;
+  }
+
+  static String? _valueForLanguage(dynamic raw, String language) {
+    if (raw is Map) {
+      final map = raw.map((k, v) => MapEntry(k.toString().toLowerCase(), v));
+      final value = map[language.toLowerCase()] ??
+          map[language == 'ar' ? 'arabic' : 'english'] ??
+          map[language == 'ar' ? 'ar' : 'en'];
+      if (value != null && value.toString().trim().isNotEmpty) {
+        return value.toString().trim();
+      }
+    }
+    return raw is String && raw.trim().isNotEmpty ? raw.trim() : null;
+  }
+
+  static String? _valueFromTranslations(dynamic raw, String key, String language) {
+    if (raw is Map) {
+      final map = raw.map((k, v) => MapEntry(k.toString(), v));
+      final direct = map[key];
+      final value = _valueForLanguage(direct, language);
+      if (value != null) return value;
+      for (final entry in map.entries) {
+        if (entry.value is Map) {
+          final localeMap = (entry.value as Map).map((k, v) => MapEntry(k.toString().toLowerCase(), v));
+          final locale = (localeMap['locale'] ?? localeMap['language'] ?? localeMap['lang'])?.toString().toLowerCase();
+          final field = localeMap[key];
+          if (locale == language && field != null && field.toString().trim().isNotEmpty) {
+            return field.toString().trim();
+          }
+        }
+      }
+    } else if (raw is List) {
+      for (final item in raw) {
+        if (item is Map) {
+          final map = item.map((k, v) => MapEntry(k.toString(), v));
+          final locale = (map['locale'] ?? map['language'] ?? map['lang'])?.toString().toLowerCase();
+          if (locale == language) {
+            final value = map[key] ?? map['value'] ?? map['text'] ?? map['name'];
+            if (value != null && value.toString().trim().isNotEmpty) return value.toString().trim();
+          }
+        }
+      }
+    }
+    return null;
   }
 
   static PropertyImageModel? _parsePrimaryImage({

@@ -166,24 +166,15 @@ class FeaturedPropertyCard extends StatelessWidget {
                                   width: 40,
                                   height: 40,
                                   child: Center(
-                                    child: loading
-                                        ? SizedBox(
-                                            width: 18,
-                                            height: 18,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: theme.colorScheme.primary,
-                                            ),
-                                          )
-                                        : Icon(
-                                            isFavorite
-                                                ? Icons.favorite_rounded
-                                                : Icons.favorite_border_rounded,
-                                            color: isFavorite
-                                                ? theme.colorScheme.error
-                                                : theme.colorScheme.onSurface,
-                                            size: 21,
-                                          ),
+                                    child: Icon(
+                                      isFavorite
+                                          ? Icons.favorite_rounded
+                                          : Icons.favorite_border_rounded,
+                                      color: isFavorite
+                                          ? theme.colorScheme.error
+                                          : theme.colorScheme.onSurface,
+                                      size: 21,
+                                    ),
                                   ),
                                 ),
                               ),

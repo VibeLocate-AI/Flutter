@@ -2,28 +2,43 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/localization/localization.dart';
+import '../../core/auth/auth_role.dart';
+import '../../core/storage/token_storage.dart';
 import '../../features/agent/presentation/pages/agent_center_page.dart';
 import '../../features/notifications/notifications_dependencies.dart';
-import '../../features/notifications/presentation/pages/notifications_page.dart';
-import '../../core/storage/token_storage.dart';
 
+/// Agent is intentionally hidden unless a screen explicitly opts in.
+/// The normal app only opts in from Home.
 class AgentAppBarAction extends StatelessWidget {
-  const AgentAppBarAction({super.key});
+  const AgentAppBarAction({
+    super.key,
+    this.showOnHome = false,
+  });
 
-  Future<bool> _isAgent() async {
-    final role = (await TokenStorage.getRole() ?? '').trim().toLowerCase();
-    return role == 'agent' || role == 'real_estate_agent';
-  }
+  final bool showOnHome;
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<bool>(
-      future: _isAgent(),
+    if (!showOnHome) {
+      return const SizedBox.shrink();
+    }
+
+    return FutureBuilder<String?>(
+      future: TokenStorage.getRole(),
       builder: (context, snapshot) {
-        if (snapshot.data != true) return const SizedBox.shrink();
+        if (!snapshot.hasData || !AuthRole.isAgent(snapshot.data)) {
+          return const SizedBox.shrink();
+        }
+
         return IconButton(
-          tooltip: AppLocalization.of(context).translate('nav_agent'),
-          onPressed: () => Get.to(() => const AgentCenterPage()),
+      tooltip: AppLocalization.of(context).translate('nav_agent'),
+      onPressed: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const AgentCenterPage(),
+          ),
+        );
+          },
           icon: const Icon(Icons.real_estate_agent_outlined),
         );
       },
@@ -31,46 +46,13 @@ class AgentAppBarAction extends StatelessWidget {
   }
 }
 
+/// Kept for old pages so they compile, but the action itself is hidden.
+/// Home owns its notification button because it also needs the unread badge.
 class NotificationAppBarAction extends StatelessWidget {
   const NotificationAppBarAction({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return GetX<NotificationBadgeController>(
-      init: Get.isRegistered<NotificationBadgeController>() ? null : NotificationBadgeController(),
-      builder: (controller) {
-        final count = controller.count.value;
-        return IconButton(
-          tooltip: AppLocalization.of(context).translate('notifications'),
-          onPressed: () => Get.to(() => const NotificationsPage()),
-          icon: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              const Icon(Icons.notifications_none_rounded),
-              if (count > 0)
-                Positioned(
-                  top: -5,
-                  right: -5,
-                  child: Container(
-                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                    padding: const EdgeInsets.symmetric(horizontal: 3),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.error,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      count > 99 ? '99+' : '$count',
-                      style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
 class NotificationBadgeController extends GetxController {

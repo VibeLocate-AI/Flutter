@@ -46,7 +46,7 @@ class LocationManager extends ChangeNotifier {
         if (_country.trim().isNotEmpty) _country.trim(),
       ].join(', ');
     }
-    return '${_latitude!.toStringAsFixed(5)}, ${_longitude!.toStringAsFixed(5)}';
+    return '';
   }
 
   String get city => _city;
@@ -55,7 +55,7 @@ class LocationManager extends ChangeNotifier {
   String get lastKnownLocation {
     if (_locationName.trim().isNotEmpty) return _locationName.trim();
     if (_latitude != null && _longitude != null) {
-      return '${_latitude!.toStringAsFixed(5)}, ${_longitude!.toStringAsFixed(5)}';
+      return '';
     }
     return '';
   }
@@ -111,7 +111,10 @@ class LocationManager extends ChangeNotifier {
           .getCurrentLocation(allowLastKnown: false);
 
       if (position == null) {
-        _hasFreshLocation = false;
+        // Keep the last valid coordinates available when a fresh GPS fix is
+        // temporarily unavailable (cold start, emulator, indoor signal,
+        // permission timeout). The map can still focus on the known location.
+        _hasFreshLocation = _latitude != null && _longitude != null;
         notifyListeners();
         return false;
       }
@@ -126,7 +129,7 @@ class LocationManager extends ChangeNotifier {
         longitude = tmp;
       }
       if (latitude.abs() > 90 || longitude.abs() > 180) {
-        _hasFreshLocation = false;
+        _hasFreshLocation = _latitude != null && _longitude != null;
         notifyListeners();
         return false;
       }

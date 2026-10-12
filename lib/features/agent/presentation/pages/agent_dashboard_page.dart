@@ -1,15 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../../app/app_router.dart';
-import '../../../../core/localization/localization.dart';
-import '../../../../core/state/location_manager.dart';
-import '../../../notifications/presentation/pages/notifications_page.dart';
-import '../../../profile/presentation/pages/profile_page.dart';
-import '../../../auth/auth_dependencies.dart';
-import '../../../properties/presentation/pages/add_property_page.dart';
 import '../../agent_controller.dart';
 import '../../data/models/agent_property.dart';
+import '../../../properties/presentation/pages/add_property_page.dart';
 
 class AgentDashboardPage extends StatefulWidget {
   const AgentDashboardPage({super.key});
@@ -28,141 +24,88 @@ class _AgentDashboardPageState extends State<AgentDashboardPage> {
         ? Get.find<AgentController>()
         : Get.put(AgentController(), permanent: true);
     controller.load();
-    if (!LocationManager.instance.isUpdating) {
-      LocationManager.instance.updateCurrentLocation();
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final localization = AppLocalization.of(context);
-    final width = MediaQuery.sizeOf(context).width;
-
     return Scaffold(
       appBar: AppBar(
-        title: Text(localization.translate('agent_dashboard')),
+        title: const Text('My Dashboard'),
         actions: [
-          IconButton(
-            tooltip: localization.translate('notifications'),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const NotificationsPage()),
+          Obx(
+            () => IconButton(
+              tooltip: 'Refresh Agent data',
+              onPressed: controller.isLoading.value ? null : controller.load,
+              icon: const Icon(Icons.refresh_rounded),
             ),
-            icon: const Icon(Icons.notifications_none_rounded),
-          ),
-          IconButton(
-            tooltip: localization.translate('profile'),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ProfilePage()),
-            ),
-            icon: const Icon(Icons.person_outline_rounded),
-          ),
-          IconButton(
-            tooltip: localization.translate('refresh'),
-            onPressed: controller.isLoading.value ? null : controller.load,
-            icon: const Icon(Icons.refresh_rounded),
           ),
         ],
       ),
       body: Obx(() {
-        final hasItems = controller.pending.isNotEmpty ||
+        final hasData = controller.pending.isNotEmpty ||
             controller.approved.isNotEmpty ||
             controller.rejected.isNotEmpty ||
             controller.pois.isNotEmpty;
 
-        if (controller.isLoading.value && !hasItems) {
+        if (controller.isLoading.value && !hasData) {
           return const Center(child: CircularProgressIndicator());
-        }
-
-        final error = controller.error.value;
-        if (error != null && !hasItems) {
-          return _ErrorState(
-            message: error,
-            retryLabel: localization.translate('try_again'),
-            onRetry: controller.load,
-          );
         }
 
         return RefreshIndicator(
           onRefresh: controller.load,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(
-              width < 380 ? 14 : 20,
-              16,
-              width < 380 ? 14 : 20,
-              120,
-            ),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 36),
             children: [
-              _AgentLocationCard(),
-              const SizedBox(height: 12),
-              if (error != null) _InlineError(message: error),
-              _SummaryRow(controller: controller),
-              const SizedBox(height: 18),
-              _PropertySection(
-                title: localization.translate('pending'),
+              _DashboardHeader(controller: controller),
+              const SizedBox(height: 14),
+              if (controller.error.value != null) ...[
+                _ErrorBanner(message: controller.error.value!),
+                const SizedBox(height: 12),
+              ],
+              _BackendStatusGrid(controller: controller),
+              const SizedBox(height: 20),
+              _PropertyGroup(
+                title: 'Pending Properties',
+                status: 'pending',
                 properties: controller.pending,
-                actionBuilder: (property) => Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      tooltip: localization.translate('approved'),
-                      onPressed: () => controller.approve(property.id),
-                      icon: const Icon(Icons.check_circle_outline_rounded),
-                    ),
-                    IconButton(
-                      tooltip: localization.translate('rejected'),
-                      onPressed: () => _rejectProperty(property.id),
-                      icon: const Icon(Icons.cancel_outlined),
-                    ),
-                  ],
-                ),
+                actions: true,
+                onApprove: controller.approve,
+                onReject: _reject,
               ),
-              _PropertySection(
-                title: localization.translate('approved'),
+              _PropertyGroup(
+                title: 'Approved Properties',
+                status: 'approved',
                 properties: controller.approved,
               ),
-              _PropertySection(
-                title: localization.translate('rejected'),
+              _PropertyGroup(
+                title: 'Rejected Properties',
+                status: 'rejected',
                 properties: controller.rejected,
               ),
-              const SizedBox(height: 12),
-              _PoiSection(
-                title: localization.translate('agent_pois'),
+              _PoiGroup(
                 pois: controller.pois,
-                onAdd: () => _openAddPoi(),
-                onEdit: _openEditPoi,
+                onAdd: () => _openPoiEditor(),
+                onEdit: _openPoiEditor,
                 onDelete: _deletePoi,
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 18),
               OutlinedButton.icon(
-                onPressed: controller.isLoading.value
-                    ? null
-                    : () async {
-                        try {
-                          await controller.submitLicense();
-                          if (mounted) {
-                            _showMessage(
-                              localization.translate('agent_license_submitted'),
-                            );
-                          }
-                        } catch (error) {
-                          if (mounted) {
-                            _showMessage(
-                              error.toString().replaceFirst('Exception: ', ''),
-                            );
-                          }
-                        }
-                      },
+                onPressed: _submitLicense,
                 icon: const Icon(Icons.verified_outlined),
-                label: Text(localization.translate('agent_submit_license')),
+                label: const Text('Submit Agent License'),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 9),
               FilledButton.icon(
-                onPressed: _openAddProperty,
-                icon: const Icon(Icons.add_rounded),
-                label: Text(localization.translate('add_property')),
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AddPropertyPage()),
+                  );
+                  await controller.load();
+                },
+                icon: const Icon(Icons.add_home_work_rounded),
+                label: const Text('Add Property'),
               ),
             ],
           ),
@@ -171,485 +114,454 @@ class _AgentDashboardPageState extends State<AgentDashboardPage> {
     );
   }
 
-  Future<void> _openAddProperty() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const AddPropertyPage()),
-    );
-    await controller.load();
-  }
-
-  Future<void> _openAddPoi({Map<String, dynamic>? existing}) async {
-    final nameController = TextEditingController();
-    final typeController = TextEditingController();
-    final categoryController = TextEditingController();
-    final subcategoryController = TextEditingController();
-    final iconController = TextEditingController();
-    final latController = TextEditingController(
-      text: existing?['latitude']?.toString() ?? '',
-    );
-    final lngController = TextEditingController(
-      text: existing?['longitude']?.toString() ?? '',
-    );
-    nameController.text = existing?['name']?.toString() ??
-        existing?['title']?.toString() ?? '';
-    typeController.text = existing?['type']?.toString() ??
-        existing?['category']?.toString() ?? '';
-    categoryController.text = existing?['category']?.toString() ??
-        existing?['type']?.toString() ?? '';
-    subcategoryController.text = existing?['subcategory']?.toString() ?? '';
-    iconController.text = existing?['icon']?.toString() ?? '';
-
-    final localization = AppLocalization.of(context);
-    try {
-      final submit = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(existing == null
-                ? localization.translate('agent_add_place')
-                : localization.translate('agent_edit_place')),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(
-                    labelText: localization.translate('agent_place_name'),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: typeController,
-                  decoration: InputDecoration(
-                    labelText: localization.translate('agent_place_type'),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: categoryController,
-                  decoration: InputDecoration(
-                    labelText: localization.translate('agent_place_category'),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: subcategoryController,
-                  decoration: InputDecoration(
-                    labelText: localization.translate('agent_place_subcategory'),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: iconController,
-                  decoration: InputDecoration(
-                    labelText: localization.translate('agent_place_icon'),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: latController,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(
-                    labelText: localization.translate('agent_latitude'),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: lngController,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(
-                    labelText: localization.translate('agent_longitude'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(localization.translate('cancel')),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(localization.translate('save')),
-            ),
-          ],
-        ),
-      );
-
-      if (submit != true) return;
-
-      final name = nameController.text.trim();
-      final type = typeController.text.trim();
-      final latitude = double.tryParse(latController.text.trim());
-      final longitude = double.tryParse(lngController.text.trim());
-
-      if (name.isEmpty || type.isEmpty || latitude == null || longitude == null) {
-        if (mounted) {
-          _showMessage(localization.translate('complete_required_fields'));
-        }
-        return;
-      }
-
-      final existingId = int.tryParse(
-        (existing?['id'] ?? existing?['osm_id'] ?? '').toString(),
-      );
-      if (existingId != null && existingId > 0) {
-        await controller.updatePoi(existingId, {
-          'name': name,
-          'category': categoryController.text.trim().isEmpty
-              ? type
-              : categoryController.text.trim(),
-          'subcategory': subcategoryController.text.trim(),
-          'latitude': latitude,
-          'longitude': longitude,
-          'icon': iconController.text.trim(),
-        });
-      } else {
-        await controller.createPoi({
-          'name': name,
-          'category': categoryController.text.trim().isEmpty
-              ? type
-              : categoryController.text.trim(),
-          'subcategory': subcategoryController.text.trim(),
-          'latitude': latitude,
-          'longitude': longitude,
-          'icon': iconController.text.trim(),
-        });
-      }
-
-      if (mounted) {
-        _showMessage(localization.translate(existing == null ? 'agent_add_place_success' : 'agent_place_updated'));
-      }
-    } finally {
-      nameController.dispose();
-      typeController.dispose();
-      categoryController.dispose();
-      subcategoryController.dispose();
-      iconController.dispose();
-      latController.dispose();
-      lngController.dispose();
-    }
-  }
-
-  Future<void> _rejectProperty(int propertyId) async {
-    final localization = AppLocalization.of(context);
+  Future<void> _reject(int id) async {
     final reasonController = TextEditingController();
-    try {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(localization.translate('rejected')),
-          content: TextField(
-            controller: reasonController,
-            maxLines: 3,
-            decoration: InputDecoration(
-              labelText: localization.translate('agent_rejection_reason'),
-              hintText: localization.translate('agent_rejection_reason'),
-            ),
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reject property'),
+        content: TextField(
+          controller: reasonController,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            labelText: 'Reason',
+            hintText: 'Optional rejection reason',
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(localization.translate('cancel')),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(localization.translate('rejected')),
-            ),
-          ],
         ),
-      );
-      if (confirmed != true) return;
-      await controller.reject(propertyId, reason: reasonController.text.trim());
-      if (mounted) _showMessage(localization.translate('agent_property_rejected'));
-    } catch (error) {
-      if (mounted) {
-        _showMessage(error.toString().replaceFirst('Exception: ', ''));
-      }
-    } finally {
-      reasonController.dispose();
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, reasonController.text),
+            child: const Text('Reject'),
+          ),
+        ],
+      ),
+    );
+    reasonController.dispose();
+    if (reason == null) return;
+    try {
+      await controller.reject(id, reason: reason);
+    } catch (e) {
+      if (!mounted) return;
+      _message(e.toString().replaceFirst('Exception: ', ''));
     }
   }
 
-  Future<void> _openEditPoi(Map<String, dynamic> poi) async {
-    await _openAddPoi(existing: poi);
+  Future<void> _submitLicense() async {
+    try {
+      await controller.submitLicense();
+      if (mounted) _message('Agent license submitted successfully.');
+    } catch (e) {
+      if (mounted) _message(e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  Future<void> _openPoiEditor([Map<String, dynamic>? existing]) async {
+    final name = TextEditingController(
+      text: (existing?['name'] ?? existing?['title'] ?? '').toString(),
+    );
+    final category = TextEditingController(
+      text: (existing?['category'] ?? existing?['type'] ?? '').toString(),
+    );
+    final subcategory = TextEditingController(
+      text: (existing?['subcategory'] ?? '').toString(),
+    );
+    final icon = TextEditingController(text: (existing?['icon'] ?? '').toString());
+    final latitude = TextEditingController(text: (existing?['latitude'] ?? '').toString());
+    final longitude = TextEditingController(text: (existing?['longitude'] ?? '').toString());
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(existing == null ? 'Create Agent POI' : 'Update Agent POI'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _dialogField(name, 'Name'),
+              _dialogField(category, 'Category'),
+              _dialogField(subcategory, 'Subcategory'),
+              _dialogField(icon, 'Icon'),
+              _dialogField(latitude, 'Latitude', number: true),
+              _dialogField(longitude, 'Longitude', number: true),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(existing == null ? 'Create' : 'Update'),
+          ),
+        ],
+      ),
+    );
+
+    if (saved != true) {
+      for (final c in [name, category, subcategory, icon, latitude, longitude]) {
+        c.dispose();
+      }
+      return;
+    }
+
+    final body = <String, dynamic>{
+      'name': name.text.trim(),
+      'category': category.text.trim(),
+      'subcategory': subcategory.text.trim(),
+      'latitude': double.tryParse(latitude.text.trim()),
+      'longitude': double.tryParse(longitude.text.trim()),
+      'icon': icon.text.trim(),
+    };
+
+    for (final c in [name, category, subcategory, icon, latitude, longitude]) {
+      c.dispose();
+    }
+
+    try {
+      if (existing == null) {
+        await controller.createPoi(body);
+      } else {
+        final id = int.tryParse(
+          (existing['id'] ?? existing['osm_id'] ?? '').toString(),
+        );
+        if (id == null) throw Exception('POI id was not returned by the backend.');
+        await controller.updatePoi(id, body);
+      }
+    } catch (e) {
+      if (mounted) _message(e.toString().replaceFirst('Exception: ', ''));
+    }
   }
 
   Future<void> _deletePoi(Map<String, dynamic> poi) async {
     final id = int.tryParse((poi['id'] ?? poi['osm_id'] ?? '').toString());
-    if (id == null || id <= 0) return;
+    if (id == null) {
+      _message('This POI has no backend id.');
+      return;
+    }
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete POI?'),
+        content: Text((poi['name'] ?? poi['title'] ?? 'This POI').toString()),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (yes != true) return;
+
     try {
       await controller.deletePoi(id);
-      if (mounted) {
-        _showMessage(
-          AppLocalization.of(context).translate('agent_place_deleted'),
-        );
-      }
-    } catch (error) {
-      if (mounted) {
-        _showMessage(error.toString().replaceFirst('Exception: ', ''));
-      }
+    } catch (e) {
+      if (mounted) _message(e.toString().replaceFirst('Exception: ', ''));
     }
   }
 
-  Future<void> _logout() async {
-    try {
-      await AuthDependencies.logout();
-    } catch (_) {}
-    if (!mounted) return;
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      AppRouter.login,
-      (route) => false,
-    );
+  void _message(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
-}
-
-class _AgentLocationCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final localization = AppLocalization.of(context);
-    final theme = Theme.of(context);
-    return AnimatedBuilder(
-      animation: LocationManager.instance,
-      builder: (context, _) {
-        final manager = LocationManager.instance;
-        final location = manager.displayLocation;
-        return Card(
-          margin: EdgeInsets.zero,
-          child: ListTile(
-            leading: Icon(
-              Icons.location_on_rounded,
-              color: theme.colorScheme.primary,
-            ),
-            title: Text(localization.translate('current_location')),
-            subtitle: Text(
-              manager.isUpdating
-                  ? localization.translate('location_detecting')
-                  : (location.isEmpty
-                      ? localization.translate('location_unavailable')
-                      : location),
-            ),
-            trailing: manager.isUpdating
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : IconButton(
-                    tooltip: localization.translate('refresh'),
-                    onPressed: () => manager.updateCurrentLocation(),
-                    icon: const Icon(Icons.my_location_rounded),
-                  ),
-          ),
-        );
-      },
+  Widget _dialogField(
+    TextEditingController controller,
+    String label, {
+    bool number = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: TextField(
+        controller: controller,
+        keyboardType: number
+            ? const TextInputType.numberWithOptions(decimal: true)
+            : TextInputType.text,
+        decoration: InputDecoration(labelText: label),
+      ),
     );
   }
 }
 
-class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({required this.controller});
+class _DashboardHeader extends StatelessWidget {
+  const _DashboardHeader({required this.controller});
 
   final AgentController controller;
 
   @override
   Widget build(BuildContext context) {
-    final localization = AppLocalization.of(context);
-    final items = [
-      (localization.translate('pending'), controller.pending.length),
-      (localization.translate('approved'), controller.approved.length),
-      (localization.translate('rejected'), controller.rejected.length),
-    ];
-
-    return Row(
-      children: items.map((item) {
-        return Expanded(
-          child: Card(
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-              child: Column(
-                children: [
-                  Text(
-                    '${item.$2}',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    item.$1,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(17),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.cloud_done_rounded, color: theme.colorScheme.primary, size: 30),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Laravel Agent data',
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Every property and POI keeps the complete response returned by the backend.',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
             ),
           ),
-        );
-      }).toList(),
+        ],
+      ),
     );
   }
 }
 
-class _PropertySection extends StatelessWidget {
-  const _PropertySection({
-    required this.title,
-    required this.properties,
-    this.actionBuilder,
-  });
-
-  final String title;
-  final List<AgentProperty> properties;
-  final Widget Function(AgentProperty property)? actionBuilder;
+class _BackendStatusGrid extends StatelessWidget {
+  const _BackendStatusGrid({required this.controller});
+  final AgentController controller;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '$title (${properties.length})',
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w900,
-          ),
+    final values = [
+      ('Pending', controller.pending.length, Icons.hourglass_top_rounded),
+      ('Approved', controller.approved.length, Icons.check_circle_rounded),
+      ('Rejected', controller.rejected.length, Icons.cancel_rounded),
+      ('POIs', controller.pois.length, Icons.location_on_rounded),
+    ];
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: values.length,
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 360,
+        mainAxisExtent: 78,
+        crossAxisSpacing: 9,
+        mainAxisSpacing: 9,
+      ),
+      itemBuilder: (_, i) => Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         ),
-        const SizedBox(height: 8),
-        if (properties.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 18),
-            child: Text(
-              AppLocalization.of(context).translate('agent_empty'),
-              style: theme.textTheme.bodySmall,
-            ),
-          )
-        else
-          ...properties.map(
-                (property) => Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  clipBehavior: Clip.antiAlias,
-                  child: ListTile(
-                    leading: _PropertyImage(url: property.imageUrl),
-                    title: Text(
-                      property.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          property.address.isEmpty ? property.price : property.address,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (property.raw.isNotEmpty)
-                          Text(
-                            '${property.raw.length} API fields',
-                            style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.primary),
-                          ),
-                      ],
-                    ),
-                    trailing: actionBuilder?.call(property),
-                    onTap: property.id == 0
-                        ? null
-                        : () => Navigator.pushNamed(
-                              context,
-                              AppRouter.propertyDetails,
-                              arguments: property.id,
-                            ),
-                    onLongPress: property.raw.isEmpty ? null : () => _showApiData(context, property.raw),
-                  ),
-                ),
-              ),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
-}
-
-void _showApiData(BuildContext context, Map<String, dynamic> data) {
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder: (context) => SafeArea(
-      child: DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: .65,
-        maxChildSize: .92,
-        builder: (context, scrollController) => ListView(
-          controller: scrollController,
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+        child: Row(
           children: [
-            Text(AppLocalization.of(context).translate('agent_api_data'), style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
-            const SizedBox(height: 12),
-            ...data.entries.map((entry) => Card(
-              child: ListTile(
-                title: Text(entry.key),
-                subtitle: Text(entry.value is Map || entry.value is List ? entry.value.toString() : '${entry.value ?? ''}'),
-              ),
-            )),
+            Icon(values[i].$3, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 9),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${values[i].$2}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+                Text(values[i].$1, style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
           ],
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
-class _PropertyImage extends StatelessWidget {
-  const _PropertyImage({required this.url});
+class _PropertyGroup extends StatelessWidget {
+  const _PropertyGroup({
+    required this.title,
+    required this.status,
+    required this.properties,
+    this.actions = false,
+    this.onApprove,
+    this.onReject,
+  });
 
-  final String url;
+  final String title;
+  final String status;
+  final List<AgentProperty> properties;
+  final bool actions;
+  final Future<void> Function(int id)? onApprove;
+  final Future<void> Function(int id)? onReject;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    if (url.isEmpty) {
-      return CircleAvatar(
-        backgroundColor: theme.colorScheme.surfaceContainerHighest,
-        child: const Icon(Icons.home_work_outlined),
-      );
-    }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: Image.network(
-        url,
-        width: 56,
-        height: 56,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => CircleAvatar(
-          backgroundColor: theme.colorScheme.surfaceContainerHighest,
-          child: const Icon(Icons.home_work_outlined),
-        ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '$title (${properties.length})',
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+                ),
+              ),
+              Text(status, style: theme.textTheme.labelSmall),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (properties.isEmpty)
+            _EmptyBox(text: 'No $status properties returned by the backend.')
+          else
+            ...properties.map(
+              (property) => _BackendPropertyCard(
+                property: property,
+                actions: actions,
+                onApprove: onApprove,
+                onReject: onReject,
+              ),
+            ),
+        ],
       ),
     );
   }
 }
 
-class _PoiSection extends StatelessWidget {
-  const _PoiSection({
-    required this.title,
+class _BackendPropertyCard extends StatelessWidget {
+  const _BackendPropertyCard({
+    required this.property,
+    required this.actions,
+    this.onApprove,
+    this.onReject,
+  });
+
+  final AgentProperty property;
+  final bool actions;
+  final Future<void> Function(int id)? onApprove;
+  final Future<void> Function(int id)? onReject;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: const EdgeInsets.only(bottom: 9),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        leading: _PropertyImage(url: property.imageUrl),
+        title: Text(
+          property.title.isEmpty ? 'Property #${property.id}' : property.title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            [
+              if (property.status.isNotEmpty) property.status,
+              if (property.price.isNotEmpty) property.price,
+              if (property.address.isNotEmpty) property.address,
+              '${property.raw.length} backend fields',
+            ].join(' • '),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        trailing: actions
+            ? Wrap(
+                spacing: 0,
+                children: [
+                  IconButton(
+                    tooltip: 'Approve',
+                    onPressed: onApprove == null ? null : () => onApprove!(property.id),
+                    icon: const Icon(Icons.check_circle_outline_rounded),
+                  ),
+                  IconButton(
+                    tooltip: 'Reject',
+                    onPressed: onReject == null ? null : () => onReject!(property.id),
+                    icon: const Icon(Icons.cancel_outlined),
+                  ),
+                ],
+              )
+            : null,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Complete backend response',
+              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (property.raw.isEmpty)
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text('The backend returned no extra fields.'),
+            )
+          else
+            ...property.raw.entries.map(
+              (entry) => _BackendField(
+                keyName: entry.key,
+                value: entry.value,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BackendField extends StatelessWidget {
+  const _BackendField({required this.keyName, required this.value});
+  final String keyName;
+  final dynamic value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isComplex = value is Map || value is List;
+    final text = isComplex
+        ? const JsonEncoder.withIndent('  ').convert(value)
+        : (value == null ? 'null' : value.toString());
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.all(9),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: .45),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(keyName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+          const SizedBox(height: 3),
+          SelectableText(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.colorScheme.onSurfaceVariant,
+              fontFamily: isComplex ? 'monospace' : null,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PoiGroup extends StatelessWidget {
+  const _PoiGroup({
     required this.pois,
     required this.onAdd,
     required this.onEdit,
     required this.onDelete,
   });
 
-  final String title;
   final List<Map<String, dynamic>> pois;
   final VoidCallback onAdd;
   final ValueChanged<Map<String, dynamic>> onEdit;
@@ -657,6 +569,7 @@ class _PoiSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -664,99 +577,119 @@ class _PoiSection extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                '$title (${pois.length})',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
+                'Agency POIs (${pois.length})',
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
               ),
             ),
-            IconButton(
-              onPressed: onAdd,
-              icon: const Icon(Icons.add_rounded),
-            ),
+            IconButton(onPressed: onAdd, icon: const Icon(Icons.add_rounded)),
           ],
         ),
+        const SizedBox(height: 7),
         if (pois.isEmpty)
-          Text(AppLocalization.of(context).translate('agent_empty'))
+          const _EmptyBox(text: 'No POIs returned by the backend.')
         else
           ...pois.map(
-                (poi) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.place_outlined),
-                  title: Text(
-                    (poi['name'] ?? poi['title'] ?? '').toString(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+            (poi) => Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ExpansionTile(
+                leading: const CircleAvatar(child: Icon(Icons.place_outlined)),
+                title: Text(
+                  (poi['name'] ?? poi['title'] ?? 'POI').toString(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  [
+                    if ((poi['category'] ?? poi['type'] ?? '').toString().isNotEmpty)
+                      (poi['category'] ?? poi['type']).toString(),
+                    '${poi.length} backend fields',
+                  ].join(' • '),
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: 'Edit',
+                      onPressed: () => onEdit(poi),
+                      icon: const Icon(Icons.edit_outlined),
+                    ),
+                    IconButton(
+                      tooltip: 'Delete',
+                      onPressed: () => onDelete(poi),
+                      icon: const Icon(Icons.delete_outline_rounded),
+                    ),
+                  ],
+                ),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                    child: Column(
+                      children: poi.entries
+                          .map((entry) => _BackendField(keyName: entry.key, value: entry.value))
+                          .toList(),
+                    ),
                   ),
-                  subtitle: Text(
-                    (poi['type'] ?? poi['category'] ?? '').toString(),
-                  ),
-                   trailing: Row(
-                     mainAxisSize: MainAxisSize.min,
-                     children: [
-                       IconButton(
-                         tooltip: AppLocalization.of(context).translate('edit'),
-                         onPressed: () => onEdit(poi),
-                         icon: const Icon(Icons.edit_outlined),
-                       ),
-                       IconButton(
-                         tooltip: AppLocalization.of(context).translate('delete'),
-                         onPressed: () => onDelete(poi),
-                         icon: const Icon(Icons.delete_outline_rounded),
-                       ),
-                     ],
-                   ),
-                 ),
+                ],
               ),
+            ),
+          ),
       ],
     );
   }
 }
 
-class _InlineError extends StatelessWidget {
-  const _InlineError({required this.message});
-
-  final String message;
+class _PropertyImage extends StatelessWidget {
+  const _PropertyImage({required this.url});
+  final String url;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        leading: const Icon(Icons.error_outline_rounded),
-        title: Text(message),
+    if (url.isEmpty) {
+      return const CircleAvatar(child: Icon(Icons.home_work_outlined));
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Image.network(
+        url,
+        width: 54,
+        height: 54,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => const CircleAvatar(child: Icon(Icons.home_work_outlined)),
       ),
     );
   }
 }
 
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({
-    required this.message,
-    required this.retryLabel,
-    required this.onRetry,
-  });
-
-  final String message;
-  final String retryLabel;
-  final Future<void> Function() onRetry;
+class _EmptyBox extends StatelessWidget {
+  const _EmptyBox({required this.text});
+  final String text;
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 14),
-            FilledButton(
-              onPressed: onRetry,
-              child: Text(retryLabel),
-            ),
-          ],
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: .45),
+          borderRadius: BorderRadius.circular(14),
         ),
-      ),
-    );
-  }
+        child: Text(text),
+      );
+}
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message});
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.errorContainer,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Text(
+          'Refresh issue. Cached Agent data remains visible.\n$message',
+          style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
+        ),
+      );
 }

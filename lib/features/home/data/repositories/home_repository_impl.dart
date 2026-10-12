@@ -10,6 +10,12 @@ class HomeRepositoryImpl
 
   final HomeRemoteDataSource remoteDataSource;
 
+  Future<HomeModel?> getCachedHome() async {
+    final data = await remoteDataSource.getCachedHome();
+    if (data == null) return null;
+    return HomeModel.fromJson(data);
+  }
+
   @override
   Future<HomeModel> getHome() async {
     final response =

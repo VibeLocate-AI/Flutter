@@ -103,65 +103,159 @@ class PropertiesRemoteDataSourceImpl
     return response;
   }
 
+  List<Map<String, dynamic>> _extractPropertyList(dynamic node) {
+    final found = <Map<String, dynamic>>[];
+
+    void walk(dynamic value) {
+      if (value is List) {
+        final candidates = <Map<String, dynamic>>[];
+        for (final raw in value) {
+          if (raw is! Map) continue;
+          final item = raw.map(
+            (key, value) => MapEntry(key.toString(), value),
+          );
+          final id = _toInt(item['id'] ?? item['property_id']);
+          final looksLikeProperty = id > 0 && (
+            item.containsKey('title') ||
+            item.containsKey('price') ||
+            item.containsKey('property_condition') ||
+            item.containsKey('type_id') ||
+            item.containsKey('approval_status') ||
+            item.containsKey('listing_type')
+          );
+          if (looksLikeProperty) candidates.add(item);
+        }
+        if (candidates.isNotEmpty) {
+          found.addAll(candidates);
+          return;
+        }
+        for (final item in value) {
+          walk(item);
+        }
+        return;
+      }
+
+      if (value is! Map) return;
+      final map = value.map(
+        (key, value) => MapEntry(key.toString(), value),
+      );
+
+      final id = _toInt(map['id'] ?? map['property_id']);
+      final looksLikeProperty = id > 0 && (
+        map.containsKey('title') ||
+        map.containsKey('price') ||
+        map.containsKey('property_condition') ||
+        map.containsKey('type_id') ||
+        map.containsKey('approval_status') ||
+        map.containsKey('listing_type')
+      );
+      if (looksLikeProperty) {
+        found.add(map);
+        return;
+      }
+
+      for (final child in map.values) {
+        if (child is Map || child is List) walk(child);
+      }
+    }
+
+    walk(node);
+
+    final seen = <int>{};
+    return found.where((item) {
+      final id = _toInt(item['id'] ?? item['property_id']);
+      return id > 0 && seen.add(id);
+    }).toList(growable: false);
+  }
+
   void _appendProperties(
     Map<String, dynamic> response,
     List<Map<String, dynamic>> target,
     Set<int> seenIds,
   ) {
-    dynamic value = response['data'];
-    if (value is Map<String, dynamic>) {
-      value = value['properties'] ?? value['data'];
-    }
-    value ??= response['properties'];
-    if (value is! List) return;
-
-    for (final item in value.whereType<Map<String, dynamic>>()) {
-      final id = _toInt(item['id']);
-      if (id == 0 || seenIds.add(id)) target.add(item);
+    for (final item in _extractPropertyList(response)) {
+      final id = _toInt(item['id'] ?? item['property_id']);
+      if (id > 0 && seenIds.add(id)) target.add(item);
     }
   }
 
-
   int _countProperties(Map<String, dynamic> response) {
-    dynamic value = response['data'];
-    if (value is Map<String, dynamic>) {
-      value = value['properties'] ?? value['data'];
-    }
-    value ??= response['properties'];
-    return value is List ? value.length : 0;
+    return _extractPropertyList(response).length;
   }
 
   Map<String, dynamic>? _pagination(Map<String, dynamic> response) {
-    final value = response['pagination'];
-    if (value is Map<String, dynamic>) return value;
-    final data = response['data'];
-    if (data is Map<String, dynamic> && data['pagination'] is Map<String, dynamic>) {
-      return data['pagination'] as Map<String, dynamic>;
+    Map<String, dynamic>? find(dynamic value) {
+      if (value is! Map) return null;
+      final map = value.map(
+        (key, value) => MapEntry(key.toString(), value),
+      );
+      for (final key in const ['pagination', 'meta']) {
+        final candidate = map[key];
+        if (candidate is Map) {
+          return candidate.map(
+            (key, value) => MapEntry(key.toString(), value),
+          );
+        }
+      }
+      for (final key in const ['data', 'result', 'payload', 'response']) {
+        final nested = find(map[key]);
+        if (nested != null) return nested;
+      }
+      return null;
     }
-    return null;
+
+    return find(response);
   }
 
-  int _toInt(dynamic value) => int.tryParse(value?.toString() ?? '') ?? 0;
+  int _toInt(dynamic value) =>
+      int.tryParse(value?.toString() ?? '') ?? 0;
 
   @override
   Future<Map<String, dynamic>> getMyProperties() async {
     final language = LocaleManager.instance.languageCode;
-    try {
-      return await _get(
+    final collected = <Map<String, dynamic>>[];
+    final seenIds = <int>{};
+    Map<String, dynamic>? firstResponse;
+
+    // The Postman contract confirms GET /api/my-properties. Keep the first
+    // request compatible with the endpoint while still asking for a large
+    // page so a normal account needs only one request.
+    for (var page = 1; page <= 20; page++) {
+      final response = await _get(
         ApiEndpoints.myProperties,
         queryParameters: {
           'lang': language,
-          'per_page': 24,
-          'page': 1,
+          'per_page': 100,
+          'page': page,
+          '_t': DateTime.now().millisecondsSinceEpoch,
         },
       );
-    } catch (_) {
-      return {
-        'success': true,
-        'data': const [],
-        'properties': const [],
-      };
+
+      firstResponse ??= response;
+      final before = collected.length;
+      _appendProperties(response, collected, seenIds);
+      final pageCount = _countProperties(response);
+      final pagination = _pagination(response);
+      final lastPage = _toInt(pagination?['last_page']) > 0
+          ? _toInt(pagination?['last_page'])
+          : _toInt(pagination?['total_pages']);
+
+      if (lastPage > 0) {
+        if (page >= lastPage) break;
+      } else if (pageCount == 0 || collected.length == before || pageCount < 100) {
+        break;
+      }
     }
+
+    if (collected.isEmpty) {
+      return firstResponse ?? <String, dynamic>{'data': <dynamic>[]};
+    }
+
+    return {
+      'success': true,
+      'data': collected,
+      'properties': collected,
+    };
   }
 
   @override

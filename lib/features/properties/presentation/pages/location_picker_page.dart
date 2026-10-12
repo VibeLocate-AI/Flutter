@@ -22,8 +22,8 @@ class LocationPickerPage extends StatefulWidget {
 
 class _LocationPickerPageState
     extends State<LocationPickerPage> {
-  static const double _defaultLatitude = 0;
-  static const double _defaultLongitude = 0;
+  static const double _defaultLatitude = 25.2048;
+  static const double _defaultLongitude = 55.2708;
 
   final MapController _mapController =
   MapController();

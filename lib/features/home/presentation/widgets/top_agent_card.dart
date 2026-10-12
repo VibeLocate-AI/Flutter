@@ -10,9 +10,11 @@ class TopAgentCard extends StatelessWidget {
   const TopAgentCard({
     super.key,
     required this.agent,
+    this.onTap,
   });
 
   final TopAgentModel agent;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -34,8 +36,14 @@ class TopAgentCard extends StatelessWidget {
         ? AppColors.darkTextSecondary
         : AppColors.grayTextSub;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(20),
@@ -60,9 +68,9 @@ class TopAgentCard extends StatelessWidget {
                   children: [
                     Flexible(
                       child: Text(
-                        agent.name.isEmpty
+                        agent.displayName.isEmpty
                             ? AppLocalization.of(context).translate('real_estate_agent')
-                            : agent.name,
+                            : agent.displayName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTextStyles.headingSmall.copyWith(
@@ -83,10 +91,10 @@ class TopAgentCard extends StatelessWidget {
                   ],
                 ),
 
-                if (agent.agencyName.isNotEmpty) ...[
+                if (agent.displayAgencyName.isNotEmpty) ...[
                   const SizedBox(height: 5),
                   Text(
-                    agent.agencyName,
+                    agent.displayAgencyName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.bodySmall.copyWith(
@@ -126,6 +134,8 @@ class TopAgentCard extends StatelessWidget {
             ),
           ),
         ],
+          ),
+        ),
       ),
     );
   }

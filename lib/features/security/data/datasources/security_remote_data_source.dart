@@ -124,15 +124,10 @@ class SecurityRemoteDataSourceImpl
       body: {'action': 'start'},
     );
 
-    dynamic data = response['data'] ?? response;
-    if (data is Map) {
-      data = data['two_factor'] ?? data['setup'] ?? data;
-    }
-    return TwoFactorSetupModel.fromJson(
-      data is Map
-          ? data.map((key, value) => MapEntry(key.toString(), value))
-          : const {},
+    final map = response.map(
+      (key, value) => MapEntry(key.toString(), value),
     );
+    return TwoFactorSetupModel.fromJson(map);
   }
 
   @override

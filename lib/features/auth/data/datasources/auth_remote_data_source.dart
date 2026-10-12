@@ -118,18 +118,17 @@ class AuthRemoteDataSourceImpl
     required String deviceUuid,
     required String deviceType,
   }) async {
+    // Match the supplied Laravel/Postman contract exactly. Verification is
+    // an email action; device fields are used by login/session endpoints.
     final response = await ApiClient.post(
       ApiEndpoints.verifyOtp,
       body: {
         'email': email,
         'otp': otp,
-        'device_uuid': deviceUuid,
-        'device_type': deviceType,
       },
     );
 
-    final tokens =
-    AuthTokensModel.fromJson(response);
+    final tokens = AuthTokensModel.fromJson(response);
 
     final nestedData = response['data'] is Map ? response['data'] as Map : null;
     final rawUser = response['user'] ?? nestedData?['user'] ?? response['profile'] ?? nestedData?['profile'];
@@ -145,10 +144,19 @@ class AuthRemoteDataSourceImpl
       }
     }
 
-    await TokenStorage.saveTokens(
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-    );
+    // Some deployments return only a success/message from verify-otp. In
+    // that case verification is still successful; keep the saved role/email
+    // and let the user continue through Login. If tokens are returned, keep
+    // the session as well.
+    if (tokens.accessToken.isNotEmpty) {
+      final currentRefresh = await TokenStorage.getRefreshToken();
+      await TokenStorage.saveTokens(
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken.isNotEmpty
+            ? tokens.refreshToken
+            : (currentRefresh ?? ''),
+      );
+    }
 
     await TokenStorage.saveEmail(email);
 
@@ -179,6 +187,12 @@ class AuthRemoteDataSourceImpl
     final result =
     LoginResponseModel.fromJson(response);
 
+    if (result.tokens.accessToken.isEmpty || result.tokens.refreshToken.isEmpty) {
+      throw const FormatException(
+        'Login succeeded but the server did not return valid session tokens.',
+      );
+    }
+
     await TokenStorage.saveTokens(
       accessToken: result.tokens.accessToken,
       refreshToken: result.tokens.refreshToken,
@@ -188,17 +202,23 @@ class AuthRemoteDataSourceImpl
       request.email,
     );
 
-    await TokenStorage.saveRememberMe(
-      request.rememberMe,
-    );
+    // Keep the authenticated session across app restarts. The refresh token
+    // is stored securely and StartupPage restores it before showing Home.
+    await TokenStorage.saveRememberMe(true);
 
-    if (result.user?.id != null) {
-      await TokenStorage.saveUserId(result.user!.id!);
+    final user = result.user;
+    final userId = user?.id;
+    if (userId != null) {
+      await TokenStorage.saveUserId(userId);
     }
-    if (result.user != null) {
-      final user = result.user!;
+    if (user != null) {
+      final name = [user.firstName, user.lastName]
+          .whereType<String>()
+          .map((value) => value.trim())
+          .where((value) => value.isNotEmpty)
+          .join(' ');
       await TokenStorage.saveLocalProfile(
-        name: [user.firstName, user.lastName].where((v) => v != null && v!.trim().isNotEmpty).map((v) => v!.trim()).join(' '),
+        name: name,
         phone: user.phone,
       );
     }
@@ -228,6 +248,12 @@ class AuthRemoteDataSourceImpl
     final result =
     LoginResponseModel.fromJson(response);
 
+    if (result.tokens.accessToken.isEmpty || result.tokens.refreshToken.isEmpty) {
+      throw const FormatException(
+        'Google login succeeded but the server did not return valid session tokens.',
+      );
+    }
+
     await TokenStorage.saveTokens(
       accessToken: result.tokens.accessToken,
       refreshToken: result.tokens.refreshToken,
@@ -235,20 +261,30 @@ class AuthRemoteDataSourceImpl
 
     final user = result.user;
 
-    await TokenStorage.saveRememberMe(false);
+    await TokenStorage.saveRememberMe(true);
 
-    if (user?.email != null &&
-        user!.email!.isNotEmpty) {
-      await TokenStorage.saveEmail(
-        user.email!,
+    final googleEmail = user?.email;
+    if (googleEmail != null && googleEmail.isNotEmpty) {
+      await TokenStorage.saveEmail(googleEmail);
+    }
+
+    final googleUserId = user?.id;
+    if (googleUserId != null) {
+      await TokenStorage.saveUserId(googleUserId);
+    }
+
+    if (user != null) {
+      final name = [user.firstName, user.lastName]
+          .whereType<String>()
+          .map((value) => value.trim())
+          .where((value) => value.isNotEmpty)
+          .join(' ');
+      await TokenStorage.saveLocalProfile(
+        name: name,
+        phone: user.phone,
       );
     }
 
-    if (user?.id != null) {
-      await TokenStorage.saveUserId(
-        user!.id!,
-      );
-    }
     final role = user?.roleSlug?.trim();
     await TokenStorage.saveRole(
       role != null && role.isNotEmpty ? role : 'tenant',
@@ -331,10 +367,17 @@ class AuthRemoteDataSourceImpl
     final tokens =
     AuthTokensModel.fromJson(response);
 
-    await TokenStorage.saveTokens(
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-    );
+    // Laravel may return only a success/message from /remember-me.
+    // Never overwrite a valid persisted session with empty tokens.
+    if (tokens.accessToken.isNotEmpty) {
+      final currentRefresh = await TokenStorage.getRefreshToken();
+      await TokenStorage.saveTokens(
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken.isNotEmpty
+            ? tokens.refreshToken
+            : (currentRefresh ?? refreshToken),
+      );
+    }
 
     return tokens;
   }
@@ -356,10 +399,20 @@ class AuthRemoteDataSourceImpl
     final tokens =
     AuthTokensModel.fromJson(response);
 
-    await TokenStorage.saveTokens(
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-    );
+    // /remember-me is allowed to return only {success,message}. In that case
+    // keep the tokens created by /login. Saving empty strings here was the
+    // reason the Add Property screen later believed the user was logged out.
+    if (tokens.accessToken.isNotEmpty) {
+      final currentRefresh = await TokenStorage.getRefreshToken();
+      await TokenStorage.saveTokens(
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken.isNotEmpty
+            ? tokens.refreshToken
+            : (currentRefresh ?? refreshToken),
+      );
+    }
+
+    await TokenStorage.saveRememberMe(remember);
   }
 
   @override
@@ -374,6 +427,6 @@ class AuthRemoteDataSourceImpl
       authenticated: true,
     );
 
-    await TokenStorage.clearTokens();
+    await TokenStorage.clearSession();
   }
 }

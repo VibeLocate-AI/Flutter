@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../core/storage/onboarding_storage.dart';
 import '../core/storage/token_storage.dart';
 import '../core/network/api_client.dart';
-import '../core/errors/exceptions.dart';
 import 'app_router.dart';
 
 class StartupPage extends StatefulWidget {
@@ -38,10 +37,14 @@ class _StartupPageState extends State<StartupPage> {
       return;
     }
 
-    final hasAccessToken =
-        await TokenStorage.hasAccessToken();
+    final accessToken = await TokenStorage.getAccessToken();
+    final refreshToken = await TokenStorage.getRefreshToken();
+    final hasAccessToken = accessToken != null && accessToken.isNotEmpty;
+    final hasRefreshToken = refreshToken != null && refreshToken.isNotEmpty;
 
-    if (!hasAccessToken) {
+    // A persisted refresh token is a valid local session even when the short
+    // lived access token disappeared/expired while the app was closed.
+    if (!hasAccessToken && !hasRefreshToken) {
       if (!mounted) return;
       Navigator.pushReplacementNamed(
         context,
@@ -50,35 +53,27 @@ class _StartupPageState extends State<StartupPage> {
       return;
     }
 
-    // If the user enabled Remember Me, refresh the session before
-    // opening the app so an expired access token does not break startup.
-    final rememberMe =
-        await TokenStorage.getRememberMe();
-    final refreshToken =
-        await TokenStorage.getRefreshToken();
+    // Keep the authenticated session alive with the refresh token.
+    // A network timeout must never delete the local session.
 
-    if (rememberMe &&
-        refreshToken != null &&
-        refreshToken.isNotEmpty) {
+    if (refreshToken != null && refreshToken.isNotEmpty) {
       try {
         final refreshed = await ApiClient.refreshSession().timeout(
           const Duration(seconds: 7),
         );
+
+        // A false result can also mean a temporary network/server failure.
+        // Never delete the locally persisted session here. ApiClient will
+        // retry the refresh when an authenticated request actually needs it.
         if (!refreshed) {
-          throw const UnauthorizedException('Session expired.');
+          // Keep the existing access/refresh tokens and continue to Home.
         }
       } on TimeoutException {
-        // Render can cold-start. Do not leave the user on a blank startup
-        // screen just because refresh took longer than the first frame.
+        // Cold starts against Render can take longer than the first frame.
+        // Keep the session and let the first API request retry normally.
       } catch (_) {
-        await TokenStorage.clearTokens();
-
-        if (!mounted) return;
-        Navigator.pushReplacementNamed(
-          context,
-          AppRouter.login,
-        );
-        return;
+        // Do not log the user out because startup refresh failed for a
+        // transient reason. A real 401 will be handled by ApiClient.
       }
     }
 

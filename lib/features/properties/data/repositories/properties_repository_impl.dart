@@ -14,57 +14,90 @@ class PropertiesRepositoryImpl implements PropertiesRepository {
   Future<List<PropertyModel>> getProperties() async {
     final response = await remoteDataSource.getProperties();
 
-    dynamic value = response['data'];
-
-    if (value is Map<String, dynamic>) {
-      value = value['properties'] ?? value['data'];
-    }
-
-    value ??= response['properties'];
-
-    if (value is! List) {
-      return const [];
-    }
-
-    return value
-        .whereType<Map<String, dynamic>>()
+    return _extractPropertyMaps(response)
         .map(PropertyModel.fromJson)
-        .toList();
+        .toList(growable: false);
   }
 
   @override
   Future<List<PropertyModel>> getMyProperties() async {
     final response = await remoteDataSource.getMyProperties();
+    final maps = _extractPropertyMaps(response);
+    return maps.map(PropertyModel.fromJson).toList(growable: false);
+  }
 
-    dynamic value = response['data'];
+  List<Map<String, dynamic>> _extractPropertyMaps(dynamic value) {
+    final result = <Map<String, dynamic>>[];
+    final seen = <int>{};
 
-    if (value is Map<String, dynamic>) {
-      value = value['properties'] ?? value['data'];
+    void walk(dynamic node) {
+      if (node is List) {
+        for (final item in node) {
+          walk(item);
+        }
+        return;
+      }
+      if (node is! Map) return;
+      final map = node.map((key, value) => MapEntry(key.toString(), value));
+      final id = int.tryParse(
+        (map['id'] ?? map['property_id'] ?? '').toString(),
+      );
+
+      final looksLikeProperty = map.containsKey('title') ||
+          map.containsKey('price') ||
+          map.containsKey('description') ||
+          map.containsKey('type_id') ||
+          map.containsKey('listing_type') ||
+          map.containsKey('property_condition') ||
+          map.containsKey('approval_status') ||
+          map.containsKey('status') ||
+          map.containsKey('bedrooms') ||
+          map.containsKey('area_sqft');
+
+      if (id != null && id > 0 && looksLikeProperty) {
+        if (seen.add(id)) result.add(map);
+        return;
+      }
+      for (final child in map.values) {
+        walk(child);
+      }
     }
 
-    value ??= response['properties'];
-
-    if (value is! List) {
-      return const [];
-    }
-
-    return value
-        .whereType<Map<String, dynamic>>()
-        .map(PropertyModel.fromJson)
-        .toList();
+    walk(value);
+    return result;
   }
 
   @override
   Future<PropertyModel> getPropertyDetails(int id) async {
-    final response = await remoteDataSource.getPropertyDetails(id);
+    Map<String, dynamic>? found;
 
-    Map<String, dynamic>? found = _findProperty(response, id);
+    // The supplied Postman collection exposes nearby/details-related routes,
+    // but not a guaranteed GET /api/properties/{id}. Try the direct route when
+    // the deployment supports it, then fall back to the real collection routes
+    // instead of failing the Details screen.
+    try {
+      final response = await remoteDataSource.getPropertyDetails(id);
+      found = _findProperty(response, id);
+    } catch (_) {
+      found = null;
+    }
+
     if (found == null) {
-      // Some Laravel deployments return the property collection envelope
-      // even for a single-property request. Fall back to the collection and
-      // select the requested ID instead of showing a false "invalid response".
-      final all = await remoteDataSource.getProperties();
-      found = _findProperty(all, id);
+      try {
+        final all = await remoteDataSource.getProperties();
+        found = _findProperty(all, id);
+      } catch (_) {
+        found = null;
+      }
+    }
+
+    if (found == null) {
+      try {
+        final mine = await remoteDataSource.getMyProperties();
+        found = _findProperty(mine, id);
+      } catch (_) {
+        found = null;
+      }
     }
 
     if (found == null) {

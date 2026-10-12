@@ -61,7 +61,17 @@ class TokenStorage {
     final token = await getAccessToken();
 
     return token != null &&
-        token.isNotEmpty;
+        token.trim().isNotEmpty;
+  }
+
+  static Future<bool> hasSession() async {
+    final access = await getAccessToken();
+    if (access != null && access.trim().isNotEmpty) {
+      return true;
+    }
+
+    final refresh = await getRefreshToken();
+    return refresh != null && refresh.trim().isNotEmpty;
   }
 
   static Future<void> saveUserId(int id) async {
@@ -149,6 +159,20 @@ class TokenStorage {
   static Future<String?> getLocalProfilePhone() => _storage.read(key: _phoneKey);
   static Future<String?> getLocalProfileCity() => _storage.read(key: _cityKey);
   static Future<String?> getLocalProfileCountry() => _storage.read(key: _countryKey);
+
+
+  static Future<void> clearSession() async {
+    await _storage.delete(key: _accessTokenKey);
+    await _storage.delete(key: _refreshTokenKey);
+    await _storage.delete(key: _userIdKey);
+    await _storage.delete(key: _emailKey);
+    await _storage.delete(key: _roleKey);
+    await _storage.delete(key: _nameKey);
+    await _storage.delete(key: _phoneKey);
+    await _storage.delete(key: _cityKey);
+    await _storage.delete(key: _countryKey);
+    await _storage.delete(key: _rememberMeKey);
+  }
 
   static Future<void> clearTokens() async {
     await _storage.delete(

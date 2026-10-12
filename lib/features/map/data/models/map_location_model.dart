@@ -13,6 +13,15 @@ class MapLocationModel {
     this.priceAmount,
     this.imageUrl = '',
     this.typeId,
+    this.categoryId,
+    this.listingType = '',
+    this.bedrooms = 0,
+    this.bathrooms = 0,
+    this.areaSqft = 0,
+    this.isFurnished = false,
+    this.rentFrequency = '',
+    this.isFeatured = false,
+    this.propertyCondition = '',
   });
 
   final int id;
@@ -26,6 +35,15 @@ class MapLocationModel {
   final double? priceAmount;
   final String imageUrl;
   final int? typeId;
+  final int? categoryId;
+  final String listingType;
+  final int bedrooms;
+  final int bathrooms;
+  final double areaSqft;
+  final bool isFurnished;
+  final String rentFrequency;
+  final bool isFeatured;
+  final String propertyCondition;
 
   factory MapLocationModel.fromJson(Map<String, dynamic> json) {
     final property = _asMap(json['property']);
@@ -70,9 +88,10 @@ class MapLocationModel {
           location?['longitude'],
     );
 
-    // Protect the map from the common lat/lng inversion. Do not swap valid
-    // coordinates; only correct an impossible latitude value.
-    if (latitude.abs() > 90 && longitude.abs() <= 90) {
+    // Correct impossible coordinates and the known UAE dataset inversion
+    // (Dubai latitude is ~22-27, longitude ~51-57).
+    if ((latitude.abs() > 90 && longitude.abs() <= 90) ||
+        (latitude >= 45 && latitude <= 90 && longitude >= 20 && longitude <= 60)) {
       final tmp = latitude;
       latitude = longitude;
       longitude = tmp;
@@ -83,8 +102,8 @@ class MapLocationModel {
       propertyId: _nullableInt(
         json['property_id'] ?? property?['id'] ?? json['id'],
       ),
-      latitude: latitude ?? 0,
-      longitude: longitude ?? 0,
+      latitude: latitude,
+      longitude: longitude,
       title: _text(
         json['title'] ??
             json['name'] ??
@@ -113,6 +132,19 @@ class MapLocationModel {
       typeId: _nullableInt(
         json['type_id'] ?? property?['type_id'],
       ),
+      categoryId: _nullableInt(
+        json['category_id'] ?? property?['category_id'],
+      ),
+      listingType: _text(
+        json['listing_type'] ?? json['purpose'] ?? property?['listing_type'] ?? property?['purpose'],
+      ),
+      bedrooms: _toInt(json['bedrooms'] ?? property?['bedrooms']),
+      bathrooms: _toInt(json['bathrooms'] ?? property?['bathrooms']),
+      areaSqft: _toDouble(json['area_sqft'] ?? property?['area_sqft']),
+      isFurnished: _toBool(json['is_furnished'] ?? property?['is_furnished']),
+      rentFrequency: _text(json['rent_frequency'] ?? property?['rent_frequency']),
+      isFeatured: _toBool(json['is_featured'] ?? property?['is_featured']),
+      propertyCondition: _text(json['property_condition'] ?? property?['property_condition']),
     );
   }
 
@@ -196,5 +228,11 @@ class MapLocationModel {
   static double _toDouble(dynamic value) {
     if (value is num) return value.toDouble();
     return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static bool _toBool(dynamic value) {
+    if (value is bool) return value;
+    final text = value?.toString().trim().toLowerCase();
+    return text == '1' || text == 'true' || text == 'yes' || text == 'furnished';
   }
 }

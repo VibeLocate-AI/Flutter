@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import '../../../../app/navigation/app_bar_actions.dart';
 import 'package:get/get.dart';
 import '../../../../core/controllers/my_properties_controller.dart';
+import '../../../../core/controllers/property_details_controller.dart';
 import '../../../home/data/models/property_model.dart';
 
-import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/localization/localization.dart';
-import '../../properties_dependencies.dart';
 import '../../../home/presentation/widgets/recommended_property_card.dart';
+import '../../../home/presentation/widgets/property_filter_sheet.dart';
+import '../../../home/presentation/widgets/property_categories.dart';
 import 'add_property_page.dart';
 
 class PropertiesPage extends StatefulWidget {
@@ -18,7 +18,7 @@ class PropertiesPage extends StatefulWidget {
 }
 
 class _PropertiesPageState extends State<PropertiesPage> {
-  final TextEditingController _searchController = TextEditingController();
+  PropertyFilterValues _filters = const PropertyFilterValues();
 
   MyPropertiesController get controller =>
       Get.find<MyPropertiesController>();
@@ -26,41 +26,106 @@ class _PropertiesPageState extends State<PropertiesPage> {
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(_onSearchChanged);
     controller.initialize();
   }
 
-  @override
-  void dispose() {
-    _searchController.removeListener(_onSearchChanged);
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _onSearchChanged() {
-    controller.setQuery(_searchController.text);
-    setState(() {});
+  Future<void> _showFilters() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => SizedBox(
+        height: MediaQuery.sizeOf(context).height * .90,
+        child: PropertyFilterSheet(
+          initialValues: _filters,
+          onApply: (value) {
+            setState(() => _filters = value);
+            controller.setFilters(value);
+          },
+        ),
+      ),
+    );
   }
 
   Future<void> _openAddProperty() async {
     final result = await Navigator.of(context).push<dynamic>(
       MaterialPageRoute(builder: (_) => const AddPropertyPage()),
     );
-    if (!mounted || (result != true && result is! int)) return;
-
-    // The add screen returns its created property id. Hydrate just that
-    // property first so it appears immediately instead of waiting for a
-    // complete collection refresh.
-    if (result is int && result > 0) {
-      try {
-        final property = await PropertiesDependencies.getPropertyDetails(result);
-        controller.prepend(property);
-      } catch (_) {
-        controller.reload();
-      }
-    } else {
-      controller.reload();
+    if (!mounted ||
+        (result != true && result is! int && result is! Map)) {
+      return;
     }
+
+    int? addedId;
+    PropertyModel? optimisticProperty;
+
+    if (result is int && result > 0) {
+      addedId = result;
+    } else if (result is Map) {
+      final normalized = result.map(
+        (key, value) => MapEntry(key.toString(), value),
+      );
+      final value = normalized['id'] ?? normalized['property_id'];
+      addedId = int.tryParse(value?.toString() ?? '');
+      try {
+        final parsedProperty = PropertyModel.fromJson(normalized);
+        optimisticProperty = parsedProperty;
+        if (parsedProperty.title.isNotEmpty || parsedProperty.price > 0) {
+          controller.prepend(parsedProperty);
+        }
+      } catch (_) {}
+    }
+
+    // /api/my-properties is the authoritative owner collection. Reload it
+    // first, then restore the optimistic record if the backend has not exposed
+    // the new row yet. This prevents a successful Add Property from appearing
+    // to vanish immediately after the request completes.
+    await controller.reload();
+
+    if (optimisticProperty != null) {
+      final missingById = addedId != null && addedId > 0
+          ? !controller.properties.any((property) => property.id == addedId)
+          : true;
+      if (missingById) {
+        controller.prepend(optimisticProperty);
+      }
+    }
+
+    bool optimisticStillMissing() {
+      final optimistic = optimisticProperty;
+      if (optimistic == null) return false;
+      return !controller.properties.any((property) {
+        if (addedId != null && addedId > 0) {
+          return property.id == addedId;
+        }
+        return property.displayTitle.trim() == optimistic.displayTitle.trim() &&
+            (optimistic.price <= 0 || (property.price - optimistic.price).abs() < 0.01);
+      });
+    }
+
+    if (addedId != null && addedId > 0 &&
+        !controller.properties.any((property) => property.id == addedId)) {
+      const delays = <int>[500, 900, 1400, 2000];
+      for (final delay in delays) {
+        await Future<void>.delayed(Duration(milliseconds: delay));
+        await controller.reload();
+        if (controller.properties.any((property) => property.id == addedId)) {
+          break;
+        }
+      }
+    } else if (optimisticProperty != null && optimisticStillMissing()) {
+      // Some deployments return a success message before returning the new
+      // ID. Keep the form data visible while the collection catches up.
+      final optimistic = optimisticProperty;
+      const delays = <int>[700, 1200, 1800];
+      for (final delay in delays) {
+        controller.prepend(optimistic);
+        await Future<void>.delayed(Duration(milliseconds: delay));
+        await controller.reload();
+        if (!optimisticStillMissing()) break;
+      }
+    }
+
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -87,8 +152,6 @@ class _PropertiesPageState extends State<PropertiesPage> {
         appBar: AppBar(
         title: Text(localization.translate('my_properties')),
         actions: [
-          const AgentAppBarAction(),
-          const NotificationAppBarAction(),
           IconButton(
             tooltip: localization.translate('add_property'),
             onPressed: _openAddProperty,
@@ -156,26 +219,15 @@ class _PropertiesPageState extends State<PropertiesPage> {
     return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
-          sliver: SliverToBoxAdapter(
-            child: TextField(
-              controller: _searchController,
-              onChanged: controller.setQuery,
-              decoration: InputDecoration(
-                hintText: localization.translate('search_properties'),
-                prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: _searchController.text.isEmpty
-                    ? null
-                    : IconButton(
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {});
-                        },
-                        icon: const Icon(Icons.close_rounded),
-                      ),
-              ),
-            ),
+        SliverToBoxAdapter(
+          child: PropertyCategories(
+            onCategorySelected: (typeId) {
+              controller.setTypeId(typeId);
+              _filters = _filters.copyWith(clearCategoryId: true);
+              controller.setFilters(_filters);
+              setState(() {});
+            },
+            onMoreFilters: _showFilters,
           ),
         ),
         SliverToBoxAdapter(
@@ -195,32 +247,6 @@ class _PropertiesPageState extends State<PropertiesPage> {
                   label: Text(localization.translate('add_property')),
                 ),
               ],
-            ),
-          ),
-        ),
-        SliverPadding(
-          padding: const EdgeInsets.only(left: 20, bottom: 14),
-          sliver: SliverToBoxAdapter(
-            child: SizedBox(
-              height: 42,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _TypeChip(
-                    label: localization.translate('property_type_all'),
-                    selected: controller.selectedTypeId.value == null,
-                    onTap: () => controller.setType(null),
-                  ),
-                  ...List.generate(16, (index) {
-                    final typeId = index + 1;
-                    return _TypeChip(
-                      label: _typeLabel(typeId, localization),
-                      selected: controller.selectedTypeId.value == typeId,
-                      onTap: () => controller.setType(typeId),
-                    );
-                  }),
-                ],
-              ),
             ),
           ),
         ),
@@ -272,13 +298,18 @@ class _PropertiesPageState extends State<PropertiesPage> {
                   separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final property = properties[index];
-                    return RecommendedPropertyCard(
+                    return _MyPropertyCard(
                       property: property,
-                      onTap: () => Navigator.pushNamed(
-                        context,
-                        '/property-details',
-                        arguments: property.id,
-                      ),
+                      onTap: property.id > 0
+                          ? () {
+                              Get.find<PropertyDetailsController>().setProperty(property);
+                              Navigator.pushNamed(
+                                context,
+                                '/property-details',
+                                arguments: property.id,
+                              );
+                            }
+                          : null,
                     );
                   },
                 ),
@@ -286,39 +317,80 @@ class _PropertiesPageState extends State<PropertiesPage> {
       ],
     );
   }
-
-  String _typeLabel(int id, AppLocalization localization) {
-    const keys = [
-      'property_type_apartment', 'property_type_villa', 'property_type_penthouse', 'property_type_townhouse',
-      'property_type_house', 'property_type_office', 'property_type_warehouse', 'property_type_land',
-      'property_type_restaurant', 'property_type_hotel', 'property_type_building', 'property_type_commercial_shop',
-      'property_type_clinic', 'property_type_school', 'property_type_showroom', 'property_type_cafe',
-    ];
-    if (id < 1 || id > keys.length) return localization.translate('property_type_all');
-    return localization.translate(keys[id - 1]);
-  }
 }
 
-class _TypeChip extends StatelessWidget {
-  const _TypeChip({required this.label, required this.selected, required this.onTap});
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
+
+String _humanizeStatus(String value) {
+  final normalized = value
+      .replaceAll('_', ' ')
+      .replaceAll('-', ' ')
+      .trim();
+  if (normalized.isEmpty) return 'Pending';
+
+  return normalized
+      .split(RegExp(r'\s+'))
+      .map(
+        (word) => word.isEmpty
+            ? word
+            : '${word[0].toUpperCase()}${word.substring(1)}',
+      )
+      .join(' ');
+}
+
+
+class _MyPropertyCard extends StatelessWidget {
+  const _MyPropertyCard({required this.property, this.onTap});
+
+  final PropertyModel property;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        label: Text(label),
-        selected: selected,
-        onSelected: (_) => onTap(),
-        labelStyle: AppTextStyles.labelMedium.copyWith(
-          color: selected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface,
+    final localization = AppLocalization.of(context);
+    final status = property.normalizedApprovalStatus;
+    final isPending = status == 'pending' || status.isEmpty;
+    final isApproved = status == 'approved';
+    final color = isApproved
+        ? Colors.green
+        : status == 'rejected'
+            ? theme.colorScheme.error
+            : Colors.orange;
+    final label = switch (status) {
+      'approved' => localization.translate('approved'),
+      'rejected' => localization.translate('rejected'),
+      'pending' => localization.translate('pending'),
+      _ => _humanizeStatus(status),
+    };
+
+    return Stack(
+      children: [
+        RecommendedPropertyCard(property: property, onTap: onTap),
+        PositionedDirectional(
+          bottom: 10,
+          end: 10,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: .94),
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: const [BoxShadow(blurRadius: 8, offset: Offset(0, 2), color: Colors.black26)],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isApproved ? Icons.check_circle_rounded : isPending ? Icons.schedule_rounded : Icons.cancel_rounded,
+                  size: 14,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 5),
+                Text(label, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
+              ],
+            ),
+          ),
         ),
-        selectedColor: theme.colorScheme.primary,
-      ),
+      ],
     );
   }
 }

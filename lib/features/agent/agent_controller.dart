@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 
 import 'data/datasources/agent_remote_data_source.dart';
+import '../../core/storage/agent_cache_storage.dart';
 import 'data/models/agent_property.dart';
 
 class AgentController extends GetxController {
@@ -21,12 +22,31 @@ class AgentController extends GetxController {
   Future<void> load() async {
     if (isLoading.value) return;
 
-    isLoading.value = true;
     error.value = null;
+
+    // Cache-first: restore the last successful Agent payload before touching
+    // the network. The API remains the source of truth and refreshes it below.
+    if (!hasLoaded.value &&
+        pending.isEmpty &&
+        approved.isEmpty &&
+        rejected.isEmpty &&
+        pois.isEmpty) {
+      try {
+        final cached = await AgentCacheStorage.read();
+        if (cached != null) {
+          pending.assignAll(_parseCachedProperties(cached['pending']));
+          approved.assignAll(_parseCachedProperties(cached['approved']));
+          rejected.assignAll(_parseCachedProperties(cached['rejected']));
+          pois.assignAll(cached['pois'] ?? const <Map<String, dynamic>>[]);
+          hasLoaded.value = true;
+        }
+      } catch (_) {}
+    }
+
+    isLoading.value =
+        pending.isEmpty && approved.isEmpty && rejected.isEmpty && pois.isEmpty;
+
     try {
-      // Keep the Agent section usable even if one endpoint is temporarily
-      // unavailable. The backend exposes these as separate endpoints, so one
-      // failing request must not blank the whole Agent screen.
       final results = await Future.wait<dynamic>([
         _safeProperties('pending'),
         _safeProperties('approved'),
@@ -34,11 +54,34 @@ class AgentController extends GetxController {
         _safePois(),
       ]);
 
-      pending.assignAll(results[0] as List<AgentProperty>);
-      approved.assignAll(results[1] as List<AgentProperty>);
-      rejected.assignAll(results[2] as List<AgentProperty>);
-      pois.assignAll(results[3] as List<Map<String, dynamic>>);
+      final freshPending = results[0] as List<AgentProperty>?;
+      final freshApproved = results[1] as List<AgentProperty>?;
+      final freshRejected = results[2] as List<AgentProperty>?;
+      final freshPois = results[3] as List<Map<String, dynamic>>?;
+
+      if (freshPending != null) pending.assignAll(freshPending);
+      if (freshApproved != null) approved.assignAll(freshApproved);
+      if (freshRejected != null) rejected.assignAll(freshRejected);
+      if (freshPois != null) pois.assignAll(freshPois);
       hasLoaded.value = true;
+
+      // Only overwrite persistent cache with successful endpoint results.
+      // A temporary Render/network failure must never erase good cached data.
+      await AgentCacheStorage.save(
+        pending: pending
+            .map((item) => item.raw)
+            .where((item) => item.isNotEmpty)
+            .toList(),
+        approved: approved
+            .map((item) => item.raw)
+            .where((item) => item.isNotEmpty)
+            .toList(),
+        rejected: rejected
+            .map((item) => item.raw)
+            .where((item) => item.isNotEmpty)
+            .toList(),
+        pois: pois.toList(growable: false),
+      );
     } catch (e) {
       error.value = e.toString().replaceFirst('Exception: ', '');
     } finally {
@@ -46,20 +89,27 @@ class AgentController extends GetxController {
     }
   }
 
+  List<AgentProperty> _parseCachedProperties(dynamic value) {
+    if (value is! List) return const <AgentProperty>[];
+    return value.whereType<Map>().map((item) {
+      final json = item.map((key, value) => MapEntry(key.toString(), value));
+      return AgentProperty.fromJson(json);
+    }).where((item) => item.id > 0).toList(growable: false);
+  }
 
-  Future<List<AgentProperty>> _safeProperties(String status) async {
+  Future<List<AgentProperty>?> _safeProperties(String status) async {
     try {
       return await dataSource.getProperties(status);
     } catch (_) {
-      return const <AgentProperty>[];
+      return null;
     }
   }
 
-  Future<List<Map<String, dynamic>>> _safePois() async {
+  Future<List<Map<String, dynamic>>?> _safePois() async {
     try {
       return await dataSource.getPois();
     } catch (_) {
-      return const <Map<String, dynamic>>[];
+      return null;
     }
   }
 

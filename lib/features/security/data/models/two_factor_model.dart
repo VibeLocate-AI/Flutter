@@ -37,12 +37,46 @@ class TwoFactorSetupModel {
   factory TwoFactorSetupModel.fromJson(
     Map<String, dynamic> json,
   ) {
+    String? findString(dynamic value, List<String> keys) {
+      if (value is Map) {
+        for (final key in keys) {
+          final candidate = value[key];
+          if (candidate is String && candidate.trim().isNotEmpty) {
+            return candidate.trim();
+          }
+        }
+        for (final nestedKey in const ['data', 'setup', 'two_factor', 'result', 'payload']) {
+          final found = findString(value[nestedKey], keys);
+          if (found != null) return found;
+        }
+      }
+      return null;
+    }
+
+    final secret = findString(
+          json,
+          const ['secret', 'two_factor_secret', 'otp_secret'],
+        ) ??
+        '';
+
+    final uri = findString(
+      json,
+      const [
+        'otpauth_url',
+        'otpauth',
+        'provisioning_uri',
+        'uri',
+        'otp_auth_url',
+        'otp_uri',
+        'qr_code',
+        'qr_url',
+      ],
+    ) ?? '';
+
     return TwoFactorSetupModel(
-      secret: json['secret']?.toString() ?? '',
-      otpauthUrl:
-          json['otpauth_url']?.toString() ?? '',
-      message:
-          json['message']?.toString() ?? '',
+      secret: secret,
+      otpauthUrl: uri,
+      message: findString(json, const ['message']) ?? '',
     );
   }
 }

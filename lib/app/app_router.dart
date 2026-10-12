@@ -10,7 +10,7 @@ import '../features/auth/presentation/pages/reset_password_page.dart';
 import '../features/auth/presentation/pages/reset_password_success_page.dart';
 import '../features/auth/presentation/pages/verification_page.dart';
 import '../features/onboarding/presentation/pages/onboarding_page.dart';
-import '../features/agent/presentation/pages/agent_dashboard_page.dart';
+import '../features/agent/presentation/pages/agent_center_page.dart';
 import '../features/agent/presentation/pages/agent_register_page.dart';
 import '../features/settings/presentation/pages/settings_page.dart';
 import '../features/properties/presentation/pages/properties_page.dart';
@@ -143,7 +143,7 @@ class AppRouter {
       case agent:
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => const AgentDashboardPage(),
+          builder: (_) => const AgentCenterPage(),
         );
 
       case agentRegister:

@@ -33,9 +33,11 @@ class AiSearchResponseModel {
         source['properties'] ??
         source['results'] ??
         source['items'] ??
+        source['matches'] ??
         json['properties'] ??
         json['results'] ??
-        json['items'];
+        json['items'] ??
+        json['matches'];
 
     final properties = propertiesJson is List
         ? propertiesJson

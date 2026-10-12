@@ -62,7 +62,7 @@ class PopularAreaCard extends StatelessWidget {
               (area.imageUrl != null &&
                       area.imageUrl!.trim().isNotEmpty)
                   ? area.imageUrl!
-                  : _imageForArea(area.name),
+                  : _imageForArea(area.displayName),
               fit: BoxFit.cover,
               errorBuilder:
                   (_, _, _) {
@@ -101,7 +101,7 @@ class PopularAreaCard extends StatelessWidget {
                 CrossAxisAlignment.start,
                 children: [
                   Text(
-                    area.name,
+                    area.displayName,
                     maxLines: 1,
                     overflow:
                     TextOverflow.ellipsis,

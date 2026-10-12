@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -357,6 +358,30 @@ class _RegisterPageState extends State<RegisterPage> {
           password: password,
           passwordConfirmation: passwordConfirmation,
         );
+      }
+
+      // Explicitly request the verification email after registration for
+      // both tenant and agent accounts. The supplied Postman contract exposes
+      // /api/resend-otp for this exact email-only action. Do not silently
+      // swallow a delivery failure: the user must know if the code could not
+      // be requested.
+      try {
+        await AuthDependencies.resendVerification(email: email);
+      } on ApiException catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+        return;
+      } catch (e) {
+        debugPrint('REGISTER OTP RESEND ERROR: $e');
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not send the verification code. Please try again.'),
+          ),
+        );
+        return;
       }
 
       if (!mounted) {

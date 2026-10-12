@@ -11,7 +11,7 @@ import '../storage/token_storage.dart';
 class ApiClient {
   ApiClient._();
 
-  static const Duration _timeout = Duration(seconds: 60);
+  static const Duration _timeout = Duration(seconds: 15);
 
   static Future<bool>? _refreshing;
 
@@ -207,23 +207,51 @@ class ApiClient {
       }
 
       final decoded = jsonDecode(response.body);
-      if (decoded is! Map<String, dynamic>) {
+      if (decoded is! Map) {
         return false;
       }
 
-      final source = decoded['data'] is Map<String, dynamic>
-          ? decoded['data'] as Map<String, dynamic>
-          : decoded;
+      Map<String, dynamic>? findTokenMap(dynamic value) {
+        if (value is! Map) return null;
+        final map = value.map(
+          (key, value) => MapEntry(key.toString(), value),
+        );
+
+        final hasAccess = map['access_token'] != null ||
+            map['accessToken'] != null ||
+            map['token'] != null ||
+            map['access'] != null;
+        if (hasAccess) return map;
+
+        for (final key in const [
+          'data',
+          'tokens',
+          'auth',
+          'result',
+          'payload',
+        ]) {
+          final nested = findTokenMap(map[key]);
+          if (nested != null) return nested;
+        }
+        return null;
+      }
+
+      final source = findTokenMap(decoded);
+      if (source == null) {
+        return false;
+      }
 
       final accessToken = (source['access_token'] ??
               source['accessToken'] ??
-              source['token'])
-          ?.toString();
+              source['token'] ??
+              source['access'])
+          ?.toString()
+          .trim();
 
       final newRefreshToken =
-          (source['refresh_token'] ??
-                  source['refreshToken'])
-              ?.toString() ??
+          (source['refresh_token'] ?? source['refreshToken'])
+                  ?.toString()
+                  .trim() ??
               refreshToken;
 
       if (accessToken == null || accessToken.isEmpty) {
